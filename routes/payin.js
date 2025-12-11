@@ -28,12 +28,12 @@ router.post('/create', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Minimum deposit amount is ₹100' });
         }
 
-        const existing = db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
+        const existing = await db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
         if (existing) {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const rates = getRatesFromDb(db);
+        const rates = await getRatesFromDb(db);
         const { fee, netAmount } = calculatePayinFee(amount, rates.payinRate);
 
         const internalOrderId = generateOrderId('HDP');
@@ -61,7 +61,7 @@ router.post('/create', apiAuthenticate, async (req, res) => {
         }
 
         const txUuid = uuidv4();
-        db.prepare(`
+        await db.prepare(`
             INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
             VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
         `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl, param);
@@ -90,7 +90,7 @@ router.post('/query', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'orderId is required' });
         }
 
-        const tx = db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, merchant.id);
+        const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, merchant.id);
 
         if (!tx) {
             return res.status(404).json({ code: 0, msg: 'Order not found' });
@@ -124,12 +124,12 @@ router.post('/check', async (req, res) => {
         }
 
         // Find user by uuid
-        const user = db.prepare('SELECT id FROM users WHERE uuid = ?').get(userId);
+        const user = await db.prepare('SELECT id FROM users WHERE uuid = ?').get(userId);
         if (!user) {
             return res.status(404).json({ code: 0, msg: 'Invalid userId' });
         }
 
-        const tx = db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, user.id);
+        const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, user.id);
 
         if (!tx) {
             return res.status(404).json({ code: 0, msg: 'Order not found' });
@@ -166,12 +166,12 @@ router.post('/callback', async (req, res) => {
         const { status, amount, orderAmount, orderId, id, sign, param } = req.body;
         const db = getDb();
 
-        db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payin', ?, ?)`).run(JSON.stringify(req.body), status);
+        await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payin', ?, ?)`).run(JSON.stringify(req.body), status);
 
         let callbackData;
         try { callbackData = JSON.parse(param || '{}'); } catch (e) { callbackData = {}; }
 
-        const tx = db.prepare('SELECT t.*, u.callback_url, u.merchant_key FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ? OR t.order_id = ?')
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ? OR t.order_id = ?')
             .get(orderId, callbackData.merchantOrderId);
 
         if (!tx) {
@@ -181,14 +181,14 @@ router.post('/callback', async (req, res) => {
 
         const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
         const actualAmount = parseFloat(amount);
-        const rates = getRatesFromDb(db);
+        const rates = await getRatesFromDb(db);
         const { fee, netAmount } = calculatePayinFee(actualAmount, rates.payinRate);
 
-        db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+        await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
             .run(newStatus, actualAmount, fee, netAmount, JSON.stringify(req.body), tx.id);
 
         if (newStatus === 'success') {
-            db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
+            await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
         }
 
         const merchantCallback = callbackData.merchantCallback || tx.callback_url;

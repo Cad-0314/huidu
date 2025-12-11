@@ -10,10 +10,10 @@ const { generateOrderId } = require('../utils/signature');
 /**
  * GET /api/merchant/balance
  */
-router.get('/balance', authenticate, (req, res) => {
+router.get('/balance', authenticate, async (req, res) => {
     try {
         const db = getDb();
-        const user = db.prepare('SELECT balance FROM users WHERE id = ?').get(req.user.id);
+        const user = await db.prepare('SELECT balance FROM users WHERE id = ?').get(req.user.id);
 
         res.json({
             code: 1,
@@ -32,7 +32,7 @@ router.get('/balance', authenticate, (req, res) => {
 /**
  * GET /api/merchant/transactions
  */
-router.get('/transactions', authenticate, (req, res) => {
+router.get('/transactions', authenticate, async (req, res) => {
     try {
         const { page = 1, limit = 20, type, status } = req.query;
         const offset = (page - 1) * limit;
@@ -47,8 +47,8 @@ router.get('/transactions', authenticate, (req, res) => {
         query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), offset);
 
-        const transactions = db.prepare(query).all(...params);
-        const total = db.prepare('SELECT COUNT(*) as total FROM transactions WHERE user_id = ?').get(req.user.id).total;
+        const transactions = await db.prepare(query).all(...params);
+        const total = (await db.prepare('SELECT COUNT(*) as total FROM transactions WHERE user_id = ?').get(req.user.id)).total;
 
         res.json({
             code: 1,
@@ -78,7 +78,7 @@ router.get('/transactions', authenticate, (req, res) => {
 /**
  * GET /api/merchant/payouts
  */
-router.get('/payouts', authenticate, (req, res) => {
+router.get('/payouts', authenticate, async (req, res) => {
     try {
         const { page = 1, limit = 20, type, status } = req.query;
         const offset = (page - 1) * limit;
@@ -93,7 +93,7 @@ router.get('/payouts', authenticate, (req, res) => {
         query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), offset);
 
-        const payouts = db.prepare(query).all(...params);
+        const payouts = await db.prepare(query).all(...params);
 
         res.json({
             code: 1,
@@ -123,24 +123,24 @@ router.get('/payouts', authenticate, (req, res) => {
 /**
  * GET /api/merchant/stats
  */
-router.get('/stats', authenticate, (req, res) => {
+router.get('/stats', authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
         const db = getDb();
 
-        const payinStats = db.prepare(`
+        const payinStats = await db.prepare(`
             SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total, COALESCE(SUM(fee), 0) as fees
             FROM transactions WHERE user_id = ? AND status = 'success'
         `).get(userId);
 
-        const payoutStats = db.prepare(`
+        const payoutStats = await db.prepare(`
             SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total, COALESCE(SUM(fee), 0) as fees
             FROM payouts WHERE user_id = ? AND status = 'success'
         `).get(userId);
 
-        const pendingPayouts = db.prepare(`
+        const pendingPayouts = (await db.prepare(`
             SELECT COUNT(*) as count FROM payouts WHERE user_id = ? AND status = 'pending'
-        `).get(userId).count;
+        `).get(userId)).count;
 
         res.json({
             code: 1,
@@ -200,12 +200,12 @@ router.post('/payin/create', authenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Minimum deposit amount is ₹100' });
         }
 
-        const existing = db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
+        const existing = await db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
         if (existing) {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const rates = getRatesFromDb(db);
+        const rates = await getRatesFromDb(db);
         const { fee, netAmount } = calculatePayinFee(amount, rates.payinRate);
 
         const internalOrderId = generateOrderId('HDP');
@@ -237,7 +237,7 @@ router.post('/payin/create', authenticate, async (req, res) => {
         }
 
         const txUuid = uuidv4();
-        db.prepare(`
+        await db.prepare(`
             INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
             VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
         `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl, param);

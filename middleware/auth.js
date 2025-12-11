@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'vspay_secret_key';
 /**
  * Authenticate JWT token from Authorization header
  */
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -18,7 +18,7 @@ function authenticate(req, res, next) {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         const db = getDb();
-        const user = db.prepare('SELECT * FROM users WHERE id = ? AND status = ?').get(decoded.userId, 'active');
+        const user = await db.prepare('SELECT * FROM users WHERE id = ? AND status = ?').get(decoded.userId, 'active');
 
         if (!user) {
             return res.status(401).json({ code: 0, msg: 'User not found or suspended' });

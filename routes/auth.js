@@ -11,7 +11,7 @@ const { generateMerchantKey } = require('../utils/signature');
  * POST /api/auth/login
  * Login for admin and merchants
  */
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -20,7 +20,7 @@ router.post('/login', (req, res) => {
         }
 
         const db = getDb();
-        const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+        const user = await db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
         if (!user) {
             return res.status(401).json({ code: 0, msg: 'Invalid credentials' });
@@ -87,7 +87,7 @@ router.get('/profile', authenticate, (req, res) => {
  * PUT /api/auth/profile
  * Update profile (callback URL, name)
  */
-router.put('/profile', authenticate, (req, res) => {
+router.put('/profile', authenticate, async (req, res) => {
     try {
         const { name, callbackUrl } = req.body;
         const user = req.user;
@@ -109,10 +109,10 @@ router.put('/profile', authenticate, (req, res) => {
             updates.push("updated_at = datetime('now')");
             params.push(user.id);
 
-            db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+            await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
         }
 
-        const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+        const updatedUser = await db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
 
         res.json({
             code: 1,
@@ -134,13 +134,13 @@ router.put('/profile', authenticate, (req, res) => {
  * POST /api/auth/regenerate-key
  * Regenerate merchant API key
  */
-router.post('/regenerate-key', authenticate, (req, res) => {
+router.post('/regenerate-key', authenticate, async (req, res) => {
     try {
         const user = req.user;
         const newKey = generateMerchantKey();
         const db = getDb();
 
-        db.prepare("UPDATE users SET merchant_key = ?, updated_at = datetime('now') WHERE id = ?")
+        await db.prepare("UPDATE users SET merchant_key = ?, updated_at = datetime('now') WHERE id = ?")
             .run(newKey, user.id);
 
         res.json({
@@ -160,7 +160,7 @@ router.post('/regenerate-key', authenticate, (req, res) => {
  * POST /api/auth/change-password
  * Change password
  */
-router.post('/change-password', authenticate, (req, res) => {
+router.post('/change-password', authenticate, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
         const user = req.user;
@@ -176,7 +176,7 @@ router.post('/change-password', authenticate, (req, res) => {
         }
 
         const hashedPassword = bcrypt.hashSync(newPassword, 10);
-        db.prepare("UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ?")
+        await db.prepare("UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ?")
             .run(hashedPassword, user.id);
 
         res.json({ code: 1, msg: 'Password changed successfully' });

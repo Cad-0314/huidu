@@ -10,10 +10,10 @@ const { generateMerchantKey } = require('../utils/signature');
  * GET /api/admin/users
  * Get all merchants
  */
-router.get('/users', authenticate, requireAdmin, (req, res) => {
+router.get('/users', authenticate, requireAdmin, async (req, res) => {
     try {
         const db = getDb();
-        const users = db.prepare(`
+        const users = await db.prepare(`
             SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, created_at
             FROM users
             ORDER BY created_at DESC
@@ -43,7 +43,7 @@ router.get('/users', authenticate, requireAdmin, (req, res) => {
  * POST /api/admin/users
  * Create new merchant
  */
-router.post('/users', authenticate, requireAdmin, (req, res) => {
+router.post('/users', authenticate, requireAdmin, async (req, res) => {
     try {
         const { username, password, name, callbackUrl } = req.body;
         const db = getDb();
@@ -52,7 +52,7 @@ router.post('/users', authenticate, requireAdmin, (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Username, password, and name are required' });
         }
 
-        const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+        const existing = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
         if (existing) {
             return res.status(400).json({ code: 0, msg: 'Username already exists' });
         }
@@ -61,7 +61,7 @@ router.post('/users', authenticate, requireAdmin, (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, 10);
         const merchantKey = generateMerchantKey();
 
-        db.prepare(`
+        await db.prepare(`
             INSERT INTO users (uuid, username, password, name, role, merchant_key, callback_url)
             VALUES (?, ?, ?, ?, 'merchant', ?, ?)
         `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null);
@@ -80,13 +80,13 @@ router.post('/users', authenticate, requireAdmin, (req, res) => {
 /**
  * PUT /api/admin/users/:id
  */
-router.put('/users/:id', authenticate, requireAdmin, (req, res) => {
+router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { name, status, callbackUrl } = req.body;
         const db = getDb();
 
-        const user = db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
+        const user = await db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
         if (!user) {
             return res.status(404).json({ code: 0, msg: 'User not found' });
         }
@@ -101,7 +101,7 @@ router.put('/users/:id', authenticate, requireAdmin, (req, res) => {
         if (updates.length > 0) {
             updates.push("updated_at = datetime('now')");
             params.push(user.id);
-            db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+            await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
         }
 
         res.json({ code: 1, msg: 'User updated' });
@@ -114,10 +114,10 @@ router.put('/users/:id', authenticate, requireAdmin, (req, res) => {
 /**
  * GET /api/admin/payouts/pending
  */
-router.get('/payouts/pending', authenticate, requireAdmin, (req, res) => {
+router.get('/payouts/pending', authenticate, requireAdmin, async (req, res) => {
     try {
         const db = getDb();
-        const payouts = db.prepare(`
+        const payouts = await db.prepare(`
             SELECT p.*, u.username, u.name as merchant_name
             FROM payouts p
             JOIN users u ON p.user_id = u.id
@@ -150,18 +150,18 @@ router.get('/payouts/pending', authenticate, requireAdmin, (req, res) => {
 /**
  * POST /api/admin/payouts/:id/approve
  */
-router.post('/payouts/:id/approve', authenticate, requireAdmin, (req, res) => {
+router.post('/payouts/:id/approve', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { utr } = req.body;
         const db = getDb();
 
-        const payout = db.prepare('SELECT * FROM payouts WHERE uuid = ? AND status = ?').get(id, 'pending');
+        const payout = await db.prepare('SELECT * FROM payouts WHERE uuid = ? AND status = ?').get(id, 'pending');
         if (!payout) {
             return res.status(404).json({ code: 0, msg: 'Payout not found or already processed' });
         }
 
-        db.prepare(`
+        await db.prepare(`
             UPDATE payouts 
             SET status = 'success', approved_by = ?, approved_at = datetime('now'), utr = ?, updated_at = datetime('now')
             WHERE id = ?
@@ -177,22 +177,22 @@ router.post('/payouts/:id/approve', authenticate, requireAdmin, (req, res) => {
 /**
  * POST /api/admin/payouts/:id/reject
  */
-router.post('/payouts/:id/reject', authenticate, requireAdmin, (req, res) => {
+router.post('/payouts/:id/reject', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { reason } = req.body;
         const db = getDb();
 
-        const payout = db.prepare('SELECT * FROM payouts WHERE uuid = ? AND status = ?').get(id, 'pending');
+        const payout = await db.prepare('SELECT * FROM payouts WHERE uuid = ? AND status = ?').get(id, 'pending');
         if (!payout) {
             return res.status(404).json({ code: 0, msg: 'Payout not found or already processed' });
         }
 
         // Refund balance
-        db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
+        await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?')
             .run(payout.amount + payout.fee, payout.user_id);
 
-        db.prepare(`
+        await db.prepare(`
             UPDATE payouts 
             SET status = 'rejected', approved_by = ?, approved_at = datetime('now'), rejection_reason = ?, updated_at = datetime('now')
             WHERE id = ?
@@ -208,15 +208,15 @@ router.post('/payouts/:id/reject', authenticate, requireAdmin, (req, res) => {
 /**
  * GET /api/admin/stats
  */
-router.get('/stats', authenticate, requireAdmin, (req, res) => {
+router.get('/stats', authenticate, requireAdmin, async (req, res) => {
     try {
         const db = getDb();
-        const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get('merchant').count;
-        const totalPayins = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = ? AND status = ?').get('payin', 'success');
-        const totalPayouts = db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM payouts WHERE status = ?').get('success');
-        const pendingPayouts = db.prepare('SELECT COUNT(*) as count FROM payouts WHERE status = ? AND payout_type = ?').get('pending', 'usdt').count;
-        const totalFees = db.prepare('SELECT COALESCE(SUM(fee), 0) as total FROM transactions WHERE status = ?').get('success');
-        const payoutFees = db.prepare('SELECT COALESCE(SUM(fee), 0) as total FROM payouts WHERE status = ?').get('success');
+        const totalUsers = (await db.prepare('SELECT COUNT(*) as count FROM users WHERE role = ?').get('merchant')).count;
+        const totalPayins = (await db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = ? AND status = ?').get('payin', 'success'));
+        const totalPayouts = (await db.prepare('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM payouts WHERE status = ?').get('success'));
+        const pendingPayouts = (await db.prepare('SELECT COUNT(*) as count FROM payouts WHERE status = ? AND payout_type = ?').get('pending', 'usdt')).count;
+        const totalFees = (await db.prepare('SELECT COALESCE(SUM(fee), 0) as total FROM transactions WHERE status = ?').get('success'));
+        const payoutFees = (await db.prepare('SELECT COALESCE(SUM(fee), 0) as total FROM payouts WHERE status = ?').get('success'));
 
         res.json({
             code: 1,
@@ -239,7 +239,7 @@ router.get('/stats', authenticate, requireAdmin, (req, res) => {
 /**
  * GET /api/admin/transactions
  */
-router.get('/transactions', authenticate, requireAdmin, (req, res) => {
+router.get('/transactions', authenticate, requireAdmin, async (req, res) => {
     try {
         const { page = 1, limit = 20, type, status } = req.query;
         const offset = (page - 1) * limit;
@@ -259,7 +259,7 @@ router.get('/transactions', authenticate, requireAdmin, (req, res) => {
         query += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), offset);
 
-        const transactions = db.prepare(query).all(...params);
+        const transactions = await db.prepare(query).all(...params);
 
         res.json({
             code: 1,
@@ -288,7 +288,7 @@ router.get('/transactions', authenticate, requireAdmin, (req, res) => {
  * POST /api/admin/users/:id/balance
  * Adjust merchant balance (add or deduct)
  */
-router.post('/users/:id/balance', authenticate, requireAdmin, (req, res) => {
+router.post('/users/:id/balance', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { amount, reason } = req.body;
@@ -300,7 +300,7 @@ router.post('/users/:id/balance', authenticate, requireAdmin, (req, res) => {
 
         const adjustAmount = parseFloat(amount);
 
-        const user = db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
+        const user = await db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
         if (!user) {
             return res.status(404).json({ code: 0, msg: 'User not found' });
         }
@@ -315,7 +315,7 @@ router.post('/users/:id/balance', authenticate, requireAdmin, (req, res) => {
         }
 
         // Update balance
-        db.prepare('UPDATE users SET balance = ?, updated_at = datetime(\'now\') WHERE id = ?')
+        await db.prepare('UPDATE users SET balance = ?, updated_at = datetime(\'now\') WHERE id = ?')
             .run(newBalance, user.id);
 
         // Log the adjustment

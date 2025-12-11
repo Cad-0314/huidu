@@ -26,7 +26,7 @@ services:
         value: "0.03"
       - key: PAYOUT_FIXED_FEE
         value: "6"
-    disk:
-      name: vspay-data
-      mountPath: /opt/render/project/src/database
-      sizeGB: 1
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

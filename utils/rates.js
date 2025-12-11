@@ -43,12 +43,17 @@ function calculatePayoutFee(amount, rate = DEFAULT_PAYOUT_RATE, fixedFee = DEFAU
 /**
  * Get rates from database settings
  */
-function getRatesFromDb(db) {
-    const getSetting = db.prepare('SELECT value FROM settings WHERE key = ?');
+/**
+ * Get rates from database settings
+ */
+async function getRatesFromDb(db) {
+    const payinRateRes = await db.prepare('SELECT value FROM settings WHERE key = ?').get('payin_rate');
+    const payoutRateRes = await db.prepare('SELECT value FROM settings WHERE key = ?').get('payout_rate');
+    const payoutFixedRes = await db.prepare('SELECT value FROM settings WHERE key = ?').get('payout_fixed_fee');
 
-    const payinRate = parseFloat(getSetting.get('payin_rate')?.value || DEFAULT_PAYIN_RATE);
-    const payoutRate = parseFloat(getSetting.get('payout_rate')?.value || DEFAULT_PAYOUT_RATE);
-    const payoutFixed = parseFloat(getSetting.get('payout_fixed_fee')?.value || DEFAULT_PAYOUT_FIXED);
+    const payinRate = parseFloat(payinRateRes?.value || DEFAULT_PAYIN_RATE);
+    const payoutRate = parseFloat(payoutRateRes?.value || DEFAULT_PAYOUT_RATE);
+    const payoutFixed = parseFloat(payoutFixedRes?.value || DEFAULT_PAYOUT_FIXED);
 
     return { payinRate, payoutRate, payoutFixed };
 }

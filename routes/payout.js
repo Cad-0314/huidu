@@ -28,19 +28,19 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Minimum bank withdrawal is ₹100' });
         }
 
-        const existing = db.prepare('SELECT id FROM payouts WHERE order_id = ?').get(orderId);
+        const existing = await db.prepare('SELECT id FROM payouts WHERE order_id = ?').get(orderId);
         if (existing) {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const rates = getRatesFromDb(db);
+        const rates = await getRatesFromDb(db);
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
         if (merchant.balance < totalDeduction) {
             return res.status(400).json({ code: 0, msg: `Insufficient balance. Required: ${totalDeduction}, Available: ${merchant.balance}` });
         }
 
-        db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
+        await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
 
         const internalOrderId = generateOrderId('HDO');
         const appUrl = process.env.APP_URL || 'http://localhost:3000';
@@ -52,7 +52,7 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
         });
 
         const payoutUuid = uuidv4();
-        db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?)`)
+        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?)`)
             .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName);
 
         try {
@@ -62,16 +62,16 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
             });
 
             if (payableResponse.code !== 1) {
-                db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
-                db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', payableResponse.msg || 'Payable API error', payoutUuid);
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
+                await db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', payableResponse.msg || 'Payable API error', payoutUuid);
                 return res.status(400).json({ code: 0, msg: payableResponse.msg || 'Failed to create payout' });
             }
 
-            db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(payableResponse.data?.id || internalOrderId, payoutUuid);
+            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(payableResponse.data?.id || internalOrderId, payoutUuid);
             res.json({ code: 1, msg: 'Payout submitted', data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'processing' } });
         } catch (apiError) {
-            db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
-            db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', apiError.message, payoutUuid);
+            await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
+            await db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', apiError.message, payoutUuid);
             throw apiError;
         }
     } catch (error) {
@@ -105,22 +105,22 @@ router.post('/usdt', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Invalid network. Use TRC20, ERC20, or BEP20' });
         }
 
-        const existing = db.prepare('SELECT id FROM payouts WHERE order_id = ?').get(orderId);
+        const existing = await db.prepare('SELECT id FROM payouts WHERE order_id = ?').get(orderId);
         if (existing) {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const rates = getRatesFromDb(db);
+        const rates = await getRatesFromDb(db);
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
         if (merchant.balance < totalDeduction) {
             return res.status(400).json({ code: 0, msg: `Insufficient balance. Required: ${totalDeduction}, Available: ${merchant.balance}` });
         }
 
-        db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
+        await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
 
         const payoutUuid = uuidv4();
-        db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, payout_type, amount, fee, net_amount, status, wallet_address, network) VALUES (?, ?, ?, 'usdt', ?, ?, ?, 'pending', ?, ?)`)
+        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, payout_type, amount, fee, net_amount, status, wallet_address, network) VALUES (?, ?, ?, 'usdt', ?, ?, ?, 'pending', ?, ?)`)
             .run(payoutUuid, merchant.id, orderId, payoutAmount, fee, payoutAmount, walletAddress, network);
 
         res.json({ code: 1, msg: 'USDT payout submitted, awaiting admin approval', data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'pending' } });
@@ -143,7 +143,7 @@ router.post('/query', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'orderId is required' });
         }
 
-        const payout = db.prepare('SELECT * FROM payouts WHERE order_id = ? AND user_id = ?').get(orderId, merchant.id);
+        const payout = await db.prepare('SELECT * FROM payouts WHERE order_id = ? AND user_id = ?').get(orderId, merchant.id);
 
         if (!payout) {
             return res.status(404).json({ code: 0, msg: 'Payout not found' });
@@ -172,12 +172,12 @@ router.post('/callback', async (req, res) => {
         const { status, amount, commission, message, orderId, id, utr, sign, param } = req.body;
         const db = getDb();
 
-        db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payout', ?, ?)`).run(JSON.stringify(req.body), status);
+        await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payout', ?, ?)`).run(JSON.stringify(req.body), status);
 
         let callbackData;
         try { callbackData = JSON.parse(param || '{}'); } catch (e) { callbackData = {}; }
 
-        const payout = db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ? OR p.order_id = ?')
+        const payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ? OR p.order_id = ?')
             .get(orderId, callbackData.merchantOrderId);
 
         if (!payout) {
@@ -187,11 +187,11 @@ router.post('/callback', async (req, res) => {
 
         const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
 
-        db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+        await db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
             .run(newStatus, utr || null, message || null, JSON.stringify(req.body), payout.id);
 
         if (newStatus === 'failed') {
-            db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount + payout.fee, payout.user_id);
+            await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount + payout.fee, payout.user_id);
         }
 
         const merchantCallback = callbackData.merchantCallback || payout.callback_url;
