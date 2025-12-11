@@ -4,9 +4,18 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-const dbPath = path.join(__dirname, '..', 'database', 'huidu.db');
+const dbDir = path.join(__dirname, '..', 'database');
+const dbPath = path.join(dbDir, 'huidu.db');
 
 let db = null;
+
+// Ensure database directory exists
+function ensureDbDir() {
+    if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+        console.log('Created database directory:', dbDir);
+    }
+}
 
 // Wrapper to make sql.js work like better-sqlite3
 class DatabaseWrapper {
@@ -56,6 +65,7 @@ class DatabaseWrapper {
     }
 
     saveToFile() {
+        ensureDbDir();
         const data = this.database.export();
         const buffer = Buffer.from(data);
         fs.writeFileSync(dbPath, buffer);
@@ -63,6 +73,7 @@ class DatabaseWrapper {
 }
 
 async function initDatabase() {
+    ensureDbDir();
     const SQL = await initSqlJs();
 
     // Try to load existing database
