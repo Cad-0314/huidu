@@ -33,7 +33,6 @@ router.post('/create', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const amount = parseFloat(orderAmount);
         const rates = getRatesFromDb(db);
         const { fee, netAmount } = calculatePayinFee(amount, rates.payinRate);
 
