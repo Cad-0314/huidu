@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Huidu Payable - Payment Gateway</title>
+    <meta name="description" content="Huidu Payment Gateway - Secure payment processing for merchants">
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="/images/logo.png" alt="Huidu">
+                <h1>Huidu</h1>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Main</div>
+                    <a class="nav-item active" data-section="dashboard">
+                        <i class="fas fa-th-large"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="nav-item" data-section="transactions">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Transactions</span>
+                    </a>
+                    <a class="nav-item" data-section="payouts">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>Payouts</span>
+                    </a>
+                    <a class="nav-item" data-section="payment-links">
+                        <i class="fas fa-link"></i>
+                        <span>Payment Links</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Integration</div>
+                    <a class="nav-item" data-section="api-docs">
+                        <i class="fas fa-code"></i>
+                        <span>API Docs</span>
+                    </a>
+                    <a class="nav-item" data-section="credentials">
+                        <i class="fas fa-key"></i>
+                        <span>Credentials</span>
+                    </a>
+                </div>
+
+                <!-- Admin Section -->
+                <div class="nav-section admin-only hidden" id="adminNav">
+                    <div class="nav-section-title">Administration</div>
+                    <a class="nav-item" data-section="users">
+                        <i class="fas fa-users"></i>
+                        <span>Merchants</span>
+                    </a>
+                    <a class="nav-item" data-section="approvals">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Pending Approvals</span>
+                        <span class="nav-badge" id="pendingBadge">0</span>
+                    </a>
+                    <a class="nav-item" data-section="all-transactions">
+                        <i class="fas fa-list"></i>
+                        <span>All Transactions</span>
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div class="user-details">
+                        <div class="name" id="userName">Admin</div>
+                        <div class="role" id="userRole">Administrator</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm btn-block mt-2" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="d-flex align-center gap-2">
+                    <button class="btn btn-secondary btn-sm" id="mobileMenuBtn" style="display: none;">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="header-actions">
+                    <span class="balance-display" id="balanceDisplay">Balance: ₹0.00</span>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                <!-- Content loaded dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content -->
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <!-- Modal actions -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+
+</html>
