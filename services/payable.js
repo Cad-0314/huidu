@@ -5,6 +5,7 @@ const payableConfig = require('../config/payable');
 const { generateSign } = require('../utils/signature');
 
 const ERROR_LOG_FILE = path.join(__dirname, '..', 'error.txt');
+const REQUEST_LOG_FILE = path.join(__dirname, '..', 'api_requests.log');
 
 // Log API errors to error.txt
 function logApiError(endpoint, error, requestData) {
@@ -23,12 +24,35 @@ ${error.response ? `Response: ${JSON.stringify(error.response.data)}` : ''}
     }
 }
 
-// Log all API requests
-function logApiRequest(endpoint, requestData, response) {
+// Log all API requests to file and console
+function logApiRequest(endpoint, requestData, response, duration) {
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] PAYABLE API: ${endpoint}`);
-    console.log('Request:', JSON.stringify(requestData));
+
+    // Redact sign for security in logs
+    const safeRequest = { ...requestData };
+    if (safeRequest.sign) safeRequest.sign = '[REDACTED]';
+
+    const logEntry = `
+=====================================
+[${timestamp}] PAYABLE API REQUEST
+=====================================
+Endpoint: ${endpoint}
+Duration: ${duration}ms
+Request: ${JSON.stringify(safeRequest, null, 2)}
+Response: ${JSON.stringify(response, null, 2)}
+`;
+
+    // Console log
+    console.log(`[${timestamp}] PAYABLE API: ${endpoint} (${duration}ms)`);
+    console.log('Request:', JSON.stringify(safeRequest));
     console.log('Response:', JSON.stringify(response));
+
+    // File log
+    try {
+        fs.appendFileSync(REQUEST_LOG_FILE, logEntry);
+    } catch (e) {
+        console.error('Failed to write to request log:', e);
+    }
 }
 
 const api = axios.create({
@@ -48,9 +72,10 @@ async function queryBalance() {
     };
     params.sign = generateSign(params, payableConfig.secret);
 
+    const startTime = Date.now();
     try {
         const response = await api.post(payableConfig.endpoints.balance, params);
-        logApiRequest('balance', params, response.data);
+        logApiRequest('balance', params, response.data, Date.now() - startTime);
         return response.data;
     } catch (error) {
         logApiError('balance', error, params);
@@ -73,9 +98,10 @@ async function createPayin(data) {
     };
     params.sign = generateSign(params, payableConfig.secret);
 
+    const startTime = Date.now();
     try {
         const response = await api.post(payableConfig.endpoints.payin, params);
-        logApiRequest('createPayin', params, response.data);
+        logApiRequest('createPayin', params, response.data, Date.now() - startTime);
         return response.data;
     } catch (error) {
         logApiError('createPayin', error, params);
@@ -94,9 +120,10 @@ async function queryPayin(orderId) {
     };
     params.sign = generateSign(params, payableConfig.secret);
 
+    const startTime = Date.now();
     try {
         const response = await api.post(payableConfig.endpoints.payinQuery, params);
-        logApiRequest('queryPayin', params, response.data);
+        logApiRequest('queryPayin', params, response.data, Date.now() - startTime);
         return response.data;
     } catch (error) {
         logApiError('queryPayin', error, params);
@@ -121,9 +148,10 @@ async function createPayout(data) {
     };
     params.sign = generateSign(params, payableConfig.secret);
 
+    const startTime = Date.now();
     try {
         const response = await api.post(payableConfig.endpoints.payout, params);
-        logApiRequest('createPayout', params, response.data);
+        logApiRequest('createPayout', params, response.data, Date.now() - startTime);
         return response.data;
     } catch (error) {
         logApiError('createPayout', error, params);

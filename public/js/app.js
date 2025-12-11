@@ -735,17 +735,18 @@ async function generatePaymentLink() {
     }
 
     try {
-        const response = await API.post('/payin/create', {
-            userId: currentUser.id,
+        // Use session-authenticated merchant endpoint instead of API-key-authenticated endpoint
+        const response = await API.post('/merchant/payin/create', {
             orderAmount: amount,
             orderId: orderId,
             callbackUrl: callbackUrl || '',
-            skipUrl: window.location.origin + '/payment-success.html',
-            sign: 'frontend'
+            skipUrl: window.location.origin + '/payment-success.html'
         });
 
+        console.log('Payment link API response:', JSON.stringify(response, null, 2));
+
         if (response.code === 1) {
-            const paymentUrl = response.data.paymentUrl || response.data.url || `Payment Link Generated - Order: ${orderId}`;
+            const paymentUrl = response.data.rechargeUrl || response.data.paymentUrl || response.data.url || `Payment Link Generated - Order: ${orderId}`;
 
             document.getElementById('generatedLinkResult').innerHTML = `
                 <div class="payment-link-result">
@@ -922,12 +923,15 @@ async function loadUsers() {
             document.getElementById('usersList').innerHTML = data.data.map(u => `
                 <tr>
                     <td>${u.name}</td>
-                    <td>${u.email}</td>
+                    <td>${u.username}</td>
                     <td>₹${parseFloat(u.balance).toFixed(2)}</td>
                     <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
                     <td>${formatDate(u.createdAt)}</td>
                     <td>
-                        <button class="btn btn-secondary btn-sm" onclick="showUserDetails('${u.id}')">
+                        <button class="btn btn-primary btn-sm" onclick="showAdjustBalanceModal('${u.id}', '${u.name}', ${u.balance})" title="Adjust Balance">
+                            <i class="fas fa-wallet"></i>
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="showUserDetails('${u.id}')" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
                     </td>
@@ -994,6 +998,58 @@ async function createUser() {
         }
     } catch (error) {
         showToast('Error creating merchant', 'error');
+    }
+}
+
+function showAdjustBalanceModal(userId, userName, currentBalance) {
+    document.getElementById('modalTitle').textContent = `Adjust Balance - ${userName}`;
+    document.getElementById('modalBody').innerHTML = `
+        <p class="text-muted mb-2" style="font-size: 0.75rem;">Current Balance: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p>
+        <form id="adjustBalanceForm">
+            <div class="form-group">
+                <label>Adjustment Amount *</label>
+                <input type="number" id="adjustAmount" step="0.01" placeholder="Enter amount (positive to add, negative to deduct)" required>
+                <small class="text-muted">Use positive value to add funds, negative to deduct</small>
+            </div>
+            <div class="form-group">
+                <label>Reason (optional)</label>
+                <input type="text" id="adjustReason" placeholder="Reason for adjustment">
+            </div>
+        </form>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-success" onclick="adjustBalance('${userId}')">
+            <i class="fas fa-plus"></i> Add Balance
+        </button>
+    `;
+    document.getElementById('modalOverlay').classList.add('active');
+}
+
+async function adjustBalance(userId) {
+    const amount = document.getElementById('adjustAmount').value;
+    const reason = document.getElementById('adjustReason').value;
+
+    if (!amount || parseFloat(amount) === 0) {
+        showToast('Please enter a valid amount', 'error');
+        return;
+    }
+
+    try {
+        console.log('Adjusting balance:', { userId, amount, reason });
+        const data = await API.post(`/admin/users/${userId}/balance`, { amount: parseFloat(amount), reason });
+        console.log('Balance adjustment response:', data);
+
+        if (data.code === 1) {
+            showToast(`Balance adjusted! New balance: ₹${data.data.newBalance.toFixed(2)}`, 'success');
+            closeModal();
+            loadUsers();
+        } else {
+            showToast(data.msg || 'Failed to adjust balance', 'error');
+        }
+    } catch (error) {
+        console.error('Adjust balance error:', error);
+        showToast('Error adjusting balance', 'error');
     }
 }
 

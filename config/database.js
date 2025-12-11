@@ -4,8 +4,34 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-const dbDir = path.join(__dirname, '..', 'database');
-const dbPath = path.join(dbDir, 'vspay.db');
+// Detect environment and set database path
+// Render mounts to /opt/render/project/src/database
+// Railway mounts to /app/database
+// Local uses ./database
+function getDbPath() {
+    const possiblePaths = [
+        '/opt/render/project/src/database',  // Render
+        '/app/database',                      // Railway
+        path.join(__dirname, '..', 'database') // Local
+    ];
+
+    for (const dir of possiblePaths) {
+        if (fs.existsSync(dir)) {
+            console.log('Using database directory:', dir);
+            return path.join(dir, 'vspay.db');
+        }
+    }
+
+    // Fallback to local
+    const localDir = path.join(__dirname, '..', 'database');
+    if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
+    }
+    return path.join(localDir, 'vspay.db');
+}
+
+const dbPath = getDbPath();
+const dbDir = path.dirname(dbPath);
 
 let db = null;
 
@@ -65,6 +91,7 @@ class DatabaseWrapper {
     }
 
     saveToFile() {
+        // Save database to persistent storage
         ensureDbDir();
         const data = this.database.export();
         const buffer = Buffer.from(data);
@@ -73,6 +100,9 @@ class DatabaseWrapper {
 }
 
 async function initDatabase() {
+    // Return existing db if already initialized
+    if (db) return db;
+
     ensureDbDir();
     const SQL = await initSqlJs();
 
@@ -81,8 +111,10 @@ async function initDatabase() {
     if (fs.existsSync(dbPath)) {
         const buffer = fs.readFileSync(dbPath);
         database = new SQL.Database(buffer);
+        console.log('Loaded existing database from:', dbPath);
     } else {
         database = new SQL.Database();
+        console.log('Created new database at:', dbPath);
     }
 
     db = new DatabaseWrapper(database);

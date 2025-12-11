@@ -1,0 +1,32 @@
+databases: []
+
+services:
+  - type: web
+    name: vspay
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PAYABLE_BASE_URL
+        value: https://payable8.com/api
+      - key: PAYABLE_SECRET
+        sync: false
+      - key: PAYABLE_USER_ID
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: PAYIN_RATE
+        value: "0.05"
+      - key: PAYOUT_RATE
+        value: "0.03"
+      - key: PAYOUT_FIXED_FEE
+        value: "6"
+    disk:
+      name: vspay-data
+      mountPath: /opt/render/project/src/database
+      sizeGB: 1

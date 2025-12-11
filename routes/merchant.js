@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
+const payableService = require('../services/payable');
+const { calculatePayinFee, getRatesFromDb } = require('../utils/rates');
+const { generateOrderId } = require('../utils/signature');
 
 /**
  * GET /api/merchant/balance
@@ -169,6 +173,83 @@ router.get('/credentials', authenticate, (req, res) => {
     } catch (error) {
         console.error('Get credentials error:', error);
         res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
+ * POST /api/merchant/payin/create
+ * Session-authenticated endpoint for dashboard to create payment links
+ * Uses JWT auth instead of API signature
+ */
+router.post('/payin/create', authenticate, async (req, res) => {
+    try {
+        const { orderAmount, orderId, callbackUrl, skipUrl, param } = req.body;
+        const merchant = req.user; // From JWT auth
+        const db = getDb();
+
+        console.log('[MERCHANT PAYIN] Request:', { orderAmount, orderId, userId: merchant.uuid });
+
+        if (!orderAmount || !orderId) {
+            return res.status(400).json({ code: 0, msg: 'orderAmount and orderId are required' });
+        }
+
+        const amount = parseFloat(orderAmount);
+
+        // Minimum deposit: ₹100
+        if (amount < 100) {
+            return res.status(400).json({ code: 0, msg: 'Minimum deposit amount is ₹100' });
+        }
+
+        const existing = db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
+        if (existing) {
+            return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
+        }
+
+        const rates = getRatesFromDb(db);
+        const { fee, netAmount } = calculatePayinFee(amount, rates.payinRate);
+
+        const internalOrderId = generateOrderId('HDP');
+        const appUrl = process.env.APP_URL || 'http://localhost:3000';
+        const ourCallbackUrl = `${appUrl}/api/payin/callback`;
+        const ourSkipUrl = skipUrl || `${appUrl}/payment/complete`;
+
+        const callbackParam = JSON.stringify({
+            merchantId: merchant.uuid,
+            merchantOrderId: orderId,
+            merchantCallback: callbackUrl || merchant.callback_url,
+            originalParam: param
+        });
+
+        console.log('[MERCHANT PAYIN] Calling Payable API...');
+
+        const payableResponse = await payableService.createPayin({
+            orderAmount: orderAmount,
+            orderId: internalOrderId,
+            callbackUrl: ourCallbackUrl,
+            skipUrl: ourSkipUrl,
+            param: callbackParam
+        });
+
+        console.log('[MERCHANT PAYIN] Payable API Response:', JSON.stringify(payableResponse));
+
+        if (payableResponse.code !== 1) {
+            return res.status(400).json({ code: 0, msg: payableResponse.msg || 'Failed to create order' });
+        }
+
+        const txUuid = uuidv4();
+        db.prepare(`
+            INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
+            VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
+        `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl, param);
+
+        res.json({
+            code: 1,
+            msg: 'Order created',
+            data: { orderId, id: txUuid, orderAmount: amount, fee, rechargeUrl: payableResponse.data?.rechargeUrl }
+        });
+    } catch (error) {
+        console.error('[MERCHANT PAYIN] Error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error: ' + error.message });
     }
 });
 

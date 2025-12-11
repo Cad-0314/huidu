@@ -284,4 +284,67 @@ router.get('/transactions', authenticate, requireAdmin, (req, res) => {
     }
 });
 
+/**
+ * POST /api/admin/users/:id/balance
+ * Adjust merchant balance (add or deduct)
+ */
+router.post('/users/:id/balance', authenticate, requireAdmin, (req, res) => {
+    try {
+        const { id } = req.params;
+        const { amount, reason } = req.body;
+        const db = getDb();
+
+        if (amount === undefined || amount === null || isNaN(parseFloat(amount))) {
+            return res.status(400).json({ code: 0, msg: 'Valid amount is required' });
+        }
+
+        const adjustAmount = parseFloat(amount);
+
+        const user = db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
+        if (!user) {
+            return res.status(404).json({ code: 0, msg: 'User not found' });
+        }
+
+        if (user.role === 'admin') {
+            return res.status(400).json({ code: 0, msg: 'Cannot adjust admin balance' });
+        }
+
+        const newBalance = user.balance + adjustAmount;
+        if (newBalance < 0) {
+            return res.status(400).json({ code: 0, msg: `Insufficient balance. Current: ${user.balance}, Adjustment: ${adjustAmount}` });
+        }
+
+        // Update balance
+        db.prepare('UPDATE users SET balance = ?, updated_at = datetime(\'now\') WHERE id = ?')
+            .run(newBalance, user.id);
+
+        // Log the adjustment
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            adminId: req.user.uuid,
+            adminUsername: req.user.username,
+            merchantId: user.uuid,
+            merchantUsername: user.username,
+            previousBalance: user.balance,
+            adjustment: adjustAmount,
+            newBalance: newBalance,
+            reason: reason || 'Manual adjustment by admin'
+        };
+        console.log('BALANCE ADJUSTMENT:', JSON.stringify(logEntry));
+
+        res.json({
+            code: 1,
+            msg: adjustAmount >= 0 ? 'Balance added successfully' : 'Balance deducted successfully',
+            data: {
+                previousBalance: user.balance,
+                adjustment: adjustAmount,
+                newBalance: newBalance
+            }
+        });
+    } catch (error) {
+        console.error('Adjust balance error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
 module.exports = router;

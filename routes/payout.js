@@ -33,7 +33,6 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const payoutAmount = parseFloat(amount);
         const rates = getRatesFromDb(db);
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
@@ -111,7 +110,6 @@ router.post('/usdt', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const payoutAmount = parseFloat(amount);
         const rates = getRatesFromDb(db);
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
