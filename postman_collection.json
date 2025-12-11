@@ -1,0 +1,204 @@
+{
+    "info": {
+        "_postman_id": "vspay-collection",
+        "name": "VSPAY API",
+        "description": "Collection for VSPAY Payment Gateway Payin and Payout APIs",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Payin",
+            "item": [
+                {
+                    "name": "Create Payin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"orderAmount\": \"100\",\n    \"orderId\": \"ORDER_{{$timestamp}}\",\n    \"callbackUrl\": \"https://webhook.site/your-id\",\n    \"sign\": \"{{signature}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/create",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "create"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Query Payin",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"orderId\": \"ORDER_12345\",\n    \"sign\": \"{{signature}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "query"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Payout",
+            "item": [
+                {
+                    "name": "Create Bank Payout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"amount\": \"150\",\n    \"orderId\": \"PAYOUT_{{$timestamp}}\",\n    \"account\": \"1234567890\",\n    \"ifsc\": \"HDFC0001234\",\n    \"personName\": \"John Doe\",\n    \"callbackUrl\": \"https://webhook.site/your-id\",\n    \"sign\": \"{{signature}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payout/bank",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "bank"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create USDT Payout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"amount\": \"52000\",\n    \"orderId\": \"USDT_{{$timestamp}}\",\n    \"walletAddress\": \"TWM...\",\n    \"network\": \"TRC20\",\n    \"callbackUrl\": \"https://webhook.site/your-id\",\n    \"sign\": \"{{signature}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payout/usdt",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "usdt"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Query Payout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"orderId\": \"PAYOUT_12345\",\n    \"sign\": \"{{signature}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payout/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "query"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "const merchantKey = pm.collectionVariables.get(\"merchant_key\");",
+                    "if (!merchantKey) return;",
+                    "",
+                    "try {",
+                    "    const body = JSON.parse(pm.request.body.raw);",
+                    "    delete body.sign;",
+                    "    const keys = Object.keys(body).sort();",
+                    "    let signStr = \"\";",
+                    "    keys.forEach(key => {",
+                    "        if (body[key] !== \"\" && body[key] !== null) {",
+                    "            signStr += `${key}=${body[key]}&`;",
+                    "        }",
+                    "    });",
+                    "    signStr += `key=${merchantKey}`;",
+                    "    const signature = CryptoJS.MD5(signStr).toString();",
+                    "    pm.collectionVariables.set(\"signature\", signature);",
+                    "    console.log(\"Signature String:\", signStr);",
+                    "    console.log(\"Generated Signature:\", signature);",
+                    "} catch (e) {",
+                    "    console.error(\"Error generating signature:\", e);",
+                    "}"
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000"
+        },
+        {
+            "key": "merchant_uuid",
+            "value": "YOUR_UUID_HERE"
+        },
+        {
+            "key": "merchant_key",
+            "value": "YOUR_KEY_HERE"
+        },
+        {
+            "key": "signature",
+            "value": ""
+        }
+    ]
+}
