@@ -37,8 +37,10 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
         if (merchant.balance < totalDeduction) {
+            console.warn(`[PAYOUT BANK FAIL] Insufficient balance. Merchant: ${merchant.uuid}, Required: ${totalDeduction}, Available: ${merchant.balance}`);
             return res.status(400).json({ code: 0, msg: `Insufficient balance. Required: ${totalDeduction}, Available: ${merchant.balance}` });
         }
+        console.log(`[PAYOUT BANK] Deducting balance. Merchant: ${merchant.uuid}, Amount: ${totalDeduction}`);
 
         await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
 
@@ -114,8 +116,10 @@ router.post('/usdt', apiAuthenticate, async (req, res) => {
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
         if (merchant.balance < totalDeduction) {
+            console.warn(`[PAYOUT USDT FAIL] Insufficient balance. Merchant: ${merchant.uuid}, Required: ${totalDeduction}, Available: ${merchant.balance}`);
             return res.status(400).json({ code: 0, msg: `Insufficient balance. Required: ${totalDeduction}, Available: ${merchant.balance}` });
         }
+        console.log(`[PAYOUT USDT] Deducting balance. Merchant: ${merchant.uuid}, Amount: ${totalDeduction}`);
 
         await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
 

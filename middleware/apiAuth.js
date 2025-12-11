@@ -1,5 +1,5 @@
 const { getDb } = require('../config/database');
-const { verifySign } = require('../utils/signature');
+const { verifySign, generateSign } = require('../utils/signature');
 
 /**
  * Authenticate API calls using merchant key and signature
@@ -22,8 +22,21 @@ async function apiAuthenticate(req, res, next) {
         }
 
         // Verify signature using merchant_key as secret
-        if (!verifySign(req.body, user.merchant_key)) {
-            return res.status(401).json({ code: 0, msg: 'Invalid signature' });
+        const calculatedSign = generateSign(req.body, user.merchant_key);
+        if (req.body.sign.toUpperCase() !== calculatedSign) {
+            console.error('---------------------------------------------------');
+            console.error('[API SIGN ERROR] Signature Mismatch');
+            console.error('Merchant UUID:', userId);
+            console.error('Merchant Key:', user.merchant_key);
+            console.error('Request Body:', JSON.stringify(req.body));
+            console.error('Received Sign:', req.body.sign);
+            console.error('Calculated Sign:', calculatedSign);
+            console.error('---------------------------------------------------');
+            return res.status(401).json({
+                code: 0,
+                msg: 'Invalid signature',
+                debug: { received: req.body.sign, calculated: calculatedSign }
+            });
         }
 
         req.merchant = user;
