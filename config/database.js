@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 const dbDir = path.join(__dirname, '..', 'database');
-const dbPath = path.join(dbDir, 'huidu.db');
+const dbPath = path.join(dbDir, 'vspay.db');
 
 let db = null;
 
@@ -198,7 +198,7 @@ function initializeSchema() {
         db.prepare(`
             INSERT INTO users (uuid, username, email, password, name, role, merchant_key)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(adminUuid, 'admin', 'admin@huidu.com', hashedPassword, 'System Admin', 'admin', merchantKey);
+        `).run(adminUuid, 'admin', 'admin@vspay.com', hashedPassword, 'System Admin', 'admin', merchantKey);
 
         console.log('Default admin created: username=admin / password=admin123');
     }

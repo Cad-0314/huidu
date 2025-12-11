@@ -1,5 +1,5 @@
 /**
- * Rate calculation utilities for Huidu Payment Gateway
+ * Rate calculation utilities for VSPAY Payment Gateway
  * Pay-in rate: 5% (we keep 5% commission)
  * Payout rate: 3% + ₹6 per transaction
  */

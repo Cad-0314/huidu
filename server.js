@@ -66,10 +66,10 @@ async function startServer() {
         app.listen(PORT, () => {
             console.log(`
     ╔═══════════════════════════════════════════════════╗
-    ║     HUIDU-PAYABLE Payment Gateway                ║
+    ║     VSPAY Payment Gateway                        ║
     ║     Server running on http://localhost:${PORT}      ║
     ╠═══════════════════════════════════════════════════╣
-    ║  Default Admin: admin@huidu.com / admin123       ║
+    ║  Default Admin: admin / admin123                  ║
     ╚═══════════════════════════════════════════════════╝
             `);
         });

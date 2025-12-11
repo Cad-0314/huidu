@@ -1,11 +1,11 @@
 // ========================================
-// HUIDU-PAYABLE - Main Application
+// VSPAY - Main Application
 // ========================================
 
 // API Helper
 const API = {
     baseUrl: '/api',
-    token: localStorage.getItem('huidu_token'),
+    token: localStorage.getItem('vspay_token'),
 
     async request(endpoint, options = {}) {
         const headers = {
@@ -60,8 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkAuth() {
-    const token = localStorage.getItem('huidu_token');
-    const user = localStorage.getItem('huidu_user');
+    const token = localStorage.getItem('vspay_token');
+    const user = localStorage.getItem('vspay_user');
 
     if (!token || !user) {
         window.location.href = '/login.html';
@@ -1207,8 +1207,8 @@ function closeModal() {
 }
 
 function logout() {
-    localStorage.removeItem('huidu_token');
-    localStorage.removeItem('huidu_user');
+    localStorage.removeItem('vspay_token');
+    localStorage.removeItem('vspay_user');
     window.location.href = '/login.html';
 }
 

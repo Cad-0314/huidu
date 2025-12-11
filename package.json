@@ -1,7 +1,7 @@
 {
-  "name": "huidu-payable",
+  "name": "vspay",
   "version": "1.0.0",
-  "description": "Huidu Payment Gateway - A secure payment processing platform",
+  "description": "VSPAY Payment Gateway - A secure payment processing platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { getDb } = require('../config/database');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'huidu_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET || 'vspay_secret_key';
 
 /**
  * Authenticate JWT token from Authorization header
