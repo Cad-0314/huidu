@@ -136,7 +136,16 @@ const translations = {
         toast_merchant_created: "Merchant created successfully!",
         error_create_merchant: "Error creating merchant",
         error_valid_amount: "Please enter a valid amount",
-        error_adjust_balance: "Error adjusting balance"
+        error_adjust_balance: "Error adjusting balance",
+
+        // Missing Descriptions
+        credentials_desc: "Use these credentials to authenticate your API requests.",
+        link_create_desc: "Create a payment link to test the pay-in flow. The link will redirect to the payment gateway for processing.",
+        label_user_id: "User ID",
+        label_callback_url: "Callback URL",
+        btn_save: "Save",
+        btn_regen_key: "Regenerate Merchant Key",
+        warn_regen_key: "Warning: This will invalidate your current key"
     },
     zh: {
         // App Shell
@@ -275,7 +284,16 @@ const translations = {
         toast_merchant_created: "商户创建成功！",
         error_create_merchant: "创建商户失败",
         error_valid_amount: "请输入有效金额",
-        error_adjust_balance: "调整余额失败"
+        error_adjust_balance: "调整余额失败",
+
+        // Missing Descriptions
+        credentials_desc: "使用这些凭证来验证您的 API 请求。",
+        link_create_desc: "创建支付链接以测试充值流程。链接将重定向到支付网关进行处理。",
+        label_user_id: "用户 ID",
+        label_callback_url: "回调地址",
+        btn_save: "保存",
+        btn_regen_key: "重新生成商户密钥",
+        warn_regen_key: "警告: 这将使您当前的密钥失效"
     }
 };
 

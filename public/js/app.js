@@ -134,15 +134,15 @@ function loadSection(section) {
 
     // Update title
     const titles = {
-        'dashboard': 'Dashboard',
-        'transactions': 'Transactions',
-        'payouts': 'Payouts',
-        'payment-links': 'Payment Links',
-        'api-docs': 'API Documentation',
-        'credentials': 'API Credentials',
-        'users': 'Merchant Management',
-        'approvals': 'Pending Approvals',
-        'all-transactions': 'All Transactions'
+        'dashboard': t('dashboard_tab'),
+        'transactions': t('transactions_tab'),
+        'payouts': t('payouts_tab'),
+        'payment-links': t('create_payment_link'),
+        'api-docs': t('api_docs_tab'),
+        'credentials': t('credentials_tab'),
+        'users': t('users_tab'),
+        'approvals': t('approvals_tab'),
+        'all-transactions': t('all_transactions_tab')
     };
     document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
 
@@ -600,7 +600,7 @@ function loadPaymentLinks() {
     content.innerHTML = `
         <div class="card mb-3">
             <h3 class="card-title mb-2">${t('generate_link')}</h3>
-            <p class="text-muted mb-3" style="font-size: 0.75rem;">Create a payment link to test the pay-in flow. The link will redirect to the payment gateway for processing.</p>
+            <p class="text-muted mb-3" style="font-size: 0.75rem;">${t('link_create_desc')}</p>
             
             <form id="paymentLinkForm">
                 <div class="d-flex gap-2" style="flex-wrap: wrap;">
@@ -716,10 +716,10 @@ async function loadCredentials() {
     content.innerHTML = `
         <div class="card">
             <h3 class="mb-3">${t('api_credentials')}</h3>
-            <p class="text-muted mb-3">Use these credentials to authenticate your API requests.</p>
+            <p class="text-muted mb-3">${t('credentials_desc')}</p>
             
             <div class="form-group">
-                <label>User ID</label>
+                <label>${t('label_user_id')}</label>
                 <div class="d-flex gap-1">
                     <input type="text" id="credUserId" readonly style="flex: 1;">
                     <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('credUserId')">
@@ -729,7 +729,7 @@ async function loadCredentials() {
             </div>
             
             <div class="form-group">
-                <label>Merchant Key (Secret)</label>
+                <label>${t('merchant_key')}</label>
                 <div class="d-flex gap-1">
                     <input type="password" id="credMerchantKey" readonly style="flex: 1;">
                     <button class="btn btn-secondary btn-sm" onclick="togglePassword('credMerchantKey')">
@@ -742,19 +742,19 @@ async function loadCredentials() {
             </div>
             
             <div class="form-group">
-                <label>Callback URL</label>
+                <label>${t('label_callback_url')}</label>
                 <div class="d-flex gap-1">
                     <input type="url" id="credCallback" placeholder="https://your-domain.com/callback" style="flex: 1;">
-                    <button class="btn btn-primary btn-sm" onclick="updateCallbackUrl()">Save</button>
+                    <button class="btn btn-primary btn-sm" onclick="updateCallbackUrl()">${t('btn_save')}</button>
                 </div>
             </div>
             
             <hr style="border-color: rgba(147, 51, 234, 0.2); margin: 1.5rem 0;">
             
             <button class="btn btn-danger" onclick="regenerateKey()">
-                <i class="fas fa-sync"></i> Regenerate Merchant Key
+                <i class="fas fa-sync"></i> ${t('btn_regen_key')}
             </button>
-            <p class="text-muted mt-2" style="font-size: 0.75rem;">Warning: This will invalidate your current key</p>
+            <p class="text-muted mt-2" style="font-size: 0.75rem;">${t('warn_regen_key')}</p>
         </div>
     `;
 
