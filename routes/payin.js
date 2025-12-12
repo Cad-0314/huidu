@@ -64,7 +64,7 @@ router.post('/create', apiAuthenticate, async (req, res) => {
         await db.prepare(`
             INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
             VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
-        `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl, param);
+        `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl || null, param || null);
 
         res.json({
             code: 1,
