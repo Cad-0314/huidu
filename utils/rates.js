@@ -58,10 +58,45 @@ async function getRatesFromDb(db) {
     return { payinRate, payoutRate, payoutFixed };
 }
 
+/**
+ * Get rates for specific user
+ * Stored in DB as percentage (e.g. 5.0 for 5%)
+ * Returns decimal (e.g. 0.05)
+ */
+async function getUserRates(db, userId) {
+    // Get global defaults first
+    const globalRates = await getRatesFromDb(db);
+
+    try {
+        const user = await db.prepare('SELECT payin_rate, payout_rate FROM users WHERE id = ?').get(userId);
+
+        if (user) {
+            // Convert percentage to decimal (5.0 -> 0.05)
+            // Handle case where it might be stored as decimal already (though we plan to store as percentage)
+            // Heuristic: if rate > 1, treat as percentage. If < 1, treat as decimal? 
+            // Better to strictly follow schema default 5.0 -> percentage.
+
+            const payinRate = user.payin_rate ? (user.payin_rate / 100) : globalRates.payinRate;
+            const payoutRate = user.payout_rate ? (user.payout_rate / 100) : globalRates.payoutRate;
+
+            return {
+                payinRate,
+                payoutRate,
+                payoutFixed: globalRates.payoutFixed
+            };
+        }
+    } catch (e) {
+        console.error('Error fetching user rates:', e);
+    }
+
+    return globalRates;
+}
+
 module.exports = {
     calculatePayinFee,
     calculatePayoutFee,
     getRatesFromDb,
+    getUserRates,
     DEFAULT_PAYIN_RATE,
     DEFAULT_PAYOUT_RATE,
     DEFAULT_PAYOUT_FIXED

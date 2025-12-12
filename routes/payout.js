@@ -5,7 +5,7 @@ const axios = require('axios');
 const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
 const payableService = require('../services/payable');
-const { calculatePayoutFee, getRatesFromDb } = require('../utils/rates');
+const { calculatePayoutFee, getUserRates } = require('../utils/rates');
 const { generateOrderId, generateSign } = require('../utils/signature');
 
 /**
@@ -33,7 +33,7 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const rates = await getRatesFromDb(db);
+        const rates = await getUserRates(db, merchant.id);
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
         if (merchant.balance < totalDeduction) {
@@ -112,7 +112,7 @@ router.post('/usdt', apiAuthenticate, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
         }
 
-        const rates = await getRatesFromDb(db);
+        const rates = await getUserRates(db, merchant.id);
         const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
         if (merchant.balance < totalDeduction) {

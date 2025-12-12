@@ -121,7 +121,7 @@ function setupNavigation() {
     });
 }
 
-function loadSection(section) {
+async function loadSection(section) {
     currentSection = section;
 
     // Update active nav
@@ -148,37 +148,54 @@ function loadSection(section) {
 
     // Load content
     const contentArea = document.getElementById('contentArea');
+    contentArea.innerHTML = '<div class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
-    switch (section) {
-        case 'dashboard':
-            loadDashboard();
-            break;
-        case 'transactions':
-            loadTransactions();
-            break;
-        case 'payouts':
-            loadPayouts();
-            break;
-        case 'payment-links':
-            loadPaymentLinks();
-            break;
-        case 'api-docs':
-            loadApiDocs();
-            break;
-        case 'credentials':
-            loadCredentials();
-            break;
-        case 'users':
-            loadUsers();
-            break;
-        case 'approvals':
-            loadApprovals();
-            break;
-        case 'all-transactions':
-            loadAllTransactions();
-            break;
-        default:
-            loadDashboard();
+    try {
+        const response = await fetch(`/sections/${section}.html`);
+        if (!response.ok) throw new Error('Section not found');
+        const html = await response.text();
+        contentArea.innerHTML = html;
+
+        // Translate static content
+        if (window.updateTranslations) {
+            window.updateTranslations();
+        }
+
+        // Initialize section logic
+        switch (section) {
+            case 'dashboard':
+                loadDashboardData();
+                break;
+            case 'transactions':
+                loadTransactionsData();
+                break;
+            case 'payouts':
+                loadPayoutsData();
+                break;
+            case 'payment-links':
+                // No data load needed initially
+                break;
+            case 'api-docs':
+                // loadApiDocs(); // If exists
+                break;
+            case 'credentials':
+                loadCredentialsData();
+                break;
+            case 'users':
+                loadUsersData();
+                break;
+            case 'approvals':
+                loadApprovalsData();
+                break;
+            case 'all-transactions':
+                loadAllTransactionsData();
+                break;
+            default:
+                break;
+        }
+    } catch (error) {
+        console.error('Error loading section:', error);
+        contentArea.innerHTML = `<div class="alert alert-error">Failed to load content: ${error.message}</div>`;
     }
 }
 
@@ -186,67 +203,11 @@ function loadSection(section) {
 // DASHBOARD
 // ========================================
 
-async function loadDashboard() {
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon purple"><i class="fas fa-wallet"></i></div>
-                <div class="stat-info">
-                    <div class="stat-label">${t('stat_balance')}</div>
-                    <div class="stat-value" id="statBalance">₹0.00</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon green"><i class="fas fa-arrow-down"></i></div>
-                <div class="stat-info">
-                    <div class="stat-label">${t('stat_payin')}</div>
-                    <div class="stat-value" id="statPayin">₹0.00</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon red"><i class="fas fa-arrow-up"></i></div>
-                <div class="stat-info">
-                    <div class="stat-label">${t('stat_payout')}</div>
-                    <div class="stat-value" id="statPayout">₹0.00</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
-                <div class="stat-info">
-                    <div class="stat-label">${t('stat_pending')}</div>
-                    <div class="stat-value" id="statPending">0</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">${t('recent_transactions')}</h3>
-                <button class="btn btn-secondary btn-sm" onclick="loadSection('transactions')">
-                    ${t('view_all')} <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>${t('order_id')}</th>
-                            <th>${t('type')}</th>
-                            <th>${t('amount')}</th>
-                            <th>${t('fee')}</th>
-                            <th>${t('status')}</th>
-                            <th>${t('date')}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recentTransactions">
-                        <tr><td colspan="6" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
+// ========================================
+// DASHBOARD
+// ========================================
 
+async function loadDashboardData() {
     // Load stats
     try {
         const statsData = await API.get('/merchant/stats');
@@ -264,8 +225,11 @@ async function loadDashboard() {
     // Load recent transactions
     try {
         const txData = await API.get('/merchant/transactions?limit=5');
+        const container = document.getElementById('recentTransactions');
+        if (!container) return;
+
         if (txData.code === 1 && txData.data.transactions.length > 0) {
-            document.getElementById('recentTransactions').innerHTML = txData.data.transactions.map(tx => `
+            container.innerHTML = txData.data.transactions.map(tx => `
                 <tr>
                     <td><code>${tx.orderId}</code></td>
                     <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
@@ -276,7 +240,7 @@ async function loadDashboard() {
                 </tr>
             `).join('');
         } else {
-            document.getElementById('recentTransactions').innerHTML = `
+            container.innerHTML = `
                 <tr><td colspan="6" class="text-muted" style="text-align:center;">${t('no_recent')}</td></tr>
             `;
         }
@@ -289,39 +253,14 @@ async function loadDashboard() {
 // TRANSACTIONS
 // ========================================
 
-async function loadTransactions() {
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">${t('transactions_tab')}</h3>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>${t('order_id')}</th>
-                            <th>${t('type')}</th>
-                            <th>${t('amount')}</th>
-                            <th>${t('fee')}</th>
-                            <th>${t('net_amount')}</th>
-                            <th>${t('status')}</th>
-                            <th>${t('utr')}</th>
-                            <th>${t('date')}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionsList">
-                        <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
+async function loadTransactionsData() {
     try {
         const data = await API.get('/merchant/transactions?limit=50');
+        const container = document.getElementById('transactionsList');
+        if (!container) return;
+
         if (data.code === 1 && data.data.transactions.length > 0) {
-            document.getElementById('transactionsList').innerHTML = data.data.transactions.map(tx => `
+            container.innerHTML = data.data.transactions.map(tx => `
                 <tr>
                     <td><code>${tx.orderId}</code></td>
                     <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
@@ -334,7 +273,7 @@ async function loadTransactions() {
                 </tr>
             `).join('');
         } else {
-            document.getElementById('transactionsList').innerHTML = `
+            container.innerHTML = `
                 <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
             `;
         }
@@ -348,59 +287,14 @@ async function loadTransactions() {
 // PAYOUTS
 // ========================================
 
-async function loadPayouts() {
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
-            <div class="card" style="cursor: pointer;" onclick="showBankPayoutModal()">
-                <div class="d-flex align-center gap-2">
-                    <div class="stat-icon green"><i class="fas fa-university"></i></div>
-                    <div>
-                        <h3>${t('bank_payout_title')}</h3>
-                        <p class="text-muted" style="font-size: 0.875rem;">${t('bank_payout_desc')}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="card" style="cursor: pointer;" onclick="showUsdtPayoutModal()">
-                <div class="d-flex align-center gap-2">
-                    <div class="stat-icon blue"><i class="fab fa-bitcoin"></i></div>
-                    <div>
-                        <h3>${t('usdt_payout_title')}</h3>
-                        <p class="text-muted" style="font-size: 0.875rem;">${t('usdt_payout_desc')}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">${t('payout_history')}</h3>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>${t('order_id')}</th>
-                            <th>${t('type')}</th>
-                            <th>${t('amount')}</th>
-                            <th>${t('fee')}</th>
-                            <th>${t('details')}</th>
-                            <th>${t('status')}</th>
-                            <th>${t('date')}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payoutsList">
-                        <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
+async function loadPayoutsData() {
     try {
         const data = await API.get('/merchant/payouts?limit=50');
+        const container = document.getElementById('payoutsList');
+        if (!container) return;
+
         if (data.code === 1 && data.data.length > 0) {
-            document.getElementById('payoutsList').innerHTML = data.data.map(p => `
+            container.innerHTML = data.data.map(p => `
                 <tr>
                     <td><code>${p.orderId}</code></td>
                     <td><span class="badge ${p.type === 'bank' ? 'badge-success' : 'badge-processing'}">${t('type_' + p.type) || p.type}</span></td>
@@ -412,7 +306,7 @@ async function loadPayouts() {
                 </tr>
             `).join('');
         } else {
-            document.getElementById('payoutsList').innerHTML = `
+            container.innerHTML = `
                 <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_payouts')}</td></tr>
             `;
         }
@@ -595,51 +489,14 @@ async function submitUsdtPayout() {
 // PAYMENT LINKS
 // ========================================
 
-function loadPaymentLinks() {
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card mb-3">
-            <h3 class="card-title mb-2">${t('generate_link')}</h3>
-            <p class="text-muted mb-3" style="font-size: 0.75rem;">${t('link_create_desc')}</p>
-            
-            <form id="paymentLinkForm">
-                <div class="d-flex gap-2" style="flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>${t('label_amount')}</label>
-                        <input type="number" id="linkAmount" placeholder="1000" required min="100">
-                    </div>
-                    <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>${t('order_id')} (optional)</label>
-                        <input type="text" id="linkOrderId" placeholder="Auto-generate">
-                    </div>
-                    <div class="form-group" style="flex: 2; min-width: 300px;">
-                        <label>Callback URL (optional)</label>
-                        <input type="url" id="linkCallback" placeholder="https://your-domain.com/callback">
-                    </div>
-                </div>
-                <button type="button" class="btn btn-primary" onclick="generatePaymentLink()">
-                    <i class="fas fa-link"></i> ${t('generate_link')}
-                </button>
-            </form>
-            
-            <div id="generatedLinkResult" class="hidden"></div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">${t('link_instruct_title')}</h3>
-            </div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                <ol style="padding-left: 1.25rem; margin: 0;">
-                    <li class="mb-1">${t('link_instruct_1')}</li>
-                    <li class="mb-1">${t('link_instruct_2')}</li>
-                    <li class="mb-1">${t('link_instruct_3')}</li>
-                    <li class="mb-1">${t('link_instruct_4')}</li>
-                    <li>${t('link_instruct_5')}</li>
-                </ol>
-            </div>
-        </div>
-    `;
+// ========================================
+// PAYMENT LINKS
+// ========================================
+
+async function loadPaymentLinksData() {
+    // This section is interactive and primarily driven by user input.
+    // The HTML is loaded statically.
+    // Use generatePaymentLink() for actions.
 }
 
 async function generatePaymentLink() {
@@ -711,53 +568,11 @@ function copyGeneratedLink() {
 // CREDENTIALS
 // ========================================
 
-async function loadCredentials() {
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card">
-            <h3 class="mb-3">${t('api_credentials')}</h3>
-            <p class="text-muted mb-3">${t('credentials_desc')}</p>
-            
-            <div class="form-group">
-                <label>${t('label_user_id')}</label>
-                <div class="d-flex gap-1">
-                    <input type="text" id="credUserId" readonly style="flex: 1;">
-                    <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('credUserId')">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>${t('merchant_key')}</label>
-                <div class="d-flex gap-1">
-                    <input type="password" id="credMerchantKey" readonly style="flex: 1;">
-                    <button class="btn btn-secondary btn-sm" onclick="togglePassword('credMerchantKey')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="copyToClipboard('credMerchantKey')">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>${t('label_callback_url')}</label>
-                <div class="d-flex gap-1">
-                    <input type="url" id="credCallback" placeholder="https://your-domain.com/callback" style="flex: 1;">
-                    <button class="btn btn-primary btn-sm" onclick="updateCallbackUrl()">${t('btn_save')}</button>
-                </div>
-            </div>
-            
-            <hr style="border-color: rgba(147, 51, 234, 0.2); margin: 1.5rem 0;">
-            
-            <button class="btn btn-danger" onclick="regenerateKey()">
-                <i class="fas fa-sync"></i> ${t('btn_regen_key')}
-            </button>
-            <p class="text-muted mt-2" style="font-size: 0.75rem;">${t('warn_regen_key')}</p>
-        </div>
-    `;
+// ========================================
+// CREDENTIALS
+// ========================================
 
+async function loadCredentialsData() {
     try {
         const data = await API.get('/merchant/credentials');
         if (data.code === 1) {
@@ -804,48 +619,40 @@ async function regenerateKey() {
 // ADMIN: USERS
 // ========================================
 
-async function loadUsers() {
+// ========================================
+// ADMIN: USERS
+// ========================================
+
+async function loadUsersData() {
     if (currentUser.role !== 'admin') {
         loadDashboard();
         return;
     }
 
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Merchants</h3>
-                <button class="btn btn-primary btn-sm" onclick="showCreateUserModal()">
-                    <i class="fas fa-plus"></i> Add Merchant
-                </button>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Balance</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersList">
-                        <tr><td colspan="6" class="text-muted" style="text-align:center;">Loading...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
     try {
         const data = await API.get('/admin/users');
-        if (data.code === 1 && data.data.length > 0) {
-            document.getElementById('usersList').innerHTML = data.data.map(u => `
+        const container = document.getElementById('usersList');
+        if (!container) return;
+
+        if (data.code === 1) {
+            const merchants = data.data.filter(u => u.role !== 'admin');
+
+            if (merchants.length > 0) {
+                container.innerHTML = merchants.map(u => `
                 <tr>
+                    <td><code>${u.id}</code></td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <code style="font-size: 0.75rem;">${u.merchantKey.substring(0, 8)}...</code>
+                            <i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.merchantKey}').then(() => showToast('Key copied', 'success'))" title="Copy Key"></i>
+                        </div>
+                    </td>
                     <td>${u.name}</td>
                     <td>${u.username}</td>
+                    <td>
+                        <small>In: ${u.payinRate || 5}%</small><br>
+                        <small>Out: ${u.payoutRate || 3}%</small>
+                    </td>
                     <td>₹${parseFloat(u.balance).toFixed(2)}</td>
                     <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
                     <td>${formatDate(u.createdAt)}</td>
@@ -853,16 +660,17 @@ async function loadUsers() {
                         <button class="btn btn-primary btn-sm" onclick="showAdjustBalanceModal('${u.id}', '${u.name}', ${u.balance})" title="Adjust Balance">
                             <i class="fas fa-wallet"></i>
                         </button>
-                        <button class="btn btn-secondary btn-sm" onclick="showUserDetails('${u.id}')" title="View Details">
-                            <i class="fas fa-eye"></i>
+                        <button class="btn btn-secondary btn-sm" onclick="showEditUserModal('${u.id}')" title="Edit Merchant">
+                            <i class="fas fa-edit"></i>
                         </button>
                     </td>
                 </tr>
             `).join('');
-        } else {
-            document.getElementById('usersList').innerHTML = `
-                <tr><td colspan="6" class="text-muted" style="text-align:center;">No merchants found</td></tr>
+            } else {
+                container.innerHTML = `
+                <tr><td colspan="9" class="text-muted" style="text-align:center;">No merchants found</td></tr>
             `;
+            }
         }
     } catch (error) {
         showToast(t('error_load_users'), 'error');
@@ -889,6 +697,18 @@ function showCreateUserModal() {
                 <label>Callback URL (optional)</label>
                 <input type="url" id="newUserCallback" placeholder="https://merchant-domain.com/callback">
             </div>
+            <div class="d-flex gap-2">
+                <div class="form-group" style="flex:1">
+                    <label>Pay-in Rate (%)</label>
+                    <input type="number" id="newUserPayinRate" value="5.0" step="0.1" min="5.0">
+                    <small class="text-muted">Must be 5.0 or more</small>
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label>Payout Rate (%)</label>
+                    <input type="number" id="newUserPayoutRate" value="3.0" step="0.1" min="3.0">
+                    <small class="text-muted">Must be 3.0 or more</small>
+                </div>
+            </div>
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
@@ -903,35 +723,140 @@ async function createUser() {
     const username = document.getElementById('newUserUsername').value;
     const password = document.getElementById('newUserPassword').value;
     const callbackUrl = document.getElementById('newUserCallback').value;
+    const payinRate = document.getElementById('newUserPayinRate').value;
+    const payoutRate = document.getElementById('newUserPayoutRate').value;
 
     if (!name || !username || !password) {
         showToast(t('toast_fill_fields'), 'error');
         return;
     }
 
+    const btn = document.querySelector('#modalFooter .btn-primary');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
     try {
-        const data = await API.post('/admin/users', { name, username, password, callbackUrl });
+        const data = await API.post('/admin/users', {
+            name, username, password, callbackUrl,
+            payinRate: parseFloat(payinRate),
+            payoutRate: parseFloat(payoutRate)
+        });
         if (data.code === 1) {
             showToast(t('toast_merchant_created'), 'success');
             closeModal();
-            loadUsers();
+            loadUsersData();
         } else {
             showToast(data.msg || 'Failed to create merchant', 'error');
         }
     } catch (error) {
         showToast(t('error_create_merchant'), 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+
+async function showEditUserModal(userId) {
+    let user = null;
+    try {
+        // We reuse the list to find user since we don't have a single user get endpoint exposed easily to frontend yet, 
+        // or we can just fetch all and filter. For efficiency, let's use what we have or fetch fresh.
+        // Actually, we can assume the user info is in the row, but cleaner to fetch.
+        // Let's use the list endpoint again or assume we can find it in the DOM?
+        // Better: Fetch fresh list to find the user or just iterate current data if we stored it globally?
+        // Simplest: Fetch list again or add a specific GET /admin/users/:id endpoint.
+        // I'll stick to fetching the full list for now as it's already there, or we can just pass the data? 
+        // Passing data as params is messy with quotes.
+        // Let's just fetch the list again internally or filter from a global variable if I had one.
+        // I will do a quick fetch of all users and find logic.
+        const data = await API.get('/admin/users');
+        if (data.code === 1) {
+            user = data.data.find(u => u.id === userId);
+        }
+    } catch (e) { console.error(e); }
+
+    if (!user) {
+        showToast('User not found', 'error');
+        return;
+    }
+
+    document.getElementById('modalTitle').textContent = 'Edit Merchant';
+    document.getElementById('modalBody').innerHTML = `
+        <form id="editUserForm">
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="editUserName" value="${user.name}" required>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="editUserStatus">
+                    <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Callback URL</label>
+                <input type="url" id="editUserCallback" value="${user.callbackUrl || ''}" placeholder="https://merchant-domain.com/callback">
+            </div>
+             <div class="d-flex gap-2">
+                <div class="form-group" style="flex:1">
+                    <label>Pay-in Rate (%)</label>
+                    <input type="number" id="editUserPayinRate" value="${user.payinRate || 5.0}" step="0.1" min="5.0">
+                    <small class="text-muted">Must be 5.0 or more</small>
+                </div>
+                <div class="form-group" style="flex:1">
+                    <label>Payout Rate (%)</label>
+                    <input type="number" id="editUserPayoutRate" value="${user.payoutRate || 3.0}" step="0.1" min="3.0">
+                    <small class="text-muted">Must be 3.0 or more</small>
+                </div>
+            </div>
+        </form>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="updateUser('${user.id}')">Update</button>
+    `;
+    document.getElementById('modalOverlay').classList.add('active');
+}
+
+async function updateUser(userId) {
+    const name = document.getElementById('editUserName').value;
+    const status = document.getElementById('editUserStatus').value;
+    const callbackUrl = document.getElementById('editUserCallback').value;
+    const payinRate = document.getElementById('editUserPayinRate').value;
+    const payoutRate = document.getElementById('editUserPayoutRate').value;
+
+    try {
+        const data = await API.put(`/admin/users/${userId}`, {
+            name, status, callbackUrl,
+            payinRate: parseFloat(payinRate),
+            payoutRate: parseFloat(payoutRate)
+        });
+
+        if (data.code === 1) {
+            showToast('Merchant updated successfully', 'success');
+            closeModal();
+            loadUsersData();
+        } else {
+            showToast(data.msg || 'Failed to update', 'error');
+        }
+    } catch (error) {
+        showToast('Error updating merchant', 'error');
     }
 }
 
 function showAdjustBalanceModal(userId, userName, currentBalance) {
     document.getElementById('modalTitle').textContent = `Adjust Balance - ${userName}`;
     document.getElementById('modalBody').innerHTML = `
-        <p class="text-muted mb-2" style="font-size: 0.75rem;">Current Balance: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p>
+        < p class= "text-muted mb-2" style = "font-size: 0.75rem;" > Current Balance: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p >
         <form id="adjustBalanceForm">
             <div class="form-group">
                 <label>Adjustment Amount *</label>
                 <input type="number" id="adjustAmount" step="0.01" placeholder="Enter amount (positive to add, negative to deduct)" required>
-                <small class="text-muted">Use positive value to add funds, negative to deduct</small>
+                    <small class="text-muted">Use positive value to add funds, negative to deduct</small>
             </div>
             <div class="form-group">
                 <label>Reason (optional)</label>
@@ -940,7 +865,7 @@ function showAdjustBalanceModal(userId, userName, currentBalance) {
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            < button class= "btn btn-secondary" onclick = "closeModal()" > Cancel</button >
         <button class="btn btn-success" onclick="adjustBalance('${userId}')">
             <i class="fas fa-plus"></i> Add Balance
         </button>
@@ -959,7 +884,7 @@ async function adjustBalance(userId) {
 
     try {
         console.log('Adjusting balance:', { userId, amount, reason });
-        const data = await API.post(`/admin/users/${userId}/balance`, { amount: parseFloat(amount), reason });
+        const data = await API.post(`/ admin / users / ${userId} / balance`, { amount: parseFloat(amount), reason });
         console.log('Balance adjustment response:', data);
 
         if (data.code === 1) {
@@ -979,44 +904,20 @@ async function adjustBalance(userId) {
 // ADMIN: APPROVALS
 // ========================================
 
-async function loadApprovals() {
+async function loadApprovalsData() {
     if (currentUser.role !== 'admin') {
         loadDashboard();
         return;
     }
 
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">${t('admin_pending_title')}</h3>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>${t('order_id')}</th>
-                            <th>${t('merchant')}</th>
-                            <th>${t('amount')}</th>
-                            <th>${t('wallet_address')}</th>
-                            <th>${t('network')}</th>
-                            <th>${t('date')}</th>
-                            <th>${t('actions')}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="approvalsList">
-                        <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
     try {
         const data = await API.get('/admin/payouts/pending');
+        const container = document.getElementById('approvalsList');
+        if (!container) return;
+
         if (data.code === 1 && data.data.length > 0) {
-            document.getElementById('approvalsList').innerHTML = data.data.map(p => `
-                <tr>
+            container.innerHTML = data.data.map(p => `
+        < tr >
                     <td><code>${p.orderId}</code></td>
                     <td>${p.merchantName}<br><small class="text-muted">${p.merchantEmail}</small></td>
                     <td>₹${parseFloat(p.amount).toFixed(2)}<br><small class="text-muted">${t('fee')}: ₹${parseFloat(p.fee).toFixed(2)}</small></td>
@@ -1031,12 +932,12 @@ async function loadApprovals() {
                             <i class="fas fa-times"></i>
                         </button>
                     </td>
-                </tr>
+                </tr >
             `).join('');
         } else {
-            document.getElementById('approvalsList').innerHTML = `
-                <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_pending')}</td></tr>
-            `;
+            container.innerHTML = `
+            < tr > <td colspan="7" class="text-muted" style="text-align:center;">${t('no_pending')}</td></tr >
+                `;
         }
     } catch (error) {
         showToast('Failed to load approvals', 'error');
@@ -1047,7 +948,7 @@ async function approvePayout(id) {
     const utr = prompt(t('prompt_utr'));
 
     try {
-        const data = await API.post(`/admin/payouts/${id}/approve`, { utr });
+        const data = await API.post(`/ admin / payouts / ${id}/approve`, { utr });
         if (data.code === 1) {
             showToast(t('toast_approved'), 'success');
             loadApprovals();
@@ -1082,43 +983,23 @@ async function rejectPayout(id) {
 // ADMIN: ALL TRANSACTIONS
 // ========================================
 
-async function loadAllTransactions() {
+// ========================================
+// ADMIN: ALL TRANSACTIONS
+// ========================================
+
+async function loadAllTransactionsData() {
     if (currentUser.role !== 'admin') {
         loadDashboard();
         return;
     }
 
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">${t('admin_all_tx')}</h3>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>${t('order_id')}</th>
-                            <th>${t('merchant')}</th>
-                            <th>${t('type')}</th>
-                            <th>${t('amount')}</th>
-                            <th>${t('fee')}</th>
-                            <th>${t('status')}</th>
-                            <th>${t('date')}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="allTransactionsList">
-                        <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
     try {
         const data = await API.get('/admin/transactions?limit=100');
+        const container = document.getElementById('allTransactionsList');
+        if (!container) return;
+
         if (data.code === 1 && data.data.length > 0) {
-            document.getElementById('allTransactionsList').innerHTML = data.data.map(tx => `
+            container.innerHTML = data.data.map(tx => `
                 <tr>
                     <td><code>${tx.orderId}</code></td>
                     <td>${tx.merchantName}<br><small class="text-muted">${tx.merchantEmail}</small></td>
@@ -1130,7 +1011,7 @@ async function loadAllTransactions() {
                 </tr>
             `).join('');
         } else {
-            document.getElementById('allTransactionsList').innerHTML = `
+            container.innerHTML = `
                 <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
             `;
         }

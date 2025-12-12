@@ -143,6 +143,8 @@ async function initializeSchema() {
             role TEXT DEFAULT 'merchant',
             merchant_key TEXT UNIQUE,
             balance REAL DEFAULT 0,
+            payin_rate REAL DEFAULT 5.0,
+            payout_rate REAL DEFAULT 3.0,
             status TEXT DEFAULT 'active',
             telegram_group_id TEXT,
             callback_url TEXT,
@@ -238,9 +240,17 @@ async function initializeSchema() {
     try {
         await db.exec('ALTER TABLE users ADD COLUMN telegram_group_id TEXT');
         console.log('Applied migration: Added telegram_group_id to users');
-    } catch (e) {
-        // Column likely exists, ignore
-    }
+    } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN payin_rate REAL DEFAULT 5.0');
+        console.log('Applied migration: Added payin_rate to users');
+    } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN payout_rate REAL DEFAULT 3.0');
+        console.log('Applied migration: Added payout_rate to users');
+    } catch (e) { }
 }
 
 module.exports = { initDatabase, getDb };

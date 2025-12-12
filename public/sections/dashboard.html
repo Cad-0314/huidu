@@ -1,0 +1,58 @@
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-wallet"></i></div>
+        <div class="stat-info">
+            <div class="stat-label" data-i18n="stat_balance">Balance</div>
+            <div class="stat-value" id="statBalance">₹0.00</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-arrow-down"></i></div>
+        <div class="stat-info">
+            <div class="stat-label" data-i18n="stat_payin">Total Pay-in</div>
+            <div class="stat-value" id="statPayin">₹0.00</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-arrow-up"></i></div>
+        <div class="stat-info">
+            <div class="stat-label" data-i18n="stat_payout">Total Payout</div>
+            <div class="stat-value" id="statPayout">₹0.00</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+        <div class="stat-info">
+            <div class="stat-label" data-i18n="stat_pending">Pending Payouts</div>
+            <div class="stat-value" id="statPending">0</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title" data-i18n="recent_transactions">Recent Transactions</h3>
+        <button class="btn btn-secondary btn-sm" onclick="loadSection('transactions')">
+            <span data-i18n="view_all">View All</span> <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th data-i18n="order_id">Order ID</th>
+                    <th data-i18n="type">Type</th>
+                    <th data-i18n="amount">Amount</th>
+                    <th data-i18n="fee">Fee</th>
+                    <th data-i18n="status">Status</th>
+                    <th data-i18n="date">Date</th>
+                </tr>
+            </thead>
+            <tbody id="recentTransactions">
+                <tr>
+                    <td colspan="6" class="text-muted" style="text-align:center;" data-i18n="loading">Loading...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

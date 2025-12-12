@@ -1,0 +1,43 @@
+<div class="card mb-3">
+    <h3 class="card-title mb-2" data-i18n="generate_link">Generate Payment Link</h3>
+    <p class="text-muted mb-3" style="font-size: 0.75rem;" data-i18n="link_create_desc">Create a payment link to accept
+        one-time payments from customers.</p>
+
+    <form id="paymentLinkForm">
+        <div class="d-flex gap-2" style="flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label data-i18n="label_amount">Amount</label>
+                <input type="number" id="linkAmount" placeholder="1000" required min="100">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label><span data-i18n="order_id">Order ID</span> (optional)</label>
+                <input type="text" id="linkOrderId" placeholder="Auto-generate">
+            </div>
+            <div class="form-group" style="flex: 2; min-width: 300px;">
+                <label>Callback URL (optional)</label>
+                <input type="url" id="linkCallback" placeholder="https://your-domain.com/callback">
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="generatePaymentLink()">
+            <i class="fas fa-link"></i> <span data-i18n="generate_link">Generate Link</span>
+        </button>
+    </form>
+
+    <div id="generatedLinkResult" class="hidden"></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title" data-i18n="link_instruct_title">Instructions</h3>
+    </div>
+    <div style="font-size: 0.75rem; color: var(--text-secondary);">
+        <ol style="padding-left: 1.25rem; margin: 0;">
+            <li class="mb-1" data-i18n="link_instruct_1">Enter the amount you want to collect.</li>
+            <li class="mb-1" data-i18n="link_instruct_2">Click "Generate Link" to create a unique payment URL.</li>
+            <li class="mb-1" data-i18n="link_instruct_3">Copy and share the link with your customer.</li>
+            <li class="mb-1" data-i18n="link_instruct_4">Once paid, you will receive a notification via callback if
+                configured.</li>
+            <li data-i18n="link_instruct_5">The link is valid for 30 minutes.</li>
+        </ol>
+    </div>
+</div>

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { getDb } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { generateMerchantKey } = require('../utils/signature');
@@ -14,7 +14,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
     try {
         const db = getDb();
         const users = await db.prepare(`
-            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, created_at
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, created_at
             FROM users
             ORDER BY created_at DESC
         `).all();
@@ -30,6 +30,8 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
                 status: u.status,
                 callbackUrl: u.callback_url,
                 merchantKey: u.merchant_key,
+                payinRate: u.payin_rate,
+                payoutRate: u.payout_rate,
                 createdAt: u.created_at
             }))
         });
@@ -45,11 +47,22 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
  */
 router.post('/users', authenticate, requireAdmin, async (req, res) => {
     try {
-        const { username, password, name, callbackUrl } = req.body;
+        const { username, password, name, callbackUrl, payinRate, payoutRate } = req.body;
         const db = getDb();
 
         if (!username || !password || !name) {
             return res.status(400).json({ code: 0, msg: 'Username, password, and name are required' });
+        }
+
+        // Validate Rates
+        const pRate = parseFloat(payinRate || 5.0);
+        const poRate = parseFloat(payoutRate || 3.0);
+
+        if (pRate < 5) {
+            return res.status(400).json({ code: 0, msg: 'Pay-in rate must be 5% or more' });
+        }
+        if (poRate < 3) {
+            return res.status(400).json({ code: 0, msg: 'Payout rate must be 3% or more' });
         }
 
         const existing = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
@@ -57,19 +70,19 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
             return res.status(400).json({ code: 0, msg: 'Username already exists' });
         }
 
-        const uuid = uuidv4();
+        const uuid = crypto.randomBytes(4).toString('hex');
         const hashedPassword = bcrypt.hashSync(password, 10);
         const merchantKey = generateMerchantKey();
 
         await db.prepare(`
-            INSERT INTO users (uuid, username, password, name, role, merchant_key, callback_url)
-            VALUES (?, ?, ?, ?, 'merchant', ?, ?)
-        `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null);
+            INSERT INTO users(uuid, username, password, name, role, merchant_key, callback_url, payin_rate, payout_rate)
+            VALUES(?, ?, ?, ?, 'merchant', ?, ?, ?, ?)
+                `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null, pRate, poRate);
 
         res.json({
             code: 1,
             msg: 'Merchant created successfully',
-            data: { id: uuid, username, name, merchantKey, callbackUrl }
+            data: { id: uuid, username, name, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate }
         });
     } catch (error) {
         console.error('Create user error:', error);
@@ -83,7 +96,7 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
 router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, status, callbackUrl } = req.body;
+        const { name, status, callbackUrl, payinRate, payoutRate } = req.body;
         const db = getDb();
 
         const user = await db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
@@ -98,10 +111,24 @@ router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
         if (status) { updates.push('status = ?'); params.push(status); }
         if (callbackUrl !== undefined) { updates.push('callback_url = ?'); params.push(callbackUrl); }
 
+        if (payinRate !== undefined) {
+            const pRate = parseFloat(payinRate);
+            if (pRate < 5) return res.status(400).json({ code: 0, msg: 'Pay-in rate must be 5% or more' });
+            updates.push('payin_rate = ?');
+            params.push(pRate);
+        }
+
+        if (payoutRate !== undefined) {
+            const poRate = parseFloat(payoutRate);
+            if (poRate < 3) return res.status(400).json({ code: 0, msg: 'Payout rate must be 3% or more' });
+            updates.push('payout_rate = ?');
+            params.push(poRate);
+        }
+
         if (updates.length > 0) {
             updates.push("updated_at = datetime('now')");
             params.push(user.id);
-            await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+            await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ? `).run(...params);
         }
 
         res.json({ code: 1, msg: 'User updated' });
@@ -123,7 +150,7 @@ router.get('/payouts/pending', authenticate, requireAdmin, async (req, res) => {
             JOIN users u ON p.user_id = u.id
             WHERE p.payout_type = 'usdt' AND p.status = 'pending'
             ORDER BY p.created_at ASC
-        `).all();
+            `).all();
 
         res.json({
             code: 1,
@@ -161,11 +188,15 @@ router.post('/payouts/:id/approve', authenticate, requireAdmin, async (req, res)
             return res.status(404).json({ code: 0, msg: 'Payout not found or already processed' });
         }
 
+        // Admin gets the payout amount added to their balance
+        // Find admin user (or use current user if they are admin, which they must be)
+        await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount, req.user.id);
+
         await db.prepare(`
             UPDATE payouts 
             SET status = 'success', approved_by = ?, approved_at = datetime('now'), utr = ?, updated_at = datetime('now')
             WHERE id = ?
-        `).run(req.user.id, utr || null, payout.id);
+            `).run(req.user.id, utr || null, payout.id);
 
         res.json({ code: 1, msg: 'Payout approved' });
     } catch (error) {
@@ -196,7 +227,7 @@ router.post('/payouts/:id/reject', authenticate, requireAdmin, async (req, res) 
             UPDATE payouts 
             SET status = 'rejected', approved_by = ?, approved_at = datetime('now'), rejection_reason = ?, updated_at = datetime('now')
             WHERE id = ?
-        `).run(req.user.id, reason || 'Rejected by admin', payout.id);
+            `).run(req.user.id, reason || 'Rejected by admin', payout.id);
 
         res.json({ code: 1, msg: 'Payout rejected and balance refunded' });
     } catch (error) {
@@ -249,8 +280,8 @@ router.get('/transactions', authenticate, requireAdmin, async (req, res) => {
             SELECT t.*, u.username, u.name as merchant_name
             FROM transactions t
             JOIN users u ON t.user_id = u.id
-            WHERE 1=1
-        `;
+            WHERE 1 = 1
+            `;
         const params = [];
 
         if (type) { query += ' AND t.type = ?'; params.push(type); }
@@ -311,7 +342,7 @@ router.post('/users/:id/balance', authenticate, requireAdmin, async (req, res) =
 
         const newBalance = user.balance + adjustAmount;
         if (newBalance < 0) {
-            return res.status(400).json({ code: 0, msg: `Insufficient balance. Current: ${user.balance}, Adjustment: ${adjustAmount}` });
+            return res.status(400).json({ code: 0, msg: `Insufficient balance.Current: ${user.balance}, Adjustment: ${adjustAmount}` });
         }
 
         // Update balance
