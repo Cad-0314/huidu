@@ -65,6 +65,9 @@
         </div>
     </div>
 
+    <!-- Translations -->
+    <script src="/js/i18n.js"></script>
+
     <script>
         // Check if already logged in
         const token = localStorage.getItem('vspay_token');
@@ -98,6 +101,7 @@
                 });
 
                 const data = await response.json();
+                console.log('Login response:', data);
 
                 if (data.code === 1) {
                     localStorage.setItem('vspay_token', data.data.token);
@@ -106,10 +110,12 @@
                 } else {
                     errorDiv.classList.remove('hidden');
                     errorMsg.textContent = data.msg || t('error_invalid');
+                    console.warn('Login failed:', data);
                 }
             } catch (error) {
+                console.error('Login error:', error);
                 errorDiv.classList.remove('hidden');
-                errorMsg.textContent = t('error_connection');
+                errorMsg.textContent = `${t('error_connection')} (${error.message})`;
             }
 
             loginBtn.disabled = false;
