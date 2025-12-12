@@ -1,0 +1,466 @@
+endpoint - https://payable8.com/api/ 
+secret:4163917be57238c4bd1a77b6c65d2c59a0caea3a 
+userId:100083
+Important!! Please process the actual amount received for order reconciliation!! The order amount is for order verification only!!
+
+Important!! Please process the actual amount received for order reconciliation!! The order amount is for order verification only!!
+
+Verification Instructions
+1. You need to sort all parameters in ascending order and add an "&" symbol as a separator ( to remove fields with empty values, as empty fields are not included in the signature ).
+
+The output is as follows:
+
+key1=1&key2=usuua&key3=https://www.fasfrt.com/&key4=test123460111&key5=https://pay.asqwwqqwas.com/pay/index.html&key6=12122112
+2. Append the secret to the end of the string.
+
+The output is as follows:
+
+key1=1&key2=usuua&key3=https://www.fasfrt.com/&key4=test123460111&key5=https://pay.asqwwqqwas.com/pay/index.html&key6=12122112&secret=123123
+3. Encrypt using MD5.
+
+The output is as follows:
+
+ggsdf1d8gdesdfssdqw5e7sdwr1c8ad423
+4. Convert the MD5 hash to uppercase.
+
+GGSDF1678DWERRERESS3B5E70B1C8AD423
+Balance Inquiry
+Interface address :/payable/balance/query
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "userId": "",
+  "sign": ""
+}
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+userId	userId	query	true	long	
+sign	sign	query	true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code 1	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  balance	Merchant Balance	string	
+  userId	Merchant ID	long	
+  platDate	Platform Time	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 1,
+	"data": {
+		"balance": "100",
+                "userId": "10001",
+		"platDate": ""
+	},
+	"msg": ""
+}
+Orders placed on behalf of others
+Interface address :/payable/payment
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "amount": "",
+  "userId": "",
+  "callbackUrl": "",
+  "account": "",
+  "ifsc": "",
+  "orderId": "",
+  "param": "",
+  "personName": "",
+  "sign": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+amount	Payment amount		true	string	
+userId	userId		true	long	
+callbackUrl	Callback address		true	string	
+account	Account		true	string	
+ifsc	ifsc		true	string	
+orderId	Merchant order number		true	string	
+param	Additional parameters		false	string	
+personName	Recipient's Name		true	string	
+sign	sign		true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Payment request status	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  amount	Payment amount - passed as a string to avoid loss of precision	string	
+  commission	handling fee	string	
+  orderId	Merchant order number	string	
+  id	Platform order number	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 1,
+	"data": {
+		"amount": "",
+		"commission": "",
+                "id":"",
+		"orderId": ""
+	},
+	"msg": ""
+}
+Order inquiry for payment on behalf
+Interface address :/payable/payment/query
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "userId": "",
+  "orderId": "",
+  "sign": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+userId	userId	query	true	long	
+sign	sign	query	true	string	
+orderId	Merchant order number	query	true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  amount	Payment amount	string	
+  commission	handling fee	string	
+  message	Failure information: Success is returned as "success", failure is returned as "reason for failure".	string	
+  orderId	Merchant order number	string	
+  param	Additional parameters	string	
+  sign	sign	string	
+  utr	utr	string	
+  id	Platform order number	string	
+  status	Payment status (0: Payment in progress, 1: Successful, 2: Failed, 3: Bank transfer in progress)	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 0,
+	"data": {
+		"amount": "",
+		"commission": "",
+		"message": "",
+		"orderId": "",
+                "id":"",
+		"param": "",
+		"status": "",
+	        "utr": ""
+	},
+	"msg": ""
+}
+Order collection on behalf
+Interface address :/payable/recharge
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "userId": "",
+  "callbackUrl": "",
+  "orderAmount": "",
+  "orderId": "",
+  "param": "",
+  "sign": "",
+  "skipUrl": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+userId	userId		true	long	
+callbackUrl	Callback address		true	string	
+orderAmount	Order amount - passed as a string to avoid loss of precision		true	string	
+orderId	Merchant order number		true	string	
+param	Additional parameters		false	string	
+sign	sign		true	string	
+shipUrl	Redirect address		true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  orderAmount	Order amount	string	
+  orderId	Merchant order number	string	
+  id	Platform order number	string	
+  rechargeUrl	Payment address	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 0,
+	"data": {
+		"orderAmount": "",
+		"orderId": "",
+                "id":"",
+		"rechargeUrl": ""
+	},
+	"msg": ""
+}
+Order collection inquiry
+Interface address :/payable/recharge/query
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "userId": "",
+  "orderId": "",
+  "sign": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+userId	userId	query	true	long	
+sign	sign	query	true	string	
+orderId	Merchant order number	query	true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  amount	Actual Amount Received - Please use the actual amount received to process orders. The order amount is only used for order verification.	string	
+  commission	handling fee	string	
+  orderAmount	Order Amount - For order confirmation purposes only	string	
+  orderId	Merchant order number	string	
+  id	Platform order number	string	
+  param	Additional parameters	string	
+  sign	sign	string	
+  status	Collection status (0: failed, 1: successful)	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 0,
+	"data": {
+		"amount": "",
+		"commission": "",
+		"orderAmount": "",
+		"orderId": "",
+                "id":"",
+		"param": "",
+		"status": ""
+	},
+	"msg": ""
+}
+UTR order replenishment
+Interface address :/payable/utr/order
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "userId": "",
+  "orderId": "",
+  "sign": ""
+  "utr": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+userId	userId		true	long	
+orderId	Merchant order number		true	string	
+sign	sign		true	string	
+utr	utr		true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  remark	Order Supplement Description	string	
+  orderId	Merchant order number	string	
+  amount	UTR Amount	string	
+  status	nrcy: Not received; used: Already credited; rcy: Order successfully completed; stp: Account has stopped receiving payments; aumt: Amount mismatch.	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 0,
+	"data": {
+		"remark": "",
+		"orderId": "",
+		"amount": "",
+		"status": ""
+	},
+	"msg": ""
+}
+upi account inquiry
+Interface address :/payable/upi
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "appKey": "",
+  "nonce": "",
+  "sign": "",
+  "upi": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+appKey	appKey	query	true	string	
+nonce	A random string, no more than 16 characters long. Note: Duplicate strings are not allowed.	query	true	string	
+sign	sign	query	true	string	
+upi	upi account	query	true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code	integer(int32)	1 success, 0 failures
+data	Response object	JSONObject	JSONObject
+  remark	UPI account description	string	
+  riskDate	Risk control time: This field is available when UPI has already undergone risk control.	string	
+  upiStatus	When the UPI belongs to our party, the field must be 0 in use and 1 under risk control.	string	
+  belongStatus	Is our UPI 0 not our UPI, and 1 our UPI?	string	
+  upi	upi	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 1,
+	"data": {
+		"remark": "该UPI是我方收款账户!请提醒会员请勿保存付款!",
+		"riskDate": "2023-05-02 05:05:00",
+		"upiStatus": "0",
+		"belongStatus": "1",
+                "upi": "dragonPayment@upi"
+	},
+	"msg": ""
+}
+UTR query
+Interface address :/payable/utr/query
+
+Request method :POST
+
+Request data type :application/json
+
+Request example :
+
+{
+  "userId": "",
+  "sign": "",
+  "utr": ""
+}
+Request parameters :
+
+Parameter name	Parameter Description	Request type	Is it necessary?	Data types	schema
+userId	userId	query	true	long	
+sign	sign	query	true	string	
+utr	utr	query	true	string	
+Response parameters :
+
+Parameter name	Parameter Description	type	schema
+code	Response status code	integer(int32)	Success 1, Failure 0
+data	Response object	JSONObject	JSONObject
+  remark	Order Supplement Description	string	
+  orderId	Merchant order number	string	
+  amount	UTR Amount	string	
+  status	nrcy: Not received; used: Already credited; rcy: Can be recharged; stp: Account has stopped receiving payments.	string	
+msg	Response Information	string	
+Response example :
+
+{
+	"code": 1,
+	"data": {
+		"remark": "",
+		"orderId": "",
+		"amount": "",
+		"status": ""
+	},
+	"msg": ""
+}
+Order callback for payment on behalf
+Request method :POST
+
+Request data type :application/json
+
+Request parameters :
+
+Parameter name	Parameter Description	type	schema
+  amount	Payment amount	string	
+  commission	handling fee	string	
+  message	Failure information: Success is returned as "success", failure is returned as "reason for failure".	string	
+  orderId	Merchant order number	string	
+  id	Platform order number	string	
+  param	Additional parameters	string	
+  sign	sign	string	
+  utr	Pay on behalf of UTR	string	
+  status	Payment status - only callback success or failure (1: success, 2: failure)	string	
+Request example :
+
+{
+        "amount": "",
+	"commission": "",
+	"message": "",
+	"orderId": "",
+        "id":"",
+	"param": "",
+	"sign": "",
+	"utr": "",
+	"status": ""
+}
+Response example :
+
+Upon receiving the callback, regardless of whether the order was successful or not, please immediately return the string "success". Otherwise, the request will be considered a failure, and three consecutive requests will be made every 3 seconds.
+
+success
+Order callback
+Request method :POST
+
+Request data type :application/json
+
+Request parameters :
+
+Parameter name	Parameter Description	type	schema
+  amount	Actual Amount Received - Please use this field to process orders. Order amount is only used for order reconciliation.	string	
+  commission	handling fee	string	
+  orderAmount	Order Amount - For order confirmation purposes only	string	
+  orderId	Merchant order number	string	
+  id	Platform order number	string	
+  param	Additional parameters	string	
+  sign	sign	string	
+  status	Collection status (0: failed, 1: successful)	string	
+Request example :
+
+{
+                "amount": "",
+		"commission": "",
+		"orderAmount": "",
+		"orderId": "",
+                "id":"",
+		"param": "",
+		"sign": "",
+		"status": ""
+}
+Response example :
+
+Upon receiving the callback, regardless of whether the order was successful or not, please immediately return the string "success". Otherwise, the request will be considered a failure, and three consecutive requests will be made every 3 seconds.
+
+success
