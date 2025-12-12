@@ -97,8 +97,8 @@ router.post('/usdt', apiAuthenticate, async (req, res) => {
 
         const payoutAmount = parseFloat(amount);
 
-        // Minimum USDT withdraw: 500 USDT = ₹51,500 (at 103 INR/USDT)
-        const minUsdtInr = 500 * 103; // 500 USDT × 103 = ₹51,500
+        // Minimum USDT withdraw: 500 USDT = ₹50,000 (at 100 INR/USDT)
+        const minUsdtInr = 500 * 100; // 500 USDT × 100 = ₹50,000
         if (payoutAmount < minUsdtInr) {
             return res.status(400).json({ code: 0, msg: `Minimum USDT withdrawal is 500 USDT (₹${minUsdtInr.toLocaleString()})` });
         }
@@ -163,6 +163,53 @@ router.post('/query', apiAuthenticate, async (req, res) => {
         });
     } catch (error) {
         console.error('Query payout error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
+ * POST /api/payout/check - Public order check API for clients
+ */
+router.post('/check', async (req, res) => {
+    try {
+        const { orderId, userId } = req.body;
+        const db = getDb();
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ code: 0, msg: 'orderId and userId are required' });
+        }
+
+        // Find user by uuid
+        const user = await db.prepare('SELECT id FROM users WHERE uuid = ?').get(userId);
+        if (!user) {
+            return res.status(404).json({ code: 0, msg: 'Invalid userId' });
+        }
+
+        const payout = await db.prepare('SELECT * FROM payouts WHERE order_id = ? AND user_id = ?').get(orderId, user.id);
+
+        if (!payout) {
+            return res.status(404).json({ code: 0, msg: 'Payout not found' });
+        }
+
+        res.json({
+            code: 1,
+            msg: 'Payout found',
+            data: {
+                orderId: payout.order_id,
+                id: payout.uuid,
+                type: payout.payout_type,
+                status: payout.status,
+                amount: payout.amount,
+                fee: payout.fee,
+                netAmount: payout.net_amount,
+                utr: payout.utr,
+                message: payout.message,
+                createdAt: payout.created_at,
+                updatedAt: payout.updated_at
+            }
+        });
+    } catch (error) {
+        console.error('Check payout error:', error);
         res.status(500).json({ code: 0, msg: 'Server error' });
     }
 });

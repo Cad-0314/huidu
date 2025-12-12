@@ -163,7 +163,7 @@ router.post('/check', async (req, res) => {
 router.post('/callback', async (req, res) => {
     try {
         console.log('Pay-in callback received:', req.body);
-        const { status, amount, orderAmount, orderId, id, sign, param } = req.body;
+        const { status, amount, orderAmount, orderId, id, sign, param, utr } = req.body;
         const db = getDb();
 
         await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payin', ?, ?)`).run(JSON.stringify(req.body), status);
@@ -184,8 +184,8 @@ router.post('/callback', async (req, res) => {
         const rates = await getRatesFromDb(db);
         const { fee, netAmount } = calculatePayinFee(actualAmount, rates.payinRate);
 
-        await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
-            .run(newStatus, actualAmount, fee, netAmount, JSON.stringify(req.body), tx.id);
+        await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+            .run(newStatus, actualAmount, fee, netAmount, utr || null, JSON.stringify(req.body), tx.id);
 
         if (newStatus === 'success') {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
@@ -198,7 +198,7 @@ router.post('/callback', async (req, res) => {
                     status: newStatus === 'success' ? 1 : 0,
                     amount: netAmount, orderAmount: actualAmount,
                     orderId: callbackData.merchantOrderId || tx.order_id,
-                    id: tx.uuid, param: callbackData.originalParam
+                    id: tx.uuid, utr: utr || '', param: callbackData.originalParam
                 };
                 merchantCallbackData.sign = generateSign(merchantCallbackData, tx.merchant_key);
                 await axios.post(merchantCallback, merchantCallbackData, { timeout: 10000 });

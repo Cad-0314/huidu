@@ -6,7 +6,7 @@ module.exports = {
     userId: process.env.PAYABLE_USER_ID,
 
     // Exchange rates
-    usdtRate: parseFloat(process.env.USDT_RATE) || 103, // 1 USDT = 103 INR
+    usdtRate: parseFloat(process.env.USDT_RATE) || 100, // 1 USDT = 100 INR
 
     // Endpoints
     endpoints: {

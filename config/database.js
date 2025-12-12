@@ -144,6 +144,7 @@ async function initializeSchema() {
             merchant_key TEXT UNIQUE,
             balance REAL DEFAULT 0,
             status TEXT DEFAULT 'active',
+            telegram_group_id TEXT,
             callback_url TEXT,
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
@@ -232,6 +233,14 @@ async function initializeSchema() {
         await db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('payout_rate', '0.03');
         await db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('payout_fixed_fee', '6');
     } catch (e) { }
+
+    // Migrations
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN telegram_group_id TEXT');
+        console.log('Applied migration: Added telegram_group_id to users');
+    } catch (e) {
+        // Column likely exists, ignore
+    }
 }
 
 module.exports = { initDatabase, getDb };

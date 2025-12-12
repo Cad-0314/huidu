@@ -40,12 +40,21 @@ async function startServer() {
         const { initDatabase } = require('./config/database');
         await initDatabase();
 
+        // Initialize Telegram Bot
+        const { initBot } = require('./services/telegram');
+        initBot();
+
         // API Routes
         app.use('/api/auth', require('./routes/auth'));
         app.use('/api/admin', require('./routes/admin'));
         app.use('/api/merchant', require('./routes/merchant'));
         app.use('/api/payin', require('./routes/payin'));
         app.use('/api/payout', require('./routes/payout'));
+
+        // Serve API Docs
+        app.get('/apidocs', (req, res) => {
+            res.sendFile(path.join(__dirname, 'public', 'apidocs.html'));
+        });
 
         // Serve frontend for all non-API routes
         app.get('*', (req, res) => {

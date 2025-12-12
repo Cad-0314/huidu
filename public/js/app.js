@@ -57,6 +57,7 @@ let currentSection = 'dashboard';
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     setupNavigation();
+    initLanguage();
 });
 
 function checkAuth() {
@@ -192,28 +193,28 @@ async function loadDashboard() {
             <div class="stat-card">
                 <div class="stat-icon purple"><i class="fas fa-wallet"></i></div>
                 <div class="stat-info">
-                    <div class="stat-label">Current Balance</div>
+                    <div class="stat-label">${t('stat_balance')}</div>
                     <div class="stat-value" id="statBalance">₹0.00</div>
                 </div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon green"><i class="fas fa-arrow-down"></i></div>
                 <div class="stat-info">
-                    <div class="stat-label">Total Pay-In</div>
+                    <div class="stat-label">${t('stat_payin')}</div>
                     <div class="stat-value" id="statPayin">₹0.00</div>
                 </div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon red"><i class="fas fa-arrow-up"></i></div>
                 <div class="stat-info">
-                    <div class="stat-label">Total Payout</div>
+                    <div class="stat-label">${t('stat_payout')}</div>
                     <div class="stat-value" id="statPayout">₹0.00</div>
                 </div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
                 <div class="stat-info">
-                    <div class="stat-label">Pending Payouts</div>
+                    <div class="stat-label">${t('stat_pending')}</div>
                     <div class="stat-value" id="statPending">0</div>
                 </div>
             </div>
@@ -221,25 +222,25 @@ async function loadDashboard() {
         
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Recent Transactions</h3>
+                <h3 class="card-title">${t('recent_transactions')}</h3>
                 <button class="btn btn-secondary btn-sm" onclick="loadSection('transactions')">
-                    View All <i class="fas fa-arrow-right"></i>
+                    ${t('view_all')} <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Fee</th>
-                            <th>Status</th>
-                            <th>Date</th>
+                            <th>${t('order_id')}</th>
+                            <th>${t('type')}</th>
+                            <th>${t('amount')}</th>
+                            <th>${t('fee')}</th>
+                            <th>${t('status')}</th>
+                            <th>${t('date')}</th>
                         </tr>
                     </thead>
                     <tbody id="recentTransactions">
-                        <tr><td colspan="6" class="text-muted" style="text-align:center;">Loading...</td></tr>
+                        <tr><td colspan="6" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -267,16 +268,16 @@ async function loadDashboard() {
             document.getElementById('recentTransactions').innerHTML = txData.data.transactions.map(tx => `
                 <tr>
                     <td><code>${tx.orderId}</code></td>
-                    <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${tx.type}</span></td>
+                    <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
-                    <td><span class="badge badge-${getStatusClass(tx.status)}">${tx.status}</span></td>
+                    <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${formatDate(tx.createdAt)}</td>
                 </tr>
             `).join('');
         } else {
             document.getElementById('recentTransactions').innerHTML = `
-                <tr><td colspan="6" class="text-muted" style="text-align:center;">No transactions yet</td></tr>
+                <tr><td colspan="6" class="text-muted" style="text-align:center;">${t('no_recent')}</td></tr>
             `;
         }
     } catch (error) {
@@ -293,24 +294,24 @@ async function loadTransactions() {
     content.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Transaction History</h3>
+                <h3 class="card-title">${t('transactions_tab')}</h3>
             </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Fee</th>
-                            <th>Net Amount</th>
-                            <th>Status</th>
-                            <th>UTR</th>
-                            <th>Date</th>
+                            <th>${t('order_id')}</th>
+                            <th>${t('type')}</th>
+                            <th>${t('amount')}</th>
+                            <th>${t('fee')}</th>
+                            <th>${t('net_amount')}</th>
+                            <th>${t('status')}</th>
+                            <th>${t('utr')}</th>
+                            <th>${t('date')}</th>
                         </tr>
                     </thead>
                     <tbody id="transactionsList">
-                        <tr><td colspan="8" class="text-muted" style="text-align:center;">Loading...</td></tr>
+                        <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -323,23 +324,23 @@ async function loadTransactions() {
             document.getElementById('transactionsList').innerHTML = data.data.transactions.map(tx => `
                 <tr>
                     <td><code>${tx.orderId}</code></td>
-                    <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${tx.type}</span></td>
+                    <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.netAmount).toFixed(2)}</td>
-                    <td><span class="badge badge-${getStatusClass(tx.status)}">${tx.status}</span></td>
+                    <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${tx.utr || '-'}</td>
                     <td>${formatDate(tx.createdAt)}</td>
                 </tr>
             `).join('');
         } else {
             document.getElementById('transactionsList').innerHTML = `
-                <tr><td colspan="8" class="text-muted" style="text-align:center;">No transactions found</td></tr>
+                <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
             `;
         }
     } catch (error) {
         console.error('Failed to load transactions:', error);
-        showToast('Failed to load transactions', 'error');
+        showToast(t('error_load_tx'), 'error');
     }
 }
 
@@ -355,8 +356,8 @@ async function loadPayouts() {
                 <div class="d-flex align-center gap-2">
                     <div class="stat-icon green"><i class="fas fa-university"></i></div>
                     <div>
-                        <h3>Bank Payout</h3>
-                        <p class="text-muted" style="font-size: 0.875rem;">Automatic processing via IMPS/NEFT</p>
+                        <h3>${t('bank_payout_title')}</h3>
+                        <p class="text-muted" style="font-size: 0.875rem;">${t('bank_payout_desc')}</p>
                     </div>
                 </div>
             </div>
@@ -364,8 +365,8 @@ async function loadPayouts() {
                 <div class="d-flex align-center gap-2">
                     <div class="stat-icon blue"><i class="fab fa-bitcoin"></i></div>
                     <div>
-                        <h3>USDT Payout</h3>
-                        <p class="text-muted" style="font-size: 0.875rem;">Manual approval required</p>
+                        <h3>${t('usdt_payout_title')}</h3>
+                        <p class="text-muted" style="font-size: 0.875rem;">${t('usdt_payout_desc')}</p>
                     </div>
                 </div>
             </div>
@@ -373,23 +374,23 @@ async function loadPayouts() {
         
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Payout History</h3>
+                <h3 class="card-title">${t('payout_history')}</h3>
             </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Fee</th>
-                            <th>Details</th>
-                            <th>Status</th>
-                            <th>Date</th>
+                            <th>${t('order_id')}</th>
+                            <th>${t('type')}</th>
+                            <th>${t('amount')}</th>
+                            <th>${t('fee')}</th>
+                            <th>${t('details')}</th>
+                            <th>${t('status')}</th>
+                            <th>${t('date')}</th>
                         </tr>
                     </thead>
                     <tbody id="payoutsList">
-                        <tr><td colspan="7" class="text-muted" style="text-align:center;">Loading...</td></tr>
+                        <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -402,28 +403,28 @@ async function loadPayouts() {
             document.getElementById('payoutsList').innerHTML = data.data.map(p => `
                 <tr>
                     <td><code>${p.orderId}</code></td>
-                    <td><span class="badge ${p.type === 'bank' ? 'badge-success' : 'badge-processing'}">${p.type}</span></td>
+                    <td><span class="badge ${p.type === 'bank' ? 'badge-success' : 'badge-processing'}">${t('type_' + p.type) || p.type}</span></td>
                     <td>₹${parseFloat(p.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(p.fee).toFixed(2)}</td>
                     <td>${p.type === 'bank' ? (p.accountNumber ? `****${p.accountNumber.slice(-4)}` : '-') : (p.walletAddress ? `${p.walletAddress.substring(0, 8)}...` : '-')}</td>
-                    <td><span class="badge badge-${getStatusClass(p.status)}">${p.status}</span></td>
+                    <td><span class="badge badge-${getStatusClass(p.status)}">${t('status_' + p.status)}</span></td>
                     <td>${formatDate(p.createdAt)}</td>
                 </tr>
             `).join('');
         } else {
             document.getElementById('payoutsList').innerHTML = `
-                <tr><td colspan="7" class="text-muted" style="text-align:center;">No payouts found</td></tr>
+                <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_payouts')}</td></tr>
             `;
         }
     } catch (error) {
         console.error('Failed to load payouts:', error);
-        showToast('Failed to load payouts', 'error');
+        showToast(t('error_load_payouts'), 'error');
     }
 }
 
 async function showBankPayoutModal() {
     // Fetch current balance
-    let balanceText = 'Loading...';
+    let balanceText = t('loading');
     try {
         const data = await API.get('/merchant/balance');
         if (data.code === 1) {
@@ -431,38 +432,38 @@ async function showBankPayoutModal() {
         }
     } catch (e) { balanceText = 'Error loading'; }
 
-    document.getElementById('modalTitle').textContent = 'Bank Payout';
+    document.getElementById('modalTitle').textContent = t('bank_payout_title');
     document.getElementById('modalBody').innerHTML = `
         <div class="balance-info-box">
-            <div class="balance-label">Available Balance</div>
+            <div class="balance-label">${t('available_balance')}</div>
             <div class="balance-amount">${balanceText}</div>
         </div>
         <div class="alert alert-info mb-3">
             <i class="fas fa-info-circle"></i>
-            <span>Fee: 3% + ₹6 | Minimum: ₹100</span>
+            <span>${t('payout_fee_info')}</span>
         </div>
         <form id="bankPayoutForm">
             <div class="form-group">
-                <label>Amount (₹)</label>
-                <input type="number" id="bankAmount" placeholder="Enter amount" required min="100">
+                <label>${t('label_amount')}</label>
+                <input type="number" id="bankAmount" placeholder="1000" required min="100">
             </div>
             <div class="form-group">
-                <label>Account Number</label>
-                <input type="text" id="bankAccount" placeholder="Bank account number" required>
+                <label>${t('label_account')}</label>
+                <input type="text" id="bankAccount" placeholder="1234567890" required>
             </div>
             <div class="form-group">
-                <label>IFSC Code</label>
-                <input type="text" id="bankIfsc" placeholder="e.g. SBIN0001234" required>
+                <label>${t('label_ifsc')}</label>
+                <input type="text" id="bankIfsc" placeholder="ABCD0123456" required>
             </div>
             <div class="form-group">
-                <label>Account Holder Name</label>
-                <input type="text" id="bankName" placeholder="Account holder name" required>
+                <label>${t('label_name')}</label>
+                <input type="text" id="bankName" placeholder="John Doe" required>
             </div>
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="submitBankPayout()">Submit Payout</button>
+        <button class="btn btn-secondary" onclick="closeModal()">${t('btn_cancel')}</button>
+        <button class="btn btn-primary" onclick="submitBankPayout()">${t('btn_submit')}</button>
     `;
     document.getElementById('modalOverlay').classList.add('active');
 }
@@ -474,7 +475,7 @@ async function submitBankPayout() {
     const name = document.getElementById('bankName').value;
 
     if (!amount || !account || !ifsc || !name) {
-        showToast('Please fill all fields', 'error');
+        showToast(t('toast_fill_fields'), 'error');
         return;
     }
 
@@ -491,7 +492,7 @@ async function submitBankPayout() {
         });
 
         if (data.code === 1) {
-            showToast('Bank payout submitted successfully!', 'success');
+            showToast(t('toast_success_bank'), 'success');
             closeModal();
             loadPayouts();
             loadBalance();
@@ -499,13 +500,13 @@ async function submitBankPayout() {
             showToast(data.msg || 'Failed to create payout', 'error');
         }
     } catch (error) {
-        showToast('Error creating payout', 'error');
+        showToast(t('toast_error'), 'error');
     }
 }
 
 async function showUsdtPayoutModal() {
     // Fetch current balance
-    let balanceText = 'Loading...';
+    let balanceText = t('loading');
     try {
         const data = await API.get('/merchant/balance');
         if (data.code === 1) {
@@ -513,29 +514,29 @@ async function showUsdtPayoutModal() {
         }
     } catch (e) { balanceText = 'Error loading'; }
 
-    document.getElementById('modalTitle').textContent = 'USDT Payout';
+    document.getElementById('modalTitle').textContent = t('usdt_payout_title');
     document.getElementById('modalBody').innerHTML = `
         <div class="balance-info-box">
-            <div class="balance-label">Available Balance</div>
+            <div class="balance-label">${t('available_balance')}</div>
             <div class="balance-amount">${balanceText}</div>
         </div>
         <div class="alert alert-info mb-3">
             <i class="fas fa-info-circle"></i>
-            <span>Fee: 3% + ₹6 | Minimum: 500 USDT (₹51,500) | Rate: 1 USDT = ₹103 | Requires admin approval</span>
+            <span>${t('payout_usdt_info')}</span>
         </div>
         <form id="usdtPayoutForm">
             <div class="form-group">
-                <label>Amount (₹) - Will be converted to USDT at ₹103/USDT</label>
-                <input type="number" id="usdtAmount" placeholder="Enter amount in INR (min ₹51,500)" required min="51500">
+                <label>${t('label_usdt_amount')}</label>
+                <input type="number" id="usdtAmount" placeholder="51500" required min="51500">
             </div>
             <div class="form-group">
-                <label>Wallet Address</label>
-                <input type="text" id="usdtWallet" placeholder="USDT wallet address" required>
+                <label>${t('label_wallet')}</label>
+                <input type="text" id="usdtWallet" placeholder="T..." required>
             </div>
             <div class="form-group">
-                <label>Network</label>
+                <label>${t('label_network')}</label>
                 <select id="usdtNetwork" required>
-                    <option value="">Select network</option>
+                    <option value="">${t('label_network')}</option>
                     <option value="TRC20">TRC20 (Tron)</option>
                     <option value="ERC20">ERC20 (Ethereum)</option>
                     <option value="BEP20">BEP20 (BSC)</option>
@@ -544,8 +545,8 @@ async function showUsdtPayoutModal() {
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="submitUsdtPayout()">Submit Payout</button>
+        <button class="btn btn-secondary" onclick="closeModal()">${t('btn_cancel')}</button>
+        <button class="btn btn-primary" onclick="submitUsdtPayout()">${t('btn_submit')}</button>
     `;
     document.getElementById('modalOverlay').classList.add('active');
 }
@@ -556,7 +557,7 @@ async function submitUsdtPayout() {
     const network = document.getElementById('usdtNetwork').value;
 
     if (!amount || !wallet || !network) {
-        showToast('Please fill all fields', 'error');
+        showToast(t('toast_fill_fields'), 'error');
         return;
     }
 
@@ -572,7 +573,7 @@ async function submitUsdtPayout() {
         });
 
         if (data.code === 1) {
-            showToast('USDT payout submitted for approval!', 'success');
+            showToast(t('toast_success_usdt'), 'success');
             closeModal();
             loadPayouts();
             loadBalance();
@@ -580,7 +581,7 @@ async function submitUsdtPayout() {
             showToast(data.msg || 'Failed to create payout', 'error');
         }
     } catch (error) {
-        showToast('Error creating payout', 'error');
+        showToast(t('toast_error'), 'error');
     }
 }
 
@@ -588,86 +589,7 @@ async function submitUsdtPayout() {
 // API DOCS
 // ========================================
 
-function loadApiDocs() {
-    const content = document.getElementById('contentArea');
-    content.innerHTML = `
-        <div class="card mb-3">
-            <h3 class="mb-2">Getting Started</h3>
-            <p class="text-muted mb-3">All API requests require signature verification. Use your <strong>userId</strong> and <strong>merchantKey</strong> to sign requests.</p>
-            
-            <h4 class="mb-2">Signature Generation</h4>
-            <ol style="color: var(--text-secondary); font-size: 0.875rem; padding-left: 1.5rem;">
-                <li>Sort all parameters by ASCII code (ascending)</li>
-                <li>Remove empty values, join with <code>&</code> as <code>key=value</code></li>
-                <li>Append <code>&secret=YOUR_MERCHANT_KEY</code></li>
-                <li>MD5 hash and convert to UPPERCASE</li>
-            </ol>
-        </div>
-        
-        <div class="endpoint-card">
-            <h4><span class="endpoint-method post">POST</span> /api/payin/create</h4>
-            <p class="text-muted mb-2">Create a pay-in order</p>
-            <div class="code-block">
-<pre>{
-  "userId": "your-uuid",
-  "orderAmount": "1000",
-  "orderId": "ORDER123",
-  "callbackUrl": "https://your-domain.com/callback",
-  "skipUrl": "https://your-domain.com/success",
-  "sign": "GENERATED_SIGN"
-}</pre>
-            </div>
-        </div>
-        
-        <div class="endpoint-card">
-            <h4><span class="endpoint-method post">POST</span> /api/payout/bank</h4>
-            <p class="text-muted mb-2">Create a bank payout (automatic)</p>
-            <div class="code-block">
-<pre>{
-  "userId": "your-uuid",
-  "amount": "1000",
-  "orderId": "PAYOUT123",
-  "account": "1234567890",
-  "ifsc": "SBIN0001234",
-  "personName": "John Doe",
-  "callbackUrl": "https://your-domain.com/callback",
-  "sign": "GENERATED_SIGN"
-}</pre>
-            </div>
-        </div>
-        
-        <div class="endpoint-card">
-            <h4><span class="endpoint-method post">POST</span> /api/payout/usdt</h4>
-            <p class="text-muted mb-2">Create a USDT payout (requires manual approval)</p>
-            <div class="code-block">
-<pre>{
-  "userId": "your-uuid",
-  "amount": "1000",
-  "orderId": "PAYOUT123",
-  "walletAddress": "TXyz...abc",
-  "network": "TRC20",
-  "sign": "GENERATED_SIGN"
-}</pre>
-            </div>
-        </div>
-        
-        <div class="endpoint-card">
-            <h4>Callback Response</h4>
-            <p class="text-muted mb-2">Your callback endpoint will receive:</p>
-            <div class="code-block">
-<pre>{
-  "status": 1,
-  "amount": 950,
-  "orderAmount": 1000,
-  "orderId": "ORDER123",
-  "id": "platform-uuid",
-  "sign": "CALLBACK_SIGN"
-}</pre>
-            </div>
-            <p class="text-muted mt-2">Respond with plain text: <code>success</code></p>
-        </div>
-    `;
-}
+
 
 // ========================================
 // PAYMENT LINKS
@@ -677,18 +599,18 @@ function loadPaymentLinks() {
     const content = document.getElementById('contentArea');
     content.innerHTML = `
         <div class="card mb-3">
-            <h3 class="card-title mb-2">Generate Payment Link</h3>
+            <h3 class="card-title mb-2">${t('generate_link')}</h3>
             <p class="text-muted mb-3" style="font-size: 0.75rem;">Create a payment link to test the pay-in flow. The link will redirect to the payment gateway for processing.</p>
             
             <form id="paymentLinkForm">
                 <div class="d-flex gap-2" style="flex-wrap: wrap;">
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Amount (₹)</label>
-                        <input type="number" id="linkAmount" placeholder="e.g. 1000" required min="100">
+                        <label>${t('label_amount')}</label>
+                        <input type="number" id="linkAmount" placeholder="1000" required min="100">
                     </div>
                     <div class="form-group" style="flex: 1; min-width: 200px;">
-                        <label>Order ID (optional)</label>
-                        <input type="text" id="linkOrderId" placeholder="Leave blank to auto-generate">
+                        <label>${t('order_id')} (optional)</label>
+                        <input type="text" id="linkOrderId" placeholder="Auto-generate">
                     </div>
                     <div class="form-group" style="flex: 2; min-width: 300px;">
                         <label>Callback URL (optional)</label>
@@ -696,7 +618,7 @@ function loadPaymentLinks() {
                     </div>
                 </div>
                 <button type="button" class="btn btn-primary" onclick="generatePaymentLink()">
-                    <i class="fas fa-link"></i> Generate Link
+                    <i class="fas fa-link"></i> ${t('generate_link')}
                 </button>
             </form>
             
@@ -705,15 +627,15 @@ function loadPaymentLinks() {
         
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">How Payment Links Work</h3>
+                <h3 class="card-title">${t('link_instruct_title')}</h3>
             </div>
             <div style="font-size: 0.75rem; color: var(--text-secondary);">
                 <ol style="padding-left: 1.25rem; margin: 0;">
-                    <li class="mb-1">Generate a payment link with the desired amount</li>
-                    <li class="mb-1">Share the link with your customer or open it to test</li>
-                    <li class="mb-1">Customer completes payment on the gateway</li>
-                    <li class="mb-1">Your callback URL receives the payment confirmation</li>
-                    <li>Balance is credited to your account (minus 5% fee)</li>
+                    <li class="mb-1">${t('link_instruct_1')}</li>
+                    <li class="mb-1">${t('link_instruct_2')}</li>
+                    <li class="mb-1">${t('link_instruct_3')}</li>
+                    <li class="mb-1">${t('link_instruct_4')}</li>
+                    <li>${t('link_instruct_5')}</li>
                 </ol>
             </div>
         </div>
@@ -726,7 +648,7 @@ async function generatePaymentLink() {
     const callbackUrl = document.getElementById('linkCallback').value;
 
     if (!amount || parseFloat(amount) < 100) {
-        showToast('Amount must be at least ₹100', 'error');
+        showToast(t('error_min_amount'), 'error');
         return;
     }
 
@@ -766,14 +688,14 @@ async function generatePaymentLink() {
                 </div>
             `;
             document.getElementById('generatedLinkResult').classList.remove('hidden');
-            showToast('Payment link generated!', 'success');
+            showToast(t('link_generated'), 'success');
         } else {
             showToast(response.msg || 'Failed to generate link', 'error');
             // Log error to console for server-side logging
             console.error('Payment link generation error:', response);
         }
     } catch (error) {
-        showToast('Error generating payment link', 'error');
+        showToast(t('error_gen_link'), 'error');
         console.error('Payment link error:', error);
     }
 }
@@ -782,7 +704,7 @@ function copyGeneratedLink() {
     const input = document.getElementById('generatedLink');
     input.select();
     document.execCommand('copy');
-    showToast('Link copied to clipboard!', 'success');
+    showToast(t('toast_copied'), 'success');
 }
 
 // ========================================
@@ -793,7 +715,7 @@ async function loadCredentials() {
     const content = document.getElementById('contentArea');
     content.innerHTML = `
         <div class="card">
-            <h3 class="mb-3">API Credentials</h3>
+            <h3 class="mb-3">${t('api_credentials')}</h3>
             <p class="text-muted mb-3">Use these credentials to authenticate your API requests.</p>
             
             <div class="form-group">
@@ -853,12 +775,12 @@ async function updateCallbackUrl() {
     try {
         const data = await API.put('/auth/profile', { callbackUrl });
         if (data.code === 1) {
-            showToast('Callback URL updated!', 'success');
+            showToast(t('toast_callback_updated'), 'success');
         } else {
             showToast(data.msg || 'Failed to update', 'error');
         }
     } catch (error) {
-        showToast('Error updating callback URL', 'error');
+        showToast(t('error_callback_update'), 'error');
     }
 }
 
@@ -869,12 +791,12 @@ async function regenerateKey() {
         const data = await API.post('/auth/regenerate-key');
         if (data.code === 1) {
             document.getElementById('credMerchantKey').value = data.data.merchantKey;
-            showToast('Merchant key regenerated!', 'success');
+            showToast(t('toast_key_regen'), 'success');
         } else {
             showToast(data.msg || 'Failed to regenerate', 'error');
         }
     } catch (error) {
-        showToast('Error regenerating key', 'error');
+        showToast(t('error_key_regen'), 'error');
     }
 }
 
@@ -943,7 +865,7 @@ async function loadUsers() {
             `;
         }
     } catch (error) {
-        showToast('Failed to load users', 'error');
+        showToast(t('error_load_users'), 'error');
     }
 }
 
@@ -983,21 +905,21 @@ async function createUser() {
     const callbackUrl = document.getElementById('newUserCallback').value;
 
     if (!name || !username || !password) {
-        showToast('Please fill required fields', 'error');
+        showToast(t('toast_fill_fields'), 'error');
         return;
     }
 
     try {
         const data = await API.post('/admin/users', { name, username, password, callbackUrl });
         if (data.code === 1) {
-            showToast('Merchant created successfully!', 'success');
+            showToast(t('toast_merchant_created'), 'success');
             closeModal();
             loadUsers();
         } else {
             showToast(data.msg || 'Failed to create merchant', 'error');
         }
     } catch (error) {
-        showToast('Error creating merchant', 'error');
+        showToast(t('error_create_merchant'), 'error');
     }
 }
 
@@ -1031,7 +953,7 @@ async function adjustBalance(userId) {
     const reason = document.getElementById('adjustReason').value;
 
     if (!amount || parseFloat(amount) === 0) {
-        showToast('Please enter a valid amount', 'error');
+        showToast(t('error_valid_amount'), 'error');
         return;
     }
 
@@ -1049,7 +971,7 @@ async function adjustBalance(userId) {
         }
     } catch (error) {
         console.error('Adjust balance error:', error);
-        showToast('Error adjusting balance', 'error');
+        showToast(t('error_adjust_balance'), 'error');
     }
 }
 
@@ -1067,23 +989,23 @@ async function loadApprovals() {
     content.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Pending USDT Payouts</h3>
+                <h3 class="card-title">${t('admin_pending_title')}</h3>
             </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Merchant</th>
-                            <th>Amount</th>
-                            <th>Wallet Address</th>
-                            <th>Network</th>
-                            <th>Date</th>
-                            <th>Actions</th>
+                            <th>${t('order_id')}</th>
+                            <th>${t('merchant')}</th>
+                            <th>${t('amount')}</th>
+                            <th>${t('wallet_address')}</th>
+                            <th>${t('network')}</th>
+                            <th>${t('date')}</th>
+                            <th>${t('actions')}</th>
                         </tr>
                     </thead>
                     <tbody id="approvalsList">
-                        <tr><td colspan="7" class="text-muted" style="text-align:center;">Loading...</td></tr>
+                        <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1097,7 +1019,7 @@ async function loadApprovals() {
                 <tr>
                     <td><code>${p.orderId}</code></td>
                     <td>${p.merchantName}<br><small class="text-muted">${p.merchantEmail}</small></td>
-                    <td>₹${parseFloat(p.amount).toFixed(2)}<br><small class="text-muted">Fee: ₹${parseFloat(p.fee).toFixed(2)}</small></td>
+                    <td>₹${parseFloat(p.amount).toFixed(2)}<br><small class="text-muted">${t('fee')}: ₹${parseFloat(p.fee).toFixed(2)}</small></td>
                     <td><code style="font-size: 0.75rem;">${p.walletAddress}</code></td>
                     <td><span class="badge badge-processing">${p.network}</span></td>
                     <td>${formatDate(p.createdAt)}</td>
@@ -1113,7 +1035,7 @@ async function loadApprovals() {
             `).join('');
         } else {
             document.getElementById('approvalsList').innerHTML = `
-                <tr><td colspan="7" class="text-muted" style="text-align:center;">No pending approvals</td></tr>
+                <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_pending')}</td></tr>
             `;
         }
     } catch (error) {
@@ -1122,12 +1044,12 @@ async function loadApprovals() {
 }
 
 async function approvePayout(id) {
-    const utr = prompt('Enter transaction ID/UTR (optional):');
+    const utr = prompt(t('prompt_utr'));
 
     try {
         const data = await API.post(`/admin/payouts/${id}/approve`, { utr });
         if (data.code === 1) {
-            showToast('Payout approved!', 'success');
+            showToast(t('toast_approved'), 'success');
             loadApprovals();
             loadPendingCount();
         } else {
@@ -1139,13 +1061,13 @@ async function approvePayout(id) {
 }
 
 async function rejectPayout(id) {
-    const reason = prompt('Enter rejection reason:');
+    const reason = prompt(t('prompt_reason'));
     if (!reason) return;
 
     try {
         const data = await API.post(`/admin/payouts/${id}/reject`, { reason });
         if (data.code === 1) {
-            showToast('Payout rejected and balance refunded', 'success');
+            showToast(t('toast_rejected'), 'success');
             loadApprovals();
             loadPendingCount();
         } else {
@@ -1170,23 +1092,23 @@ async function loadAllTransactions() {
     content.innerHTML = `
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">All Transactions</h3>
+                <h3 class="card-title">${t('admin_all_tx')}</h3>
             </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
-                            <th>Order ID</th>
-                            <th>Merchant</th>
-                            <th>Type</th>
-                            <th>Amount</th>
-                            <th>Fee</th>
-                            <th>Status</th>
-                            <th>Date</th>
+                            <th>${t('order_id')}</th>
+                            <th>${t('merchant')}</th>
+                            <th>${t('type')}</th>
+                            <th>${t('amount')}</th>
+                            <th>${t('fee')}</th>
+                            <th>${t('status')}</th>
+                            <th>${t('date')}</th>
                         </tr>
                     </thead>
                     <tbody id="allTransactionsList">
-                        <tr><td colspan="7" class="text-muted" style="text-align:center;">Loading...</td></tr>
+                        <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1200,20 +1122,20 @@ async function loadAllTransactions() {
                 <tr>
                     <td><code>${tx.orderId}</code></td>
                     <td>${tx.merchantName}<br><small class="text-muted">${tx.merchantEmail}</small></td>
-                    <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${tx.type}</span></td>
+                    <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
-                    <td><span class="badge badge-${getStatusClass(tx.status)}">${tx.status}</span></td>
+                    <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${formatDate(tx.createdAt)}</td>
                 </tr>
             `).join('');
         } else {
             document.getElementById('allTransactionsList').innerHTML = `
-                <tr><td colspan="7" class="text-muted" style="text-align:center;">No transactions found</td></tr>
+                <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
             `;
         }
     } catch (error) {
-        showToast('Failed to load transactions', 'error');
+        showToast(t('error_load_tx'), 'error');
     }
 }
 
@@ -1250,7 +1172,7 @@ function copyToClipboard(elementId) {
     input.select();
     document.execCommand('copy');
     input.type = 'password';
-    showToast('Copied to clipboard!', 'success');
+    showToast(t('toast_copied'), 'success');
 }
 
 function togglePassword(elementId) {
@@ -1306,4 +1228,38 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') {
         closeModal();
     }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    // Auth check
+    const token = localStorage.getItem('vspay_token');
+    if (!token) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    // Set user info
+    const userStr = localStorage.getItem('vspay_user');
+    let currentUser = null;
+    if (userStr) {
+        currentUser = JSON.parse(userStr);
+        document.getElementById('userName').textContent = currentUser.name || currentUser.username;
+        document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrator' : 'Merchant';
+        document.getElementById('userAvatar').textContent = (currentUser.name || currentUser.username).charAt(0).toUpperCase();
+
+        // Show admin nav if admin
+        if (currentUser.role === 'admin') {
+            document.getElementById('adminNav').classList.remove('hidden');
+            if (typeof loadPendingCount === 'function') loadPendingCount();
+        }
+    }
+
+    // Initialize Localization
+    if (window.initLanguage) {
+        window.initLanguage();
+    }
+
+    // Load initial section
+    loadSection('dashboard');
 });
