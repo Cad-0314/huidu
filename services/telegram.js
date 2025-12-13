@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf');
 const { getDb } = require('../config/database');
+const payableService = require('./payable');
 
 let bot = null;
 
@@ -42,13 +43,50 @@ async function initBot() {
     bot.command('balance', async (ctx) => {
         try {
             const chatId = ctx.chat.id.toString();
-            const user = await db.prepare('SELECT balance, name FROM users WHERE telegram_group_id = ?').get(chatId);
+            const user = await db.prepare('SELECT id, balance, name, username FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) {
                 return ctx.reply('⚠️ This chat is not bound to any merchant. Use /bind <KEY> first.');
             }
 
-            ctx.reply(`💰 Merchant: ${user.name}\nBalance: ₹${user.balance.toFixed(2)}`);
+            // Stats Queries
+            const todayPayin = await db.prepare(`
+                SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+                WHERE user_id = ? AND type = 'payin' AND status = 'success' 
+                AND created_at >= datetime('now', 'start of day', 'localtime')
+            `).get(user.id);
+
+            const yesterdayPayin = await db.prepare(`
+                SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+                WHERE user_id = ? AND type = 'payin' AND status = 'success' 
+                AND created_at >= datetime('now', 'start of day', '-1 day', 'localtime')
+                AND created_at < datetime('now', 'start of day', 'localtime')
+            `).get(user.id);
+
+            const todayPayout = await db.prepare(`
+                SELECT COALESCE(SUM(amount), 0) as total FROM payouts 
+                WHERE user_id = ? AND status = 'success'
+                AND created_at >= datetime('now', 'start of day', 'localtime')
+            `).get(user.id);
+
+            const yesterdayPayout = await db.prepare(`
+                SELECT COALESCE(SUM(amount), 0) as total FROM payouts 
+                WHERE user_id = ? AND status = 'success'
+                AND created_at >= datetime('now', 'start of day', '-1 day', 'localtime')
+                AND created_at < datetime('now', 'start of day', 'localtime')
+            `).get(user.id);
+
+            let msg = `💰 **Merchant Details**\n`;
+            msg += `Name: ${user.name} (@${user.username})\n`;
+            msg += `Balance: ₹${user.balance.toFixed(2)}\n\n`;
+            msg += `📥 **Collections**\n`;
+            msg += `Today: ₹${todayPayin.total.toFixed(2)}\n`;
+            msg += `Yesterday: ₹${yesterdayPayin.total.toFixed(2)}\n\n`;
+            msg += `📤 **Payouts**\n`;
+            msg += `Today: ₹${todayPayout.total.toFixed(2)}\n`;
+            msg += `Yesterday: ₹${yesterdayPayout.total.toFixed(2)}`;
+
+            ctx.reply(msg);
         } catch (error) {
             console.error('Bot Balance Error:', error);
             ctx.reply('Error fetching balance.');
@@ -71,20 +109,61 @@ async function initBot() {
                 return ctx.reply('⚠️ This chat is not bound to any merchant.');
             }
 
+            let responseMsg = '';
+
+            // 1. Check Local DB
             const tx = await db.prepare('SELECT * FROM transactions WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
 
-            if (!tx) {
-                // Also check payouts?
-                const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
+            if (tx) {
+                responseMsg += `🔎 **Local Payin Record**\nOrder ID: ${tx.order_id}\nAmount: ${tx.amount}\nStatus: ${tx.status.toUpperCase()}\nUTR: ${tx.utr || 'N/A'}\n\n`;
 
-                if (payout) {
-                    return ctx.reply(`📤 **Payout Details**\nOrder ID: ${payout.order_id}\nAmount: ${payout.amount}\nStatus: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}`);
+                // If pending, check upstream
+                if (tx.status === 'pending') {
+                    // Try to check upstream by UTR or OrderID
+                    try {
+                        let upstream = null;
+                        if (tx.utr) {
+                            upstream = await payableService.queryUtr(tx.utr);
+                        } else {
+                            upstream = await payableService.queryPayin(tx.order_id);
+                        }
+
+                        if (upstream && upstream.code === 1) {
+                            responseMsg += `🌐 **Upstream Status**\nStatus: ${upstream.data.status}\nAmount: ${upstream.data.amount}`;
+                        }
+                    } catch (e) {
+                        // Ignore upstream error
+                    }
                 }
-
-                return ctx.reply('❌ Transaction not found.');
+                return ctx.reply(responseMsg);
             }
 
-            ctx.reply(`📥 **Payin Details**\nOrder ID: ${tx.order_id}\nAmount: ${tx.amount}\nStatus: ${tx.status.toUpperCase()}\nUTR: ${tx.utr || 'N/A'}`);
+            // Check Payouts Local
+            const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
+            if (payout) {
+                return ctx.reply(`📤 **Payout Details**\nOrder ID: ${payout.order_id}\nAmount: ${payout.amount}\nStatus: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}`);
+            }
+
+            // 2. If not found locally, Check Upstream (By UTR or Order ID)
+            ctx.reply('Searching upstream...');
+            try {
+                // Try UTR first
+                let upstream = await payableService.queryUtr(queryId);
+                if (upstream.code === 1) {
+                    return ctx.reply(`🌐 **Upstream Found (UTR)**\nOrder ID: ${upstream.data.orderId}\nAmount: ${upstream.data.amount}\nStatus: ${upstream.data.status}\nUTR: ${queryId}`);
+                }
+            } catch (e) { }
+
+            try {
+                // Try Order ID
+                let upstream = await payableService.queryPayin(queryId);
+                if (upstream.code === 1) {
+                    return ctx.reply(`🌐 **Upstream Found (Order)**\nOrder ID: ${upstream.data.orderId}\nAmount: ${upstream.data.amount}\nStatus: ${upstream.data.status}`);
+                }
+            } catch (e) { }
+
+            return ctx.reply('❌ Transaction not found locally or upstream.');
+
         } catch (error) {
             console.error('Bot Check Error:', error);
             ctx.reply('Error checking transaction.');
@@ -112,6 +191,17 @@ async function initBot() {
             console.error('Bot Last Error:', error);
             ctx.reply('Error fetching last transaction.');
         }
+    });
+
+    // Help Command
+    bot.start((ctx) => {
+        ctx.reply(
+            `Available Commands:\n\n` +
+            `/balance - Check merchant balance & stats\n` +
+            `/check <UTR/ID> - Check transaction status (Local & Upstream)\n` +
+            `/last - View last pending payin\n` +
+            `/bind <KEY> - Link group to merchant`
+        );
     });
 
     bot.launch().then(() => {

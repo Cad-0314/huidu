@@ -158,6 +158,76 @@ router.post('/check', async (req, res) => {
 });
 
 /**
+ * POST /api/payin/check-utr - Check order status by UTR
+ */
+router.post('/check-utr', async (req, res) => {
+    try {
+        const { utr, userId } = req.body;
+        const db = getDb();
+
+        if (!utr) {
+            return res.status(400).json({ code: 0, msg: 'UTR is required' });
+        }
+
+        // Optional: validate userId if provided, or just search globally if UTR is unique enough
+        // For security, checking user context is better
+        let userIdVal = null;
+        if (userId) {
+            const user = await db.prepare('SELECT id FROM users WHERE uuid = ?').get(userId);
+            if (user) userIdVal = user.id;
+        }
+
+        let query = 'SELECT * FROM transactions WHERE utr = ?';
+        const params = [utr];
+        if (userIdVal) {
+            query += ' AND user_id = ?';
+            params.push(userIdVal);
+        }
+
+        const tx = await db.prepare(query).get(...params);
+
+        if (tx) {
+            return res.json({
+                code: 1,
+                msg: 'Order found locally',
+                data: {
+                    orderId: tx.order_id,
+                    id: tx.uuid,
+                    status: tx.status,
+                    amount: tx.amount,
+                    utr: tx.utr,
+                    createdAt: tx.created_at
+                }
+            });
+        }
+
+        // If not found locally, check upstream
+        try {
+            const upstream = await payableService.queryUtr(utr);
+            if (upstream.code === 1) {
+                return res.json({
+                    code: 1,
+                    msg: 'Order found upstream',
+                    data: {
+                        orderId: upstream.data.orderId,
+                        status: upstream.data.status,
+                        amount: upstream.data.amount,
+                        utr: utr
+                    }
+                });
+            }
+        } catch (e) {
+            // Upstream check failed or returned error
+        }
+
+        return res.status(404).json({ code: 0, msg: 'Transaction not found' });
+    } catch (error) {
+        console.error('Check UTR error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
  * POST /api/payin/callback
  */
 router.post('/callback', async (req, res) => {

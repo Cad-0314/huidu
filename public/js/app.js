@@ -731,10 +731,8 @@ async function createUser() {
         return;
     }
 
-    const btn = document.querySelector('#modalFooter .btn-primary');
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    closeModal(); // Close the form modal first
+    showLoader(); // Show global loader
 
     try {
         const data = await API.post('/admin/users', {
@@ -742,20 +740,20 @@ async function createUser() {
             payinRate: parseFloat(payinRate),
             payoutRate: parseFloat(payoutRate)
         });
+
+        hideLoader(); // Hide loader
+
         if (data.code === 1) {
-            showToast(t('toast_merchant_created'), 'success');
-            closeModal();
+            // showToast(t('toast_merchant_created'), 'success');
             loadUsersData();
+            showWelcomeModal(data.data); // Show the fancy welcome popup
         } else {
             showToast(data.msg || 'Failed to create merchant', 'error');
+            // If failed, maybe reopen the create modal? For now just show toast.
         }
     } catch (error) {
+        hideLoader();
         showToast(t('error_create_merchant'), 'error');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
     }
 }
 
@@ -1108,6 +1106,42 @@ function showToast(message, type = 'info') {
 document.getElementById('modalOverlay').addEventListener('click', (e) => {
     if (e.target.id === 'modalOverlay') {
         closeModal();
+    }
+});
+
+// ========================================
+// UI UTILITIES
+// ========================================
+
+function showLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) loader.classList.add('active');
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) loader.classList.remove('active');
+}
+
+function showWelcomeModal(data) {
+    const modal = document.getElementById('welcomeModal');
+    if (!modal) return;
+
+    document.getElementById('welcomeMerchantId').textContent = data.id || 'N/A';
+    document.getElementById('welcomeMerchantKey').textContent = data.merchantKey || 'N/A';
+
+    modal.classList.add('active');
+}
+
+function closeWelcomeModal() {
+    const modal = document.getElementById('welcomeModal');
+    if (modal) modal.classList.remove('active');
+}
+
+// Close welcome modal on overlay click
+document.getElementById('welcomeModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'welcomeModal') {
+        closeWelcomeModal();
     }
 });
 

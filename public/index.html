@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/custom-ui.css">
 </head>
 
 <body>
@@ -131,6 +132,53 @@
                 <!-- Modal actions -->
             </div>
         </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div id="welcomeModal">
+        <div class="welcome-content">
+            <div class="welcome-header">
+                <div class="welcome-icon">🎉</div>
+                <h2>Congratulations!</h2>
+                <p>Merchant account has been successfully created.</p>
+            </div>
+            <div class="welcome-body">
+                <div class="info-group">
+                    <span class="info-label">Merchant ID</span>
+                    <div class="info-value-box">
+                        <span id="welcomeMerchantId">M-12345678</span>
+                        <button class="copy-btn" onclick="copyToClipboard('welcomeMerchantId')">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">Merchant Key (Keep Secret)</span>
+                    <div class="info-value-box">
+                        <span id="welcomeMerchantKey">key_1234567890</span>
+                        <button class="copy-btn" onclick="copyToClipboard('welcomeMerchantKey')">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                <!-- Documentation Link -->
+                <div class="doc-link-box">
+                    <p class="mb-2 text-muted" style="font-size: 0.9rem;">Get started by integrating our API</p>
+                    <a href="/apidocs" target="_blank" class="doc-link">
+                        <i class="fas fa-book"></i> View Documentation
+                    </a>
+                </div>
+            </div>
+            <div class="welcome-footer">
+                <button class="btn-done" onclick="closeWelcomeModal()">Awsome, Let's Go!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Loader -->
+    <div id="globalLoader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Processing...</div>
     </div>
 
     <script src="/js/i18n.js"></script>
