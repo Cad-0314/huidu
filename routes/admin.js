@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { getDb } = require('../config/database');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { generateMerchantKey } = require('../utils/signature');
+const telegramService = require('../services/telegram');
 
 /**
  * GET /api/admin/users
@@ -99,37 +100,11 @@ router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
         const { name, status, callbackUrl, payinRate, payoutRate } = req.body;
         const db = getDb();
 
-        const user = await db.prepare('SELECT * FROM users WHERE uuid = ?').get(id);
-        if (!user) {
-            return res.status(404).json({ code: 0, msg: 'User not found' });
-        }
-
-        const updates = [];
-        const params = [];
-
-        if (name) { updates.push('name = ?'); params.push(name); }
-        if (status) { updates.push('status = ?'); params.push(status); }
-        if (callbackUrl !== undefined) { updates.push('callback_url = ?'); params.push(callbackUrl); }
-
-        if (payinRate !== undefined) {
-            const pRate = parseFloat(payinRate);
-            if (pRate < 5) return res.status(400).json({ code: 0, msg: 'Pay-in rate must be 5% or more' });
-            updates.push('payin_rate = ?');
-            params.push(pRate);
-        }
-
-        if (payoutRate !== undefined) {
-            const poRate = parseFloat(payoutRate);
-            if (poRate < 3) return res.status(400).json({ code: 0, msg: 'Payout rate must be 3% or more' });
-            updates.push('payout_rate = ?');
-            params.push(poRate);
-        }
-
-        if (updates.length > 0) {
-            updates.push("updated_at = datetime('now')");
-            params.push(user.id);
-            await db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ? `).run(...params);
-        }
+        await db.prepare(`
+            UPDATE users 
+            SET name = ?, status = ?, callback_url = ?, payin_rate = ?, payout_rate = ?, updated_at = datetime('now')
+            WHERE uuid = ?
+        `).run(name, status, callbackUrl, parseFloat(payinRate), parseFloat(payoutRate), id);
 
         res.json({ code: 1, msg: 'User updated' });
     } catch (error) {
@@ -137,6 +112,23 @@ router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
         res.status(500).json({ code: 0, msg: 'Server error' });
     }
 });
+
+/**
+ * POST /api/admin/broadcast
+ */
+router.post('/broadcast', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ code: 0, msg: 'Message is required' });
+
+        const result = await telegramService.broadcastMessage(message);
+        res.json({ code: 1, msg: 'Broadcast sent', data: result });
+    } catch (error) {
+        console.error('Broadcast error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
 
 /**
  * GET /api/admin/payouts/pending

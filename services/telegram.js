@@ -23,13 +23,25 @@ async function initBot() {
             }
 
             const merchantKey = message[1].trim();
-            const user = await db.prepare('SELECT id, name FROM users WHERE merchant_key = ?').get(merchantKey);
+            const user = await db.prepare('SELECT id, name, telegram_group_id FROM users WHERE merchant_key = ?').get(merchantKey);
 
             if (!user) {
                 return ctx.reply('Invalid Merchant Key.');
             }
 
             const chatId = ctx.chat.id.toString();
+
+            // Check if this Group is already bound to another merchant
+            const existingGroup = await db.prepare('SELECT username FROM users WHERE telegram_group_id = ? AND id != ?').get(chatId, user.id);
+            if (existingGroup) {
+                return ctx.reply(`⚠️ This group is already bound to merchant: ${existingGroup.username}. Unbind there first.`);
+            }
+
+            // Check if this Merchant is already bound to another group
+            if (user.telegram_group_id && user.telegram_group_id !== chatId) {
+                return ctx.reply(`⚠️ This merchant is already bound to another group. Contact admin to reset.`);
+            }
+
             await db.prepare('UPDATE users SET telegram_group_id = ? WHERE id = ?').run(chatId, user.id);
 
             ctx.reply(`✅ Successfully bound to merchant: ${user.name}`);
@@ -215,4 +227,25 @@ async function initBot() {
     process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
 
-module.exports = { initBot };
+async function broadcastMessage(text) {
+    if (!bot) return { success: 0, failed: 0 };
+    const db = getDb();
+    const users = await db.prepare('SELECT telegram_group_id FROM users WHERE telegram_group_id IS NOT NULL').all();
+
+    let success = 0;
+    let failed = 0;
+
+    for (const u of users) {
+        if (!u.telegram_group_id) continue;
+        try {
+            await bot.telegram.sendMessage(u.telegram_group_id, text);
+            success++;
+        } catch (e) {
+            console.error(`Failed to send to ${u.telegram_group_id}:`, e.message);
+            failed++;
+        }
+    }
+    return { success, failed };
+}
+
+module.exports = { initBot, broadcastMessage };

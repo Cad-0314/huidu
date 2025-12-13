@@ -1,0 +1,40 @@
+<div class="card fade-in">
+    <div class="card-header d-flex justify-between align-center">
+        <h3 data-i18n="broadcast_title">Bot Broadcast</h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <span data-i18n="broadcast_desc">Send a message to all merchants who have linked their Telegram
+                account.</span>
+        </div>
+
+        <div class="form-group mt-3">
+            <label for="broadcastMessage" data-i18n="label_message">Message</label>
+            <textarea id="broadcastMessage" rows="6" class="form-control"
+                placeholder="Enter your message here..."></textarea>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <button class="btn btn-primary" onclick="sendBroadcast()" id="btnSendBroadcast">
+                    <i class="fas fa-paper-plane"></i> <span data-i18n="btn_send_broadcast">Send Broadcast</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="broadcastResult" class="mt-4 hidden h-full">
+            <h4 data-i18n="recent_broadcast">Broadcast Result</h4>
+            <div class="stats-grid mt-2">
+                <div class="stat-card">
+                    <div class="stat-value text-success" id="broadcastSuccess">0</div>
+                    <div class="stat-label" data-i18n="sent_success">Sent Successfully</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-danger" id="broadcastFailed">0</div>
+                    <div class="stat-label" data-i18n="sent_failed">Failed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

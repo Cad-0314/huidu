@@ -132,6 +132,15 @@ function getDb() {
 
 // Initialize Schema (Table Creations)
 async function initializeSchema() {
+    // Enable WAL Mode for performance (Local DB only)
+    if (db.type === 'local') {
+        try {
+            await db.exec('PRAGMA journal_mode = WAL;');
+            await db.exec('PRAGMA synchronous = NORMAL;');
+            console.log('WAL Mode enabled');
+        } catch (e) { console.error('Failed to enable WAL mode:', e); }
+    }
+
     const tableQueries = [
         `CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,6 +223,26 @@ async function initializeSchema() {
 
     for (const sql of tableQueries) {
         await db.exec(sql);
+    }
+
+    // Indices for performance
+    const indexQueries = [
+        'CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)',
+        'CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_order_id ON transactions(order_id)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_payouts_user_id ON payouts(user_id)',
+        'CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status)',
+        'CREATE INDEX IF NOT EXISTS idx_payouts_created_at ON payouts(created_at)'
+    ];
+
+    for (const sql of indexQueries) {
+        try {
+            await db.exec(sql);
+        } catch (e) { }
     }
 
     // Default Admin & Settings

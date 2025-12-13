@@ -70,6 +70,10 @@
                         <i class="fas fa-list"></i>
                         <span data-i18n="all_transactions_tab">All Transactions</span>
                     </a>
+                    <a class="nav-item" data-section="broadcast">
+                        <i class="fas fa-broadcast-tower"></i>
+                        <span data-i18n="broadcast_title">Bot Broadcast</span>
+                    </a>
                 </div>
             </nav>
 
@@ -139,38 +143,71 @@
         <div class="welcome-content">
             <div class="welcome-header">
                 <div class="welcome-icon">🎉</div>
-                <h2>Congratulations!</h2>
-                <p>Merchant account has been successfully created.</p>
+                <h2 data-i18n="welcome_title">Congratulations!</h2>
+                <p data-i18n="welcome_subtitle">Merchant account has been successfully created.</p>
             </div>
-            <div class="welcome-body">
+
+            <div class="welcome-body scrollable-body">
+                <!-- Credentials Section -->
                 <div class="info-group">
-                    <span class="info-label">Merchant ID</span>
+                    <span class="info-label" data-i18n="label_merchant_id">Merchant ID</span>
                     <div class="info-value-box">
                         <span id="welcomeMerchantId">M-12345678</span>
                         <button class="copy-btn" onclick="copyToClipboard('welcomeMerchantId')">
-                            <i class="fas fa-copy"></i> Copy
+                            <i class="fas fa-copy"></i>
                         </button>
                     </div>
                 </div>
                 <div class="info-group">
-                    <span class="info-label">Merchant Key (Keep Secret)</span>
+                    <span class="info-label" data-i18n="label_merchant_key">Merchant Key (Secret)</span>
                     <div class="info-value-box">
                         <span id="welcomeMerchantKey">key_1234567890</span>
                         <button class="copy-btn" onclick="copyToClipboard('welcomeMerchantKey')">
-                            <i class="fas fa-copy"></i> Copy
+                            <i class="fas fa-copy"></i>
                         </button>
                     </div>
                 </div>
-                <!-- Documentation Link -->
-                <div class="doc-link-box">
-                    <p class="mb-2 text-muted" style="font-size: 0.9rem;">Get started by integrating our API</p>
-                    <a href="/apidocs" target="_blank" class="doc-link">
-                        <i class="fas fa-book"></i> View Documentation
-                    </a>
+
+                <!-- System Rules Section -->
+                <div class="divider">
+                    <span data-i18n="section_rules">System Rules</span>
+                </div>
+                <div class="rules-grid">
+                    <div class="rule-item">
+                        <span class="rule-label" data-i18n="label_payin_rate">Pay-in Rate</span>
+                        <span class="rule-value" id="welcomePayinRate">5.0%</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-label" data-i18n="label_payout_rate">Payout Rate</span>
+                        <span class="rule-value" id="welcomePayoutRate">3.0%</span>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-label" data-i18n="label_settlement">Settlement</span>
+                        <span class="rule-value" data-i18n="val_settlement">Instant (T+0)</span>
+                    </div>
+                </div>
+
+                <!-- API Section -->
+                <div class="divider">
+                    <span data-i18n="section_api">API Integration</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label" data-i18n="label_base_url">Base URL</span>
+                    <div class="info-value-box">
+                        <span id="welcomeBaseUrl">https://api.vspay.com</span>
+                        <button class="copy-btn" onclick="copyToClipboard('welcomeBaseUrl')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
+
             <div class="welcome-footer">
-                <button class="btn-done" onclick="closeWelcomeModal()">Awsome, Let's Go!</button>
+                <button class="btn-share full-width mb-2" onclick="copyShareableMessage()">
+                    <i class="fas fa-share-alt"></i> <span data-i18n="btn_copy_message">Copy Shareable Message</span>
+                </button>
+                <button class="btn-done full-width" onclick="closeWelcomeModal()" data-i18n="btn_awesome">Awesome, Let's
+                    Go!</button>
             </div>
         </div>
     </div>

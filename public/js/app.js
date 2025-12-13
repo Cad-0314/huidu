@@ -52,6 +52,7 @@ const API = {
 // State
 let currentUser = null;
 let currentSection = 'dashboard';
+const sectionCache = {};
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -148,54 +149,75 @@ async function loadSection(section) {
 
     // Load content
     const contentArea = document.getElementById('contentArea');
+
+    // Check cache first
+    if (sectionCache[section]) {
+        contentArea.innerHTML = sectionCache[section];
+        initSection(section);
+        return;
+    }
+
     contentArea.innerHTML = '<div class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
     try {
         const response = await fetch(`/sections/${section}.html`);
         if (!response.ok) throw new Error('Section not found');
         const html = await response.text();
+
+        // Cache and render
+        sectionCache[section] = html;
         contentArea.innerHTML = html;
 
-        // Translate static content
-        if (window.updateTranslations) {
-            window.updateTranslations();
-        }
-
-        // Initialize section logic
-        switch (section) {
-            case 'dashboard':
-                loadDashboardData();
-                break;
-            case 'transactions':
-                loadTransactionsData();
-                break;
-            case 'payouts':
-                loadPayoutsData();
-                break;
-            case 'payment-links':
-                // No data load needed initially
-                break;
-            case 'api-docs':
-                // loadApiDocs(); // If exists
-                break;
-            case 'credentials':
-                loadCredentialsData();
-                break;
-            case 'users':
-                loadUsersData();
-                break;
-            case 'approvals':
-                loadApprovalsData();
-                break;
-            case 'all-transactions':
-                loadAllTransactionsData();
-                break;
-            default:
-                break;
-        }
+        initSection(section);
     } catch (error) {
         console.error('Error loading section:', error);
         contentArea.innerHTML = `<div class="alert alert-error">Failed to load content: ${error.message}</div>`;
+    }
+}
+
+function initSection(section) {
+    // Translate static content
+    if (window.updateTranslations) {
+        window.updateTranslations();
+    }
+
+    // Initialize section logic
+    switch (section) {
+        case 'dashboard':
+            loadDashboardData();
+            break;
+        case 'transactions':
+            loadTransactionsData();
+            break;
+        case 'payouts':
+            loadPayoutsData();
+            break;
+        case 'payment-links':
+            // No data load needed initially
+            break;
+        case 'api-docs':
+            // loadApiDocs(); // If exists
+            break;
+        case 'credentials':
+            loadCredentialsData();
+            break;
+        case 'users':
+            loadUsersData();
+            break;
+        case 'approvals':
+            loadApprovalsData();
+            break;
+        case 'approvals':
+            loadApprovalsData();
+            break;
+        case 'all-transactions':
+            loadAllTransactionsData();
+            break;
+        case 'broadcast':
+            // No init needed
+            break;
+        default:
+            break;
     }
 }
 
@@ -1113,6 +1135,40 @@ document.getElementById('modalOverlay').addEventListener('click', (e) => {
 // UI UTILITIES
 // ========================================
 
+// ========================================
+// BROADCAST
+// ========================================
+
+async function sendBroadcast() {
+    const message = document.getElementById('broadcastMessage').value;
+    if (!message) {
+        showToast(t('toast_fill_fields'), 'error');
+        return;
+    }
+
+    const btn = document.getElementById('btnSendBroadcast');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+    try {
+        const data = await API.post('/admin/broadcast', { message });
+        if (data.code === 1) {
+            showToast(t('toast_broadcast_sent'), 'success');
+            document.getElementById('broadcastResult').classList.remove('hidden');
+            document.getElementById('broadcastSuccess').textContent = data.data.success;
+            document.getElementById('broadcastFailed').textContent = data.data.failed;
+        } else {
+            showToast(data.msg || 'Broadcast failed', 'error');
+        }
+    } catch (error) {
+        showToast('Error sending broadcast', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 function showLoader() {
     const loader = document.getElementById('globalLoader');
     if (loader) loader.classList.add('active');
@@ -1129,8 +1185,50 @@ function showWelcomeModal(data) {
 
     document.getElementById('welcomeMerchantId').textContent = data.id || 'N/A';
     document.getElementById('welcomeMerchantKey').textContent = data.merchantKey || 'N/A';
+    document.getElementById('welcomePayinRate').textContent = (data.payinRate || 5.0) + '%';
+    document.getElementById('welcomePayoutRate').textContent = (data.payoutRate || 3.0) + '%';
+    document.getElementById('welcomeBaseUrl').textContent = window.location.origin;
+
+    // Store data for sharing
+    modal.dataset.shareData = JSON.stringify(data);
 
     modal.classList.add('active');
+}
+
+function copyShareableMessage() {
+    const modal = document.getElementById('welcomeModal');
+    if (!modal || !modal.dataset.shareData) return;
+
+    try {
+        const data = JSON.parse(modal.dataset.shareData);
+        const baseUrl = window.location.origin;
+
+        const message = `${t('msg_welcome')}
+
+${t('msg_account_details')}
+${t('label_merchant_id')}: ${data.id}
+${t('label_merchant_key')}: ${data.merchantKey}
+
+${t('msg_system_rules')}
+- ${t('label_payin_rate')}: ${data.payinRate}%
+- ${t('label_payout_rate')}: ${data.payoutRate}%
+- ${t('label_settlement')}: ${t('val_settlement')}
+
+${t('msg_api_details')}
+- ${t('label_base_url')}: ${baseUrl}
+- ${t('msg_docs')}: ${baseUrl}/apidocs`;
+
+        navigator.clipboard.writeText(message).then(() => {
+            const btn = modal.querySelector('.btn-share');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> ' + t('toast_copied');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+            }, 2000);
+        });
+    } catch (e) {
+        console.error('Share error', e);
+    }
 }
 
 function closeWelcomeModal() {

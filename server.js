@@ -22,6 +22,7 @@ function logError(error, context = '') {
 
 // Middleware
 app.use(cors());
+app.use(require('compression')());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -145,7 +145,42 @@ const translations = {
         label_callback_url: "Callback URL",
         btn_save: "Save",
         btn_regen_key: "Regenerate Merchant Key",
-        warn_regen_key: "Warning: This will invalidate your current key"
+        warn_regen_key: "Warning: This will invalidate your current key",
+
+        // Welcome Popup
+        welcome_title: "Congratulations!",
+        welcome_subtitle: "Merchant account has been successfully created.",
+        label_merchant_id: "Merchant ID",
+        label_merchant_key: "Merchant Key (Secret)",
+        section_rules: "System Rules",
+        label_payin_rate: "Pay-in Rate",
+        label_payout_rate: "Payout Rate",
+        label_settlement: "Settlement",
+        val_settlement: "Instant (T+0)",
+        section_api: "API Integration",
+        label_base_url: "Base URL",
+        btn_copy_message: "Copy Shareable Message",
+        btn_awesome: "Awesome, Let's Go!",
+
+        // Share Message Template
+        msg_welcome: "🎉 Welcome to VSPAY!",
+        msg_account_details: "Here are your account details:",
+        msg_system_rules: "⚡ System Rules:",
+        msg_api_details: "🔗 API Integration:",
+        msg_account_details: "Here are your account details:",
+        msg_system_rules: "⚡ System Rules:",
+        msg_api_details: "🔗 API Integration:",
+        msg_docs: "Docs",
+
+        // Broadcast
+        broadcast_title: "Bot Broadcast",
+        broadcast_desc: "Send a message to all merchants who have linked their Telegram account.",
+        label_message: "Message",
+        btn_send_broadcast: "Send Broadcast",
+        toast_broadcast_sent: "Broadcast sent successfully!",
+        recent_broadcast: "Broadcast Result",
+        sent_success: "Sent Successfully",
+        sent_failed: "Failed"
     },
     zh: {
         // App Shell
@@ -293,7 +328,42 @@ const translations = {
         label_callback_url: "回调地址",
         btn_save: "保存",
         btn_regen_key: "重新生成商户密钥",
-        warn_regen_key: "警告: 这将使您当前的密钥失效"
+        warn_regen_key: "警告: 这将使您当前的密钥失效",
+
+        // Welcome Popup
+        welcome_title: "恭喜！",
+        welcome_subtitle: "商户账户已成功创建。",
+        label_merchant_id: "商户 ID",
+        label_merchant_key: "商户密钥 (保密)",
+        section_rules: "系统规则",
+        label_payin_rate: "充值费率",
+        label_payout_rate: "代付费率",
+        label_settlement: "结算周期",
+        val_settlement: "即时 (T+0)",
+        section_api: "API 集成",
+        label_base_url: "基础 URL",
+        btn_copy_message: "复制分享信息",
+        btn_awesome: "太棒了，开始吧！",
+
+        // Share Message Template
+        msg_welcome: "🎉 欢迎使用 VSPAY!",
+        msg_account_details: "这是您的账户详情:",
+        msg_system_rules: "⚡ 系统规则:",
+        msg_api_details: "🔗 API 集成:",
+        msg_account_details: "这是您的账户详情:",
+        msg_system_rules: "⚡ 系统规则:",
+        msg_api_details: "🔗 API 集成:",
+        msg_docs: "文档",
+
+        // Broadcast
+        broadcast_title: "机器人广播",
+        broadcast_desc: "向所有绑定 Telegram 的商户发送消息。",
+        label_message: "消息内容",
+        btn_send_broadcast: "发送广播",
+        toast_broadcast_sent: "广播发送成功！",
+        recent_broadcast: "广播结果",
+        sent_success: "发送成功",
+        sent_failed: "发送失败"
     }
 };
 
