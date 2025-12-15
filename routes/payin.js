@@ -54,10 +54,14 @@ router.post('/create', apiAuthenticate, async (req, res) => {
 
         const txUuid = uuidv4();
 
-        // Wrap callbackUrl and original param into stored param to preserve dynamic callback capability
+        // Extract deeplinks from Silkpay response
+        const deepLinks = silkpayResponse.data.deepLink || {};
+
+        // Wrap callbackUrl, original param, and deeplinks into stored param
         const storedParam = JSON.stringify({
             c: callbackUrl,
-            p: param
+            p: param,
+            deepLinks: deepLinks
         });
 
         // Note: we store silkpay's payOrderId in platform_order_id. mOrderId is not explicitly stored but is internalOrderId.
@@ -68,9 +72,6 @@ router.post('/create', apiAuthenticate, async (req, res) => {
 
         // Return local payment page URL
         const localPaymentUrl = `${appUrl}/pay/${silkpayResponse.data.payOrderId || internalOrderId}`;
-
-        // Extract deeplinks from Silkpay response
-        const deepLinks = silkpayResponse.data.deepLink || {};
 
         res.json({
             code: 1,

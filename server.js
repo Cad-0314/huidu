@@ -77,11 +77,29 @@ async function startServer() {
                 // Read template
                 let html = fs.readFileSync(path.join(__dirname, 'public', 'pay.html'), 'utf8');
 
+                // Extract deeplinks from stored param
+                let deepLinks = {};
+                try {
+                    if (tx.param) {
+                        const parsed = JSON.parse(tx.param);
+                        if (parsed.deepLinks) {
+                            deepLinks = parsed.deepLinks;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to parse deeplinks:', e);
+                }
+
                 // Inject Data
-                html = html.replace('{{AMOUNT}}', parseFloat(tx.amount).toFixed(2));
+                html = html.replace(/\{\{AMOUNT\}\}/g, parseFloat(tx.amount).toFixed(2));
                 html = html.replace('{{ORDER_ID}}', tx.order_id); // Show merchant's order ID to user
                 html = html.replace('{{DATE}}', new Date(tx.created_at).toLocaleDateString());
                 html = html.replace('{{PAYMENT_URL}}', tx.payment_url); // Link to Silkpay
+
+                // Inject deeplinks
+                html = html.replace('{{DEEPLINK_PHONEPE}}', deepLinks.upi_phonepe || '');
+                html = html.replace('{{DEEPLINK_PAYTM}}', deepLinks.upi_paytm || '');
+                html = html.replace('{{DEEPLINK_UPI}}', deepLinks.upi_scan || tx.payment_url || '');
 
                 res.send(html);
             } catch (error) {
