@@ -41,16 +41,7 @@
         }
 
         .logo-header img {
-            height: 40px;
-            filter: brightness(0) invert(1);
-        }
-
-        .logo-header .logo-text {
-            color: white;
-            font-size: 24px;
-            font-weight: 700;
-            margin-left: 10px;
-            letter-spacing: 1px;
+            height: 50px;
         }
 
         .payment-header {
@@ -268,8 +259,7 @@
 <body>
     <div class="payment-container">
         <div class="logo-header">
-            <img src="/images/logo.png" alt="VSPAY" onerror="this.style.display='none'">
-            <span class="logo-text">VSPAY</span>
+            <img src="/images/logo.png" alt="VSPAY">
         </div>
         <div class="payment-header">
             <div class="amount-display">
@@ -282,30 +272,12 @@
             <div class="section-title">Select an option to pay (UPI)</div>
 
             <div class="payment-options">
-                <div class="payment-option" data-method="phonepe" data-deeplink="{{DEEPLINK_PHONEPE}}">
-                    <div class="option-icon">
-                        <img src="/images/phonepe.png" alt="PhonePe"
-                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#5f259f\'><circle cx=\'12\' cy=\'12\' r=\'12\'/><text x=\'12\' y=\'16\' text-anchor=\'middle\' fill=\'white\' font-size=\'10\' font-weight=\'bold\'>P</text></svg>'">
-                    </div>
-                    <span class="option-text">PhonePe</span>
-                    <div class="option-radio"></div>
-                </div>
-
-                <div class="payment-option" data-method="paytm" data-deeplink="{{DEEPLINK_PAYTM}}">
-                    <div class="option-icon">
-                        <img src="/images/paytm.png" alt="Paytm"
-                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#002970\'><rect width=\'24\' height=\'24\' rx=\'4\'/><text x=\'12\' y=\'15\' text-anchor=\'middle\' fill=\'white\' font-size=\'7\' font-weight=\'bold\'>Paytm</text></svg>'">
-                    </div>
-                    <span class="option-text">Paytm</span>
-                    <div class="option-radio"></div>
-                </div>
-
-                <div class="payment-option" data-method="upi" data-deeplink="{{DEEPLINK_UPI}}">
+                <div class="payment-option selected" data-method="upi" data-deeplink="{{DEEPLINK_UPI}}">
                     <div class="option-icon">
                         <img src="/images/upi.png" alt="UPI"
                             onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#097939\'><rect width=\'24\' height=\'24\' rx=\'4\'/><text x=\'12\' y=\'15\' text-anchor=\'middle\' fill=\'white\' font-size=\'7\' font-weight=\'bold\'>UPI</text></svg>'">
                     </div>
-                    <span class="option-text">Other UPI Apps</span>
+                    <span class="option-text">Pay with UPI</span>
                     <div class="option-radio"></div>
                 </div>
             </div>
@@ -346,62 +318,32 @@
             const fallbackUrl = document.getElementById('fallbackUrl').value;
             let selectedDeeplink = null;
 
-            options.forEach(option => {
-                const deeplink = option.getAttribute('data-deeplink');
+            const option = document.querySelector('.payment-option');
+            const deeplink = option.getAttribute('data-deeplink');
 
-                // Check if deeplink is available
-                if (!deeplink || deeplink === '' || deeplink === 'undefined' || deeplink === 'null' || deeplink.startsWith('{{')) {
-                    option.classList.add('disabled');
-                }
-
-                option.addEventListener('click', function () {
-                    if (this.classList.contains('disabled')) return;
-
-                    // Remove selected from all
-                    options.forEach(o => o.classList.remove('selected'));
-
-                    // Add selected to clicked
-                    this.classList.add('selected');
-
-                    // Store deeplink
-                    selectedDeeplink = this.getAttribute('data-deeplink');
-
-                    // Enable pay button
-                    payBtn.disabled = false;
+            // Check if deeplink is valid
+            if (!deeplink || deeplink === '' || deeplink === 'undefined' || deeplink === 'null' || deeplink.startsWith('{{')) {
+                // No valid deeplink, use fallback URL
+                payBtn.disabled = false;
+                payBtn.addEventListener('click', function () {
+                    window.location.href = fallbackUrl;
                 });
-            });
+            } else {
+                // Valid deeplink, enable button
+                payBtn.disabled = false;
+                payBtn.addEventListener('click', function () {
+                    // Open deeplink directly
+                    window.location.href = deeplink;
 
-            payBtn.addEventListener('click', function () {
-                if (selectedDeeplink && selectedDeeplink !== '' && !selectedDeeplink.startsWith('{{')) {
-                    // Try to open deeplink
-                    window.location.href = selectedDeeplink;
-
-                    // Fallback after timeout
+                    // Fallback after timeout if app doesn't open
                     setTimeout(() => {
                         if (document.hidden !== true) {
-                            // If still visible, deeplink might not have worked
-                            if (confirm('Unable to open app. Open payment page instead?')) {
+                            if (confirm('Unable to open UPI app. Open payment page instead?')) {
                                 window.location.href = fallbackUrl;
                             }
                         }
                     }, 2500);
-                } else {
-                    // No deeplink, use fallback
-                    window.location.href = fallbackUrl;
-                }
-            });
-
-            // If no valid options, auto-select fallback behavior
-            const validOptions = document.querySelectorAll('.payment-option:not(.disabled)');
-            if (validOptions.length === 0) {
-                // All disabled, enable button for fallback
-                payBtn.disabled = false;
-                payBtn.addEventListener('click', function () {
-                    window.location.href = fallbackUrl;
-                }, { once: true });
-            } else if (validOptions.length > 0) {
-                // Auto-select first valid option
-                validOptions[0].click();
+                });
             }
         });
     </script>

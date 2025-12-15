@@ -1,0 +1,398 @@
+{
+    "info": {
+        "_postman_id": "silkpay-api-collection",
+        "name": "Silkpay API",
+        "description": "Silkpay Payment Gateway API Collection\n\n**Sandbox Environment:**\n- Base URL: https://api.dev.silkpay.ai\n- Merchant ID: TEST\n- Secret Key: SIb3DQEBAQ\n\n**Important Notes:**\n- All signatures use MD5 encryption (32 lowercase characters)\n- Timestamps must be accurate to milliseconds\n- Callbacks require returning 'OK' string to confirm receipt",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "https://api.dev.silkpay.ai",
+            "type": "string"
+        },
+        {
+            "key": "mId",
+            "value": "TEST",
+            "type": "string"
+        },
+        {
+            "key": "secret",
+            "value": "SIb3DQEBAQ",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Payin",
+            "description": "Pay-in (Collection) API endpoints",
+            "item": [
+                {
+                    "name": "1. Create Payin Order (v2)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "const mOrderId = 'PAYIN_' + Date.now();",
+                                    "const amount = '100.00';",
+                                    "",
+                                    "// Sign: md5(mId + mOrderId + amount + timestamp + secret)",
+                                    "const signString = mId + mOrderId + amount + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('mOrderId', mOrderId);",
+                                    "pm.collectionVariables.set('amount', amount);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"amount\": \"{{amount}}\",\n    \"mId\": \"{{mId}}\",\n    \"mOrderId\": \"{{mOrderId}}\",\n    \"timestamp\": \"{{timestamp}}\",\n    \"notifyUrl\": \"https://your-server.com/api/payin/callback\",\n    \"returnUrl\": \"https://your-server.com/payment/success\",\n    \"sign\": \"{{sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/payin/v2",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "payin",
+                                "v2"
+                            ]
+                        },
+                        "description": "Creates a payin order and returns the cashier payment link.\n\n**Response includes:**\n- payOrderId: Gateway order number\n- deepLink: Object containing UPI deep links (upi_phonepe, upi_paytm, upi_scan)\n- paymentUrl: The payment link for the cashier page\n\n**Signature:** `md5(mId + mOrderId + amount + timestamp + secret)`"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "2. Query Payin Order Status",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "const mOrderId = pm.collectionVariables.get('mOrderId') || 'i001';",
+                                    "",
+                                    "// Sign: md5(mId + mOrderId + timestamp + secret)",
+                                    "const signString = mId + mOrderId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"mId\": \"{{mId}}\",\n    \"mOrderId\": \"{{mOrderId}}\",\n    \"timestamp\": \"{{timestamp}}\",\n    \"sign\": \"{{sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/payin/query",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "payin",
+                                "query"
+                            ]
+                        },
+                        "description": "Queries the status of a payin order.\n\n**Response status values:**\n- 0: Initialization\n- 1: Payment successful\n- 2: Payment failed\n\n**Signature:** `md5(mId + mOrderId + timestamp + secret)`"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "3. Submit UTR for Compensation",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "",
+                                    "// Sign: md5(mId + timestamp + secret)",
+                                    "const signString = mId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"mId\": \"{{mId}}\",\n    \"utr\": \"12345678\",\n    \"mOrderId\": \"{{mOrderId}}\",\n    \"sign\": \"{{sign}}\",\n    \"timestamp\": \"{{timestamp}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/payin/submit/utr",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "payin",
+                                "submit",
+                                "utr"
+                            ]
+                        },
+                        "description": "Used to re-associate a UTR with an order (compensation). The re-order will fail if the amount does not match.\n\n**Response code values:**\n- 1: Successful order processing\n- Others: Failure\n\n**Signature:** `md5(mId + timestamp + secret)`"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "4. Query UTR",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "",
+                                    "// Sign: md5(mId + timestamp + secret)",
+                                    "const signString = mId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"mId\": \"{{mId}}\",\n    \"utr\": \"411111234512\",\n    \"sign\": \"{{sign}}\",\n    \"timestamp\": \"{{timestamp}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/payin/query/utr",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "payin",
+                                "query",
+                                "utr"
+                            ]
+                        },
+                        "description": "Queries order details using the UTR.\n\n**Response code values:**\n- 1: A new order can be created (for compensation)\n- Others: Cannot create new order\n\n**Signature:** `md5(mId + timestamp + secret)`"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Payout",
+            "description": "Pay-out (Disbursement) API endpoints",
+            "item": [
+                {
+                    "name": "1. Create Payout Order",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "const mOrderId = 'PAYOUT_' + Date.now();",
+                                    "const amount = '100.00';",
+                                    "",
+                                    "// Sign: md5(mId + mOrderId + amount + timestamp + secret)",
+                                    "const signString = mId + mOrderId + amount + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('payoutOrderId', mOrderId);",
+                                    "pm.collectionVariables.set('payoutAmount', amount);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"amount\": \"{{payoutAmount}}\",\n    \"mId\": \"{{mId}}\",\n    \"mOrderId\": \"{{payoutOrderId}}\",\n    \"timestamp\": \"{{timestamp}}\",\n    \"notifyUrl\": \"https://your-server.com/api/payout/callback\",\n    \"upi\": \"\",\n    \"bankNo\": \"2983900989\",\n    \"ifsc\": \"ICIC0000001\",\n    \"name\": \"Beneficiary Name\",\n    \"sign\": \"{{sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/payout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "payout"
+                            ]
+                        },
+                        "description": "Creates a payout order to transfer funds to a beneficiary.\n\n**Required fields:**\n- amount: Order amount in INR\n- name: Beneficiary name\n- Either UPI or (bankNo + ifsc)\n\n**Signature:** `md5(mId + mOrderId + amount + timestamp + secret)`"
+                    },
+                    "response": []
+                },
+                {
+                    "name": "2. Query Payout Order Status",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "const mOrderId = pm.collectionVariables.get('payoutOrderId') || 'o001';",
+                                    "",
+                                    "// Sign: md5(mId + mOrderId + timestamp + secret)",
+                                    "const signString = mId + mOrderId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"mId\": \"{{mId}}\",\n    \"mOrderId\": \"{{payoutOrderId}}\",\n    \"timestamp\": \"{{timestamp}}\",\n    \"sign\": \"{{sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/payout/query",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "payout",
+                                "query"
+                            ]
+                        },
+                        "description": "Queries the status of a payout order.\n\n**Response status values:**\n- 0: Initial\n- 1: Processing\n- 2: Payment successful\n- 3: Payment failed\n\n**Signature:** `md5(mId + mOrderId + timestamp + secret)`"
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Balance",
+            "description": "Balance inquiry endpoint",
+            "item": [
+                {
+                    "name": "Merchant Balance Inquiry",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const timestamp = Date.now().toString();",
+                                    "const mId = pm.collectionVariables.get('mId');",
+                                    "const secret = pm.collectionVariables.get('secret');",
+                                    "",
+                                    "// Sign: md5(mId + timestamp + secret)",
+                                    "const signString = mId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.collectionVariables.set('timestamp', timestamp);",
+                                    "pm.collectionVariables.set('sign', sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"mId\": \"{{mId}}\",\n    \"timestamp\": \"{{timestamp}}\",\n    \"sign\": \"{{sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/transaction/balance",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "transaction",
+                                "balance"
+                            ]
+                        },
+                        "description": "Queries the merchant's current balance.\n\n**Response includes:**\n- availableAmount: Available balance\n- pendingAmount: Frozen/pending balance\n- totalAmount: Total (Available + Pending)\n\n**Signature:** `md5(mId + timestamp + secret)`"
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ]
+}
