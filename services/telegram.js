@@ -1,6 +1,6 @@
 const { Telegraf } = require('telegraf');
 const { getDb } = require('../config/database');
-const payableService = require('./payable');
+const silkpayService = require('./silkpay');
 
 let bot = null;
 
@@ -124,6 +124,7 @@ async function initBot() {
             let responseMsg = '';
 
             // 1. Check Local DB
+            // We search platform_order_id because Silkpay uses internal ID for queries usually, but sometimes merchant ID works.
             const tx = await db.prepare('SELECT * FROM transactions WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
 
             if (tx) {
@@ -131,17 +132,19 @@ async function initBot() {
 
                 // If pending, check upstream
                 if (tx.status === 'pending') {
-                    // Try to check upstream by UTR or OrderID
+                    // Try to check upstream by UTR or OrderID (platform_order_id likely)
                     try {
                         let upstream = null;
                         if (tx.utr) {
-                            upstream = await payableService.queryUtr(tx.utr);
+                            upstream = await silkpayService.queryUtr(tx.utr);
                         } else {
-                            upstream = await payableService.queryPayin(tx.order_id);
+                            upstream = await silkpayService.queryPayin(tx.platform_order_id || tx.order_id);
                         }
 
-                        if (upstream && upstream.code === 1) {
-                            responseMsg += `🌐 **Upstream Status / 上游状态**\nStatus/状态: ${upstream.data.status}\nAmount/金额: ${upstream.data.amount}`;
+                        if (upstream && upstream.status === '200') {
+                            const data = upstream.data || {};
+                            const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
+                            responseMsg += `🌐 **Upstream Status / 上游状态**\nStatus/状态: ${upStatus}\nAmount/金额: ${data.amount}`;
                         }
                     } catch (e) {
                         // Ignore upstream error
@@ -160,17 +163,23 @@ async function initBot() {
             ctx.reply('Searching upstream... / 正在搜寻上游...');
             try {
                 // Try UTR first
-                let upstream = await payableService.queryUtr(queryId);
-                if (upstream.code === 1) {
-                    return ctx.reply(`🌐 **Upstream Found (UTR) / 上游找到 (UTR)**\nOrder ID/订单号: ${upstream.data.orderId}\nAmount/金额: ${upstream.data.amount}\nStatus/状态: ${upstream.data.status}\nUTR: ${queryId}`);
+                let upstream = await silkpayService.queryUtr(queryId);
+                // Silkpay UTR check returns status 200 and data.code = 1 if usable/found?
+                // Docs say: data.code: 1 means successful order processing (compensation), NO, Wait.
+                // UTR Query Order (No. 5 in payin.txt): data.code 1 means new order can be created?
+                // Actually it says "Queries order details using the UTR". Response data has "amount", "mOrderId" etc.
+                if (upstream.status === '200' && upstream.data) {
+                    return ctx.reply(`🌐 **Upstream Found (UTR) / 上游找到 (UTR)**\nOrder ID/订单号: ${upstream.data.mOrderId || 'N/A'}\nAmount/金额: ${upstream.data.amount}\nStatus/状态: ${upstream.data.code === 1 ? 'Active/Usable' : 'Used/Invalid'}\nUTR: ${queryId}`);
                 }
             } catch (e) { }
 
             try {
                 // Try Order ID
-                let upstream = await payableService.queryPayin(queryId);
-                if (upstream.code === 1) {
-                    return ctx.reply(`🌐 **Upstream Found (Order) / 上游找到 (订单号)**\nOrder ID/订单号: ${upstream.data.orderId}\nAmount/金额: ${upstream.data.amount}\nStatus/状态: ${upstream.data.status}`);
+                let upstream = await silkpayService.queryPayin(queryId);
+                if (upstream.status === '200' && upstream.data) {
+                    const data = upstream.data;
+                    const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
+                    return ctx.reply(`🌐 **Upstream Found (Order) / 上游找到 (订单号)**\nOrder ID/订单号: ${data.mOrderId}\nAmount/金额: ${data.amount}\nStatus/状态: ${upStatus}`);
                 }
             } catch (e) { }
 

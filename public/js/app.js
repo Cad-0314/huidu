@@ -547,7 +547,7 @@ async function generatePaymentLink() {
         console.log('Payment link API response:', JSON.stringify(response, null, 2));
 
         if (response.code === 1) {
-            const paymentUrl = response.data.rechargeUrl || response.data.paymentUrl || response.data.url || `Payment Link Generated - Order: ${orderId}`;
+            const paymentUrl = response.data.paymentUrl || response.data.rechargeUrl || response.data.url || `Payment Link Generated - Order: ${orderId}`;
 
             document.getElementById('generatedLinkResult').innerHTML = `
                 <div class="payment-link-result">

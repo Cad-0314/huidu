@@ -3,7 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
-const payableService = require('../services/payable');
+const silkpayService = require('../services/silkpay');
 const { calculatePayinFee, getRatesFromDb } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
 
@@ -213,39 +213,38 @@ router.post('/payin/create', authenticate, async (req, res) => {
         const ourCallbackUrl = `${appUrl}/api/payin/callback`;
         const ourSkipUrl = skipUrl || `${appUrl}/payment/complete`;
 
-        const callbackParam = JSON.stringify({
-            merchantId: merchant.uuid,
-            merchantOrderId: orderId,
-            merchantCallback: callbackUrl || merchant.callback_url,
-            originalParam: param
-        });
+        console.log('[MERCHANT PAYIN] Calling Silkpay API...');
 
-        console.log('[MERCHANT PAYIN] Calling Payable API...');
-
-        const payableResponse = await payableService.createPayin({
+        const silkpayResponse = await silkpayService.createPayin({
             orderAmount: orderAmount,
             orderId: internalOrderId,
-            callbackUrl: ourCallbackUrl,
-            skipUrl: ourSkipUrl,
-            param: callbackParam
+            notifyUrl: ourCallbackUrl,
+            returnUrl: ourSkipUrl
         });
 
-        console.log('[MERCHANT PAYIN] Payable API Response:', JSON.stringify(payableResponse));
-
-        if (payableResponse.code !== 1) {
-            return res.status(400).json({ code: 0, msg: payableResponse.msg || 'Failed to create order' });
+        if (silkpayResponse.status !== '200') {
+            return res.status(400).json({ code: 0, msg: silkpayResponse.message || 'Failed to create order' });
         }
 
         const txUuid = uuidv4();
+
+        // Wrap callbackUrl and original param into stored param to preserve dynamic callback capability
+        const storedParam = JSON.stringify({
+            c: callbackUrl,
+            p: param
+        });
+
         await db.prepare(`
             INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
             VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
-        `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl || null, param || null);
+        `).run(txUuid, merchant.id, orderId, silkpayResponse.data.payOrderId || internalOrderId, amount, amount, fee, netAmount, silkpayResponse.data.paymentUrl, storedParam);
+
+        const localPaymentUrl = `${appUrl}/pay/${silkpayResponse.data.payOrderId || internalOrderId}`;
 
         res.json({
             code: 1,
             msg: 'Order created',
-            data: { orderId, id: txUuid, orderAmount: amount, fee, rechargeUrl: payableResponse.data?.rechargeUrl }
+            data: { orderId, id: txUuid, orderAmount: amount, fee, rechargeUrl: localPaymentUrl, paymentUrl: localPaymentUrl }
         });
     } catch (error) {
         console.error('[MERCHANT PAYIN] Error:', error);

@@ -52,6 +52,44 @@ async function startServer() {
         app.use('/api/payin', require('./routes/payin'));
         app.use('/api/payout', require('./routes/payout'));
 
+        // Payment Page - Public Route
+        app.get('/pay/:orderId', async (req, res) => {
+            try {
+                const { getDb } = require('./config/database');
+                const db = getDb();
+                const orderId = req.params.orderId;
+
+                // Lookup by internal Platform Order ID (internalOrderId) OR Merchant Order ID (order_id)
+                // Silkpay uses internalOrderId (HDP...) so the local link should probably use that or the merchant one.
+                // Let's support both if possible or just order_id.
+                // If the link uses the generated internal ID (HDP...), we search platform_order_id.
+                // If it uses the user-provided ID, we search order_id.
+                const tx = await db.prepare('SELECT * FROM transactions WHERE platform_order_id = ? OR order_id = ?').get(orderId, orderId);
+
+                if (!tx || tx.type !== 'payin') {
+                    return res.status(404).send('Payment not found');
+                }
+
+                if (tx.status === 'success') {
+                    return res.send('<h1>Payment already completed</h1>');
+                }
+
+                // Read template
+                let html = fs.readFileSync(path.join(__dirname, 'public', 'pay.html'), 'utf8');
+
+                // Inject Data
+                html = html.replace('{{AMOUNT}}', parseFloat(tx.amount).toFixed(2));
+                html = html.replace('{{ORDER_ID}}', tx.order_id); // Show merchant's order ID to user
+                html = html.replace('{{DATE}}', new Date(tx.created_at).toLocaleDateString());
+                html = html.replace('{{PAYMENT_URL}}', tx.payment_url); // Link to Silkpay
+
+                res.send(html);
+            } catch (error) {
+                console.error('Payment page error:', error);
+                res.status(500).send('Server Error');
+            }
+        });
+
         // Serve API Docs
         app.get('/apidocs', (req, res) => {
             res.sendFile(path.join(__dirname, 'public', 'apidocs.html'));

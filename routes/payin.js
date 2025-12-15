@@ -66,10 +66,13 @@ router.post('/create', apiAuthenticate, async (req, res) => {
             VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
         `).run(txUuid, merchant.id, orderId, silkpayResponse.data.payOrderId || internalOrderId, amount, amount, fee, netAmount, silkpayResponse.data.paymentUrl, storedParam);
 
+        // Return local payment page URL
+        const localPaymentUrl = `${appUrl}/pay/${silkpayResponse.data.payOrderId || internalOrderId}`;
+
         res.json({
             code: 1,
             msg: 'Order created',
-            data: { orderId, id: txUuid, orderAmount: amount, fee, paymentUrl: silkpayResponse.data.paymentUrl }
+            data: { orderId, id: txUuid, orderAmount: amount, fee, paymentUrl: localPaymentUrl }
         });
     } catch (error) {
         console.error('Create payin error:', error);
