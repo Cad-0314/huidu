@@ -69,10 +69,21 @@ router.post('/create', apiAuthenticate, async (req, res) => {
         // Return local payment page URL
         const localPaymentUrl = `${appUrl}/pay/${silkpayResponse.data.payOrderId || internalOrderId}`;
 
+        // Extract deeplinks from Silkpay response
+        const deepLinks = silkpayResponse.data.deepLink || {};
+
         res.json({
             code: 1,
             msg: 'Order created',
-            data: { orderId, id: txUuid, orderAmount: amount, fee, paymentUrl: localPaymentUrl }
+            data: {
+                orderId,
+                id: txUuid,
+                orderAmount: amount,
+                fee,
+                paymentUrl: localPaymentUrl,
+                silkpayPaymentUrl: silkpayResponse.data.paymentUrl,
+                deepLink: deepLinks
+            }
         });
     } catch (error) {
         console.error('Create payin error:', error);
