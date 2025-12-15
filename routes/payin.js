@@ -81,9 +81,7 @@ router.post('/create', apiAuthenticate, async (req, res) => {
                 id: txUuid,
                 orderAmount: amount,
                 fee,
-                paymentUrl: localPaymentUrl,
-                silkpayPaymentUrl: silkpayResponse.data.paymentUrl,
-                deepLink: deepLinks
+                paymentUrl: localPaymentUrl
             }
         });
     } catch (error) {

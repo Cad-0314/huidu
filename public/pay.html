@@ -300,16 +300,6 @@
                 </div>
             </div>
 
-            <!-- QR Code Container -->
-            <div id="qr-container"
-                style="display: none; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; padding: 10px; background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e0;">
-                <div id="qrcode"></div>
-                <div style="margin-top: 10px; font-size: 13px; color: #4a5568; text-align: center;">
-                    Scan with any UPI App<br>
-                    <span style="font-size: 11px; color: #718096;">(GPay, PhonePe, Paytm, etc.)</span>
-                </div>
-            </div>
-
             <button class="pay-button" id="payBtn" disabled>
                 Pay <span class="currency">₹</span> {{AMOUNT}}
             </button>
@@ -339,19 +329,12 @@
     <!-- Fallback Payment URL -->
     <input type="hidden" id="fallbackUrl" value="{{PAYMENT_URL}}">
 
-    <!-- QR Code Library -->
-    <script src="/js/qrcode.min.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const options = document.querySelectorAll('.payment-option');
             const payBtn = document.getElementById('payBtn');
             const fallbackUrl = document.getElementById('fallbackUrl').value;
-            const qrContainer = document.getElementById('qr-container');
-            const qrcodeDiv = document.getElementById('qrcode');
             let selectedDeeplink = null;
-            let currentMethod = null;
-            let qrCodeObj = null;
 
             // Check each option for valid deeplink
             options.forEach(option => {
@@ -373,33 +356,8 @@
                     // Add selected to clicked
                     this.classList.add('selected');
 
-                    // Store selection
+                    // Store deeplink
                     selectedDeeplink = this.getAttribute('data-deeplink');
-                    currentMethod = this.getAttribute('data-method');
-
-                    // Handle QR Code for "Other UPI" or generic UPI
-                    if (currentMethod === 'upi') {
-                        qrContainer.style.display = 'flex';
-                        qrcodeDiv.innerHTML = ''; // Clear previous
-
-                        try {
-                            qrCodeObj = new QRCode(qrcodeDiv, {
-                                text: selectedDeeplink,
-                                width: 180,
-                                height: 180,
-                                colorDark: "#000000",
-                                colorLight: "#ffffff",
-                                correctLevel: QRCode.CorrectLevel.M
-                            });
-                        } catch (e) {
-                            console.error('QR Gen Error:', e);
-                        }
-
-                        payBtn.innerHTML = 'Open App on Mobile';
-                    } else {
-                        qrContainer.style.display = 'none';
-                        payBtn.innerHTML = 'Pay <span class="currency">₹</span> {{AMOUNT}}';
-                    }
 
                     // Enable pay button
                     payBtn.disabled = false;
@@ -412,14 +370,17 @@
                     // Open deeplink
                     window.location.href = selectedDeeplink;
 
-                    // Fallback logic check
+                    // Fallback logic for desktop/failures
                     setTimeout(() => {
                         if (document.hidden !== true) {
-                            if (confirm('Did the app open? If not, click OK to try the standard payment page.')) {
+                            // If confirming is annoying, we can just redirect. 
+                            // But usually browser might block simple redirect if no user interaction.
+                            // Confirm is safer.
+                            if (confirm('Unable to open UPI app. Open payment page instead?')) {
                                 window.location.href = fallbackUrl;
                             }
                         }
-                    }, 3000);
+                    }, 2500);
                 } else {
                     // No valid deeplink selected, use fallback
                     window.location.href = fallbackUrl;
@@ -433,7 +394,7 @@
             } else {
                 // All options disabled, enable button for fallback
                 payBtn.disabled = false;
-                payBtn.textContent = 'Pay Now (Web)';
+                payBtn.textContent = 'Pay Now';
             }
         });
     </script>
