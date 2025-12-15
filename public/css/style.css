@@ -63,7 +63,7 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     line-height: 1.5;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 /* Scrollbar styling */
@@ -115,7 +115,7 @@ body {
 }
 
 .login-logo img {
-    height: 60px;
+    height: 90px;
     width: auto;
     margin-bottom: var(--spacing-md);
 }
@@ -291,7 +291,7 @@ body {
 }
 
 .sidebar-header img {
-    height: 28px;
+    height: 56px;
     width: auto;
 }
 
