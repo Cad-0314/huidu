@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
-const payableService = require('../services/payable');
+const silkpayService = require('../services/silkpay');
 const { calculatePayoutFee, getUserRates } = require('../utils/rates');
 const { generateOrderId, generateSign } = require('../utils/signature');
 
@@ -48,28 +48,34 @@ router.post('/bank', apiAuthenticate, async (req, res) => {
         const appUrl = process.env.APP_URL || 'http://localhost:3000';
         const ourCallbackUrl = `${appUrl}/api/payout/callback`;
 
-        const callbackParam = JSON.stringify({
-            merchantId: merchant.uuid, merchantOrderId: orderId,
-            merchantCallback: callbackUrl || merchant.callback_url, originalParam: param
-        });
-
         const payoutUuid = uuidv4();
+
+        // Note: Payouts table might not support param column, so we skip storing dynamic callback for now.
+        // If needed, we must add column to schema.
+
         await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?)`)
             .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName);
 
         try {
-            const payableResponse = await payableService.createPayout({
-                amount, orderId: internalOrderId, account, ifsc, personName,
-                callbackUrl: ourCallbackUrl, param: callbackParam
+            const silkpayResponse = await silkpayService.createPayout({
+                amount,
+                orderId: internalOrderId,
+                account: account, // Silkpay mapping? createPayout checks "bankNo"
+                bankNo: account,
+                ifsc: ifsc,
+                name: personName, // Silkpay "name"
+                personName: personName,
+                notifyUrl: ourCallbackUrl
             });
 
-            if (payableResponse.code !== 1) {
+            if (silkpayResponse.status !== '200') {
                 await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
-                await db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', payableResponse.msg || 'Payable API error', payoutUuid);
-                return res.status(400).json({ code: 0, msg: payableResponse.msg || 'Failed to create payout' });
+                await db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', silkpayResponse.message || 'Silkpay API error', payoutUuid);
+                return res.status(400).json({ code: 0, msg: silkpayResponse.message || 'Failed to create payout' });
             }
 
-            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(payableResponse.data?.id || internalOrderId, payoutUuid);
+            // Silkpay response data: { payOrderId: '...' }
+            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(silkpayResponse.data.payOrderId || internalOrderId, payoutUuid);
             res.json({ code: 1, msg: 'Payout submitted', data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'processing' } });
         } catch (apiError) {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
@@ -220,39 +226,45 @@ router.post('/check', async (req, res) => {
 router.post('/callback', async (req, res) => {
     try {
         console.log('Payout callback received:', req.body);
-        const { status, amount, commission, message, orderId, id, utr, sign, param } = req.body;
+        const { status, amount, payOrderId, message, orderId, utr, sign } = req.body;
         const db = getDb();
 
         await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payout', ?, ?)`).run(JSON.stringify(req.body), status);
 
-        let callbackData;
-        try { callbackData = JSON.parse(param || '{}'); } catch (e) { callbackData = {}; }
-
-        const payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ? OR p.order_id = ?')
-            .get(orderId, callbackData.merchantOrderId);
-
-        if (!payout) {
-            console.log('Payout not found for orderId:', orderId);
-            return res.send('success');
+        // Verify Signature
+        if (!silkpayService.verifyPayoutCallback(req.body)) {
+            console.error('Payout callback signature verification failed');
+            return res.send('OK');
         }
 
-        const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
+        // Lookup transaction by payOrderId (platform_order_id)
+        const payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+            .get(payOrderId);
+
+        if (!payout) {
+            console.log('Payout not found for payOrderId:', payOrderId);
+            return res.send('OK');
+        }
+
+        // Status: 2: Success, 3: Failed
+        const newStatus = status === '2' || status === 2 ? 'success' : 'failed';
 
         await db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
             .run(newStatus, utr || null, message || null, JSON.stringify(req.body), payout.id);
 
-        if (newStatus === 'failed') {
+        // Refund if failed
+        if (newStatus === 'failed' && payout.status !== 'failed') {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount + payout.fee, payout.user_id);
         }
 
-        const merchantCallback = callbackData.merchantCallback || payout.callback_url;
+        const merchantCallback = payout.callback_url; // From DB join
         if (merchantCallback) {
             try {
                 const merchantCallbackData = {
                     status: newStatus === 'success' ? 1 : 2, amount: payout.amount, commission: payout.fee,
                     message: message || (newStatus === 'success' ? 'success' : 'failed'),
-                    orderId: callbackData.merchantOrderId || payout.order_id,
-                    id: payout.uuid, utr: utr || '', param: callbackData.originalParam
+                    orderId: payout.order_id, // User's orderId
+                    id: payout.uuid, utr: utr || '', param: '' // param not supported in Silkpay callback echo
                 };
                 merchantCallbackData.sign = generateSign(merchantCallbackData, payout.merchant_key);
                 await axios.post(merchantCallback, merchantCallbackData, { timeout: 10000 });
@@ -261,10 +273,10 @@ router.post('/callback', async (req, res) => {
             }
         }
 
-        res.send('success');
+        res.send('OK');
     } catch (error) {
         console.error('Payout callback error:', error);
-        res.send('success');
+        res.send('OK');
     }
 });
 

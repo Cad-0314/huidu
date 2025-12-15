@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
-const payableService = require('../services/payable');
+const silkpayService = require('../services/silkpay');
 const { calculatePayinFee, getRatesFromDb } = require('../utils/rates');
 const { generateOrderId, generateSign } = require('../utils/signature');
 
@@ -41,35 +41,35 @@ router.post('/create', apiAuthenticate, async (req, res) => {
         const ourCallbackUrl = `${appUrl}/api/payin/callback`;
         const ourSkipUrl = skipUrl || `${appUrl}/payment/complete`;
 
-        const callbackParam = JSON.stringify({
-            merchantId: merchant.uuid,
-            merchantOrderId: orderId,
-            merchantCallback: callbackUrl || merchant.callback_url,
-            originalParam: param
-        });
-
-        const payableResponse = await payableService.createPayin({
+        const silkpayResponse = await silkpayService.createPayin({
             orderAmount: orderAmount,
             orderId: internalOrderId,
-            callbackUrl: ourCallbackUrl,
-            skipUrl: ourSkipUrl,
-            param: callbackParam
+            notifyUrl: ourCallbackUrl,
+            returnUrl: ourSkipUrl
         });
 
-        if (payableResponse.code !== 1) {
-            return res.status(400).json({ code: 0, msg: payableResponse.msg || 'Failed to create order' });
+        if (silkpayResponse.status !== '200') {
+            return res.status(400).json({ code: 0, msg: silkpayResponse.message || 'Failed to create order' });
         }
 
         const txUuid = uuidv4();
+
+        // Wrap callbackUrl and original param into stored param to preserve dynamic callback capability
+        const storedParam = JSON.stringify({
+            c: callbackUrl,
+            p: param
+        });
+
+        // Note: we store silkpay's payOrderId in platform_order_id. mOrderId is not explicitly stored but is internalOrderId.
         await db.prepare(`
             INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
             VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
-        `).run(txUuid, merchant.id, orderId, payableResponse.data?.id || internalOrderId, amount, amount, fee, netAmount, payableResponse.data?.rechargeUrl || null, param || null);
+        `).run(txUuid, merchant.id, orderId, silkpayResponse.data.payOrderId || internalOrderId, amount, amount, fee, netAmount, silkpayResponse.data.paymentUrl, storedParam);
 
         res.json({
             code: 1,
             msg: 'Order created',
-            data: { orderId, id: txUuid, orderAmount: amount, fee, rechargeUrl: payableResponse.data?.rechargeUrl }
+            data: { orderId, id: txUuid, orderAmount: amount, fee, paymentUrl: silkpayResponse.data.paymentUrl }
         });
     } catch (error) {
         console.error('Create payin error:', error);
@@ -203,14 +203,15 @@ router.post('/check-utr', async (req, res) => {
 
         // If not found locally, check upstream
         try {
-            const upstream = await payableService.queryUtr(utr);
-            if (upstream.code === 1) {
+            const upstream = await silkpayService.queryUtr(utr);
+            if (upstream.status === '200' && upstream.data?.code === 1) {
+                // Upstream found it
                 return res.json({
                     code: 1,
                     msg: 'Order found upstream',
                     data: {
-                        orderId: upstream.data.orderId,
-                        status: upstream.data.status,
+                        orderId: upstream.data.mOrderId, // This might be null if not bound
+                        status: 1, // 'code' 1 means success/usable
                         amount: upstream.data.amount,
                         utr: utr
                     }
@@ -233,20 +234,25 @@ router.post('/check-utr', async (req, res) => {
 router.post('/callback', async (req, res) => {
     try {
         console.log('Pay-in callback received:', req.body);
-        const { status, amount, orderAmount, orderId, id, sign, param, utr } = req.body;
+        const { status, amount, payOrderId, mId, mOrderId, sign, utr } = req.body;
         const db = getDb();
 
         await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payin', ?, ?)`).run(JSON.stringify(req.body), status);
 
-        let callbackData;
-        try { callbackData = JSON.parse(param || '{}'); } catch (e) { callbackData = {}; }
+        // Verify Signature
+        if (!silkpayService.verifyPayinCallback(req.body)) {
+            console.error('Payin callback signature verification failed');
+            return res.send('OK'); // Return OK to stop retries even if bad sign? Usually yes to avoid spam.
+        }
 
-        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ? OR t.order_id = ?')
-            .get(orderId, callbackData.merchantOrderId);
+        // Lookup transaction by payOrderId (platform_order_id)
+        // Silkpay returns payOrderId. We stored it in platform_order_id.
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+            .get(payOrderId);
 
         if (!tx) {
-            console.log('Transaction not found for orderId:', orderId);
-            return res.send('success');
+            console.log('Transaction not found for payOrderId:', payOrderId);
+            return res.send('OK');
         }
 
         const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
@@ -257,18 +263,39 @@ router.post('/callback', async (req, res) => {
         await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
             .run(newStatus, actualAmount, fee, netAmount, utr || null, JSON.stringify(req.body), tx.id);
 
-        if (newStatus === 'success') {
+        if (newStatus === 'success' && tx.status !== 'success') {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
         }
 
-        const merchantCallback = callbackData.merchantCallback || tx.callback_url;
+        // Unwrap stored param
+        let callbackUrl = null;
+        let originalParam = null;
+        try {
+            if (tx.param) {
+                const parsed = JSON.parse(tx.param);
+                // Check if it's our wrapper structure
+                if (parsed.c !== undefined || parsed.p !== undefined) {
+                    callbackUrl = parsed.c;
+                    originalParam = parsed.p;
+                } else {
+                    // Legacy or plain string? If it's json but not our structure, treat as original?
+                    // Safe bet: if parsing works, use it, but our wrapper is strictly {c, p}
+                    originalParam = tx.param;
+                }
+            }
+        } catch (e) {
+            // Not JSON, assume string param
+            originalParam = tx.param;
+        }
+
+        const merchantCallback = callbackUrl || tx.callback_url;
         if (merchantCallback) {
             try {
                 const merchantCallbackData = {
                     status: newStatus === 'success' ? 1 : 0,
                     amount: netAmount, orderAmount: actualAmount,
-                    orderId: callbackData.merchantOrderId || tx.order_id,
-                    id: tx.uuid, utr: utr || '', param: callbackData.originalParam
+                    orderId: tx.order_id, // User's order ID
+                    id: tx.uuid, utr: utr || '', param: originalParam || ''
                 };
                 merchantCallbackData.sign = generateSign(merchantCallbackData, tx.merchant_key);
                 await axios.post(merchantCallback, merchantCallbackData, { timeout: 10000 });
@@ -277,10 +304,10 @@ router.post('/callback', async (req, res) => {
             }
         }
 
-        res.send('success');
+        res.send('OK');
     } catch (error) {
         console.error('Payin callback error:', error);
-        res.send('success');
+        res.send('OK');
     }
 });
 

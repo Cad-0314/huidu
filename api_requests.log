@@ -1,0 +1,286 @@
+
+=====================================
+[2025-12-11T10:19:35.667Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1788ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1ADNIU_FEB1E0DC",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448373429\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.178"
+}
+
+=====================================
+[2025-12-11T10:19:39.742Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 231ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1ADRW4_E381F792",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448379497\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.178"
+}
+
+=====================================
+[2025-12-11T10:19:40.062Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 180ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1ADS61_2932E3B2",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448379733\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.178"
+}
+
+=====================================
+[2025-12-11T10:19:53.549Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 527ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1AE2AU_6494E8D6",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448392915\",\"merchantCallback\":\"aman.com\"}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.178"
+}
+
+=====================================
+[2025-12-11T10:19:54.160Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 200ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1AE30G_FABA6E2D",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448393909\",\"merchantCallback\":\"aman.com\"}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.178"
+}
+
+=====================================
+[2025-12-11T10:21:13.766Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 883ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1AFRWY_35105E03",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448472834\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.174"
+}
+
+=====================================
+[2025-12-11T10:21:14.588Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 151ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1AFT3Y_CC45031D",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448474288\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.174"
+}
+
+=====================================
+[2025-12-11T10:25:05.386Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1082ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1AKQH8_CE34B812",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448704061\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.201"
+}
+
+=====================================
+[2025-12-11T10:25:19.517Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 574ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1AL1SP_10BD95DF",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765448718894\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.201"
+}
+
+=====================================
+[2025-12-11T10:41:29.529Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 2318ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "500",
+  "orderId": "HDP_MJ1B5SVZ_2FBD832D",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765449687034\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.201"
+}
+
+=====================================
+[2025-12-11T11:11:05.832Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 771ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "1000",
+  "orderId": "HDP_MJ1C7WPP_4EAD26DA",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765451465033\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.245"
+}
+
+=====================================
+[2025-12-12T09:11:39.666Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 892ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "120",
+  "orderId": "HDP_MJ2NE5TN_C8AA3C19",
+  "callbackUrl": "https://huidu.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"17e9e136-9ce5-4fe8-bf41-2fc9025c43ac\",\"merchantOrderId\":\"LINK_1765530698614\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.232"
+}
+
+=====================================
+[2025-12-15T09:09:34.025Z] SILKPAY API REQUEST
+=====================================
+Endpoint: getBalance
+Duration: 762ms
+Request: {
+  "mId": "TEST",
+  "timestamp": "1765789773262",
+  "sign": "9ab8a281f097117251282bc1d9847ed5"
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "totalAmount": 1745459.96,
+    "availableAmount": 1745459.96,
+    "pendingAmount": 0
+  }
+}
+
+=====================================
+[2025-12-15T09:16:35.708Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1539ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "10000",
+  "orderId": "HDP_MJ6XW1RR_1F8EBD84",
+  "callbackUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"41b55acf-cf68-484c-a560-8600f99be56a\",\"merchantOrderId\":\"LINK_1765790182426\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.170"
+}
+
+=====================================
+[2025-12-15T09:18:43.397Z] PAYABLE API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1434ms
+Request: {
+  "userId": "100083",
+  "orderAmount": "10000",
+  "orderId": "HDP_MJ6XYSDN_284BD00B",
+  "callbackUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "skipUrl": "http://localhost:3000/payment-success.html",
+  "param": "{\"merchantId\":\"41b55acf-cf68-484c-a560-8600f99be56a\",\"merchantOrderId\":\"LINK_1765790313105\",\"merchantCallback\":null}",
+  "sign": "[REDACTED]"
+}
+Response: {
+  "code": 0,
+  "msg": "not verify ip address:103.191.88.251"
+}

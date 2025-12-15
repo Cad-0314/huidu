@@ -1,0 +1,3 @@
+# Error Log - Huidu Payable Gateway
+# This file logs all server errors with timestamps
+
