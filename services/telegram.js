@@ -195,7 +195,25 @@ async function initBot() {
 
             const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
             if (payout) {
-                return reply(ctx, `📤 **Payout Details / 代付详情**\nOrder ID/订单号: ${payout.order_id}\nAmount/金额: ${payout.amount}\nStatus/状态: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}`);
+                responseMsg += `📤 **Local Payout Details / 本地代付详情**\nOrder ID/订单号: ${payout.order_id}\nAmount/金额: ${payout.amount}\nStatus/状态: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}\n\n`;
+
+                if (payout.status !== 'success' && payout.status !== 'failed') {
+                    try {
+                        const upstream = await silkpayService.queryPayout(payout.platform_order_id || payout.order_id);
+                        if (upstream && upstream.status === '200') {
+                            const data = upstream.data || {};
+                            // 0: Initial, 1: Processing, 2: Success, 3: Failed
+                            let upStatusStr = 'UNKNOWN';
+                            if (data.status === 2) upStatusStr = 'SUCCESS';
+                            else if (data.status === 3) upStatusStr = 'FAILED';
+                            else if (data.status === 1) upStatusStr = 'PROCESSING';
+                            else upStatusStr = 'INITIAL';
+
+                            responseMsg += `🌐 **Provider Status / 上游状态**\nStatus/状态: ${upStatusStr}\nAmount/金额: ${data.amount}`;
+                        }
+                    } catch (e) { }
+                }
+                return reply(ctx, responseMsg);
             }
 
             reply(ctx, 'Searching provider... / 正在搜寻上游...');
@@ -240,6 +258,48 @@ async function initBot() {
         }
     });
 
+    // Command: /stats - Query success rate
+    bot.command('stats', async (ctx) => {
+        try {
+            const chatId = ctx.chat.id.toString();
+            const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
+            if (!user) return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
+
+            // Success Rate = (Total Success / Total Orders) * 100
+            const stats = await db.prepare(`
+                SELECT 
+                    COUNT(*) as total_orders,
+                    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_orders
+                FROM transactions 
+                WHERE user_id = ? AND type = 'payin'
+            `).get(user.id);
+
+            const total = stats.total_orders || 0;
+            const success = stats.success_orders || 0;
+            const rate = total > 0 ? ((success / total) * 100).toFixed(2) : '0.00';
+
+            reply(ctx, `📊 **Success Rate / 成功率**\nTotal Orders/总订单: ${total}\nSuccess/成功: ${success}\nRate/成功率: ${rate}%`);
+
+        } catch (error) {
+            console.error('Bot Stats Error:', error);
+            reply(ctx, 'Error fetching stats.\n获取统计失败。');
+        }
+    });
+
+    // Command: /upi - Query UPI listing and available
+    bot.command('upi', async (ctx) => {
+        // Just listing available methods as requested
+        const msg = `📱 **Available UPI Methods / 可用 UPI 方式**\n\n` +
+            `🔹 PhonePe\n` +
+            `🔹 Paytm\n` +
+            `🔹 Google Pay (GPay)\n` +
+            `🔹 BHIM / UPI Apps\n\n` +
+            `✅ All UPI apps supported via Intent/DeepLink.\n` +
+            `✅ 支持所有 UPI 应用跳转支付。`;
+
+        reply(ctx, msg);
+    });
+
     // Help Command
     bot.start((ctx) => {
         reply(ctx,
@@ -247,6 +307,8 @@ async function initBot() {
             `/link <AMOUNT> - Create payment link / 创建支付链接\n` +
             `/balance - Check merchant balance & stats / 查询余额和统计\n` +
             `/check <UTR/ID> - Check transaction status / 查询交易状态\n` +
+            `/stats - Check success rate / 查询成功率\n` +
+            `/upi - List UPI options / UPI 列表\n` +
             `/last - View last pending payin / 查看最后一条待处理收款\n` +
             `/bind <KEY> - Link group to merchant / 绑定商户`
         );
