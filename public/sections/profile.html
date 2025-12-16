@@ -1,0 +1,73 @@
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <h3 class="mb-3" data-i18n="profile_details">Profile Details</h3>
+
+            <div class="form-group">
+                <label data-i18n="label_name">Name</label>
+                <input type="text" id="profileName" class="form-control" readonly>
+            </div>
+            <div class="form-group">
+                <label data-i18n="label_username">Username</label>
+                <input type="text" id="profileUsername" class="form-control" readonly>
+            </div>
+
+            <hr class="my-4" style="border-color: rgba(147, 51, 234, 0.2);">
+
+            <h4 class="mb-3" data-i18n="section_rules">System Rules</h4>
+            <div class="d-flex justify-between mb-2">
+                <span data-i18n="label_payin_rate">Pay-in Rate</span>
+                <span class="badge badge-primary" id="profilePayinRate">5%</span>
+            </div>
+            <div class="d-flex justify-between mb-2">
+                <span data-i18n="label_payout_rate">Payout Rate</span>
+                <span class="badge badge-primary" id="profilePayoutRate">3%</span>
+            </div>
+            <div class="d-flex justify-between mb-2">
+                <span data-i18n="label_settlement">Settlement</span>
+                <span class="text-white" data-i18n="val_settlement">Instant (T+0)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card bg-darker">
+            <h3 class="mb-3" data-i18n="section_security">Security</h3>
+
+            <!-- 2FA Section -->
+            <div class="mb-4">
+                <h5 class="text-muted mb-2">Two-Factor Authentication</h5>
+                <div class="p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
+                    <div class="d-flex align-center justify-between">
+                        <div id="profile2faStatus">
+                            <!-- Injected by JS -->
+                            <span class="badge badge-success">Enabled</span>
+                        </div>
+                        <button class="btn btn-danger btn-sm" id="btnDisable2faProfile" onclick="disable2fa()">
+                            <i class="fas fa-shield-alt"></i> <span data-i18n="btn_disable_2fa">Disable & Logout</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm hidden" id="btnEnable2faProfile"
+                            onclick="showSetup2faModal()">
+                            <i class="fas fa-lock"></i> <span data-i18n="setup_2fa_title">Enable 2FA</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <h5 class="text-muted mb-2" data-i18n="change_password">Change Password</h5>
+            <form onsubmit="changePassword(event)">
+                <div class="form-group">
+                    <label data-i18n="current_password">Current Password</label>
+                    <input type="password" id="currentPassword" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="new_password">New Password</label>
+                    <input type="password" id="newPassword" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_update_pass">Update
+                    Password</button>
+            </form>
+        </div>
+    </div>
+</div>

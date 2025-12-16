@@ -1,0 +1,131 @@
+<div class="card">
+    <div class="card-header">
+        <h3>Settlement Request</h3>
+    </div>
+    <div class="card-body">
+        <!-- Settlement Type Tabs -->
+        <div class="tabs mb-4">
+            <button class="tab-btn active" onclick="switchSettlementTab('bank')">
+                <i class="fas fa-university"></i> Bank Transfer
+            </button>
+            <button class="tab-btn" onclick="switchSettlementTab('usdt')">
+                <i class="fas fa-coins"></i> USDT (TRC20/ERC20)
+            </button>
+        </div>
+
+        <!-- Bank Form -->
+        <div id="bankSettlementForm">
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>Account Number</label>
+                    <input type="text" id="settleBankAccount" class="form-control" placeholder="Enter account number">
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>IFSC Code</label>
+                    <input type="text" id="settleBankIfsc" class="form-control" placeholder="ABCD0123456"
+                        style="text-transform: uppercase;">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>Account Holder Name</label>
+                    <input type="text" id="settleBankName" class="form-control" placeholder="Name on bank account">
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="settleBankAmount" class="form-control" placeholder="Min ₹100">
+                    <small class="text-muted">Balance: <span class="avail-balance">Loading...</span></small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>Order ID (Optional)</label>
+                    <input type="text" id="settleBankOrderId" class="form-control" placeholder="Unique Order ID">
+                    <small class="text-muted">Leave blank to auto-generate</small>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>2FA Code</label>
+                    <input type="text" id="settleBankCode" class="form-control" placeholder="Enter 6-digit TOTP">
+                </div>
+            </div>
+            <button class="btn btn-primary full-width mt-2" onclick="submitSettlement('bank')">
+                Submit Bank Withdrawal
+            </button>
+        </div>
+
+        <!-- USDT Form -->
+        <div id="usdtSettlementForm" style="display: none;">
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle"></i> Minimum withdrawal: 500 USDT
+            </div>
+            <div class="form-group">
+                <label>Wallet Address</label>
+                <input type="text" id="settleUsdtAddress" class="form-control" placeholder="T...">
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>Network</label>
+                    <select id="settleUsdtNetwork" class="form-control">
+                        <option value="TRC20">TRC20</option>
+                        <option value="ERC20">ERC20</option>
+                        <option value="BEP20">BEP20</option>
+                    </select>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>Amount (INR Value)</label>
+                    <input type="number" id="settleUsdtAmount" class="form-control" placeholder="Equivalent INR Amount">
+                    <small class="text-muted">Rate: ~100 INR/USDT</small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>Order ID (Optional)</label>
+                    <input type="text" id="settleUsdtOrderId" class="form-control" placeholder="Unique Order ID">
+                    <small class="text-muted">Leave blank to auto-generate</small>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>2FA Code</label>
+                    <input type="text" id="settleUsdtCode" class="form-control" placeholder="Enter 6-digit TOTP">
+                </div>
+            </div>
+            <button class="btn btn-primary full-width mt-2" onclick="submitSettlement('usdt')">
+                Submit USDT Withdrawal
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tabs {
+        display: flex;
+        gap: 10px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 10px;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 8px 16px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-weight: 500;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .tab-btn:hover:not(.active) {
+        background: var(--bg-secondary);
+        color: var(--text-main);
+    }
+
+    .avail-balance {
+        font-weight: bold;
+        color: var(--success);
+    }
+</style>

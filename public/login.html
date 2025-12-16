@@ -50,6 +50,15 @@
                     </div>
                 </div>
 
+                <div class="form-group hidden" id="2faGroup">
+                    <label for="2faCode" data-i18n="label_2fa">2FA Code</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-shield-alt"></i>
+                        <input type="text" id="2faCode" name="2faCode" placeholder="Enter 6-digit code or 111111"
+                            data-i18n="placeholder_2fa">
+                    </div>
+                </div>
+
                 <button type="submit" class="btn btn-primary btn-lg btn-block" id="loginBtn">
                     <span data-i18n="btn_signin">Sign In</span>
                     <i class="fas fa-arrow-right"></i>
@@ -79,25 +88,41 @@
             window.initLanguage();
         }
 
+        let tempToken = null;
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const twoFaCode = document.getElementById('2faCode').value;
             const loginBtn = document.getElementById('loginBtn');
             const errorDiv = document.getElementById('loginError');
             const errorMsg = document.getElementById('errorMessage');
+            const twoFaGroup = document.getElementById('2faGroup');
 
             loginBtn.disabled = true;
             loginBtn.innerHTML = `<div class="loader"></div> ${t('btn_signing_in')}`;
             errorDiv.classList.add('hidden');
 
             try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
+                let response;
+
+                if (tempToken) {
+                    // Verify 2FA
+                    response = await fetch('/api/auth/verify-2fa', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tempToken, code: twoFaCode })
+                    });
+                } else {
+                    // Initial Login
+                    response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                }
 
                 const data = await response.json();
                 console.log('Login response:', data);
@@ -106,6 +131,23 @@
                     localStorage.setItem('vspay_token', data.data.token);
                     localStorage.setItem('vspay_user', JSON.stringify(data.data.user));
                     window.location.href = '/';
+                } else if (data.code === 2 && data.require2fa) {
+                    // 2FA Required
+                    tempToken = data.tempToken;
+                    twoFaGroup.classList.remove('hidden');
+                    document.getElementById('username').disabled = true;
+                    document.getElementById('password').disabled = true;
+
+                    if (!data.isSetup) {
+                        errorDiv.classList.remove('hidden');
+                        errorMsg.textContent = "Please enter default code: 111111"; // Or specialized message
+                        errorDiv.classList.remove('alert-error'); // maybe make it info?
+                        errorDiv.classList.add('alert-info');
+                    } else {
+                        errorDiv.classList.add('hidden');
+                    }
+
+                    loginBtn.innerHTML = `<span>Verify 2FA</span><i class="fas fa-check"></i>`;
                 } else {
                     errorDiv.classList.remove('hidden');
                     errorMsg.textContent = data.msg || t('error_invalid');
@@ -118,7 +160,9 @@
             }
 
             loginBtn.disabled = false;
-            loginBtn.innerHTML = `<span>${t('btn_signin')}</span><i class="fas fa-arrow-right"></i>`;
+            if (!tempToken) {
+                loginBtn.innerHTML = `<span>${t('btn_signin')}</span><i class="fas fa-arrow-right"></i>`;
+            }
         });
     </script>
 </body>

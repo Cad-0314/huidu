@@ -249,3 +249,228 @@ Response: {
     "paymentUrl": "https://dev.silkpay.help/#/?orderNo=DS-1215194001136093289272324"
   }
 }
+
+=====================================
+[2025-12-16T13:23:08.441Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayout
+Duration: 494ms
+Request: {
+  "amount": 100,
+  "mId": "TEST",
+  "mOrderId": "HDO_MJ8M4Z8Q_1C2D7885",
+  "timestamp": "1765891387945",
+  "notifyUrl": "https://vspay.rioclub.site/api/payout/callback",
+  "bankNo": "1234567890",
+  "ifsc": "TEST0000001",
+  "name": "Test Payout",
+  "sign": "4e2dbec4c08474b6981829f53f6b2a4b",
+  "upi": ""
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "payOrderId": "DF-1216184001838558166930434"
+  }
+}
+
+=====================================
+[2025-12-16T13:33:56.304Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayout
+Duration: 551ms
+Request: {
+  "amount": 100,
+  "mId": "TEST",
+  "mOrderId": "HDO_MJ8MIV3N_24BE0E83",
+  "timestamp": "1765892035753",
+  "notifyUrl": "https://vspay.rioclub.site/api/payout/callback",
+  "bankNo": "1234567890",
+  "ifsc": "TEST0000001",
+  "name": "Test Payout",
+  "sign": "a6781c2efa48416375db72cc1e17a4c9",
+  "upi": ""
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "payOrderId": "DF-1216194001843993204773891"
+  }
+}
+
+=====================================
+[2025-12-16T13:50:16.709Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayout
+Duration: 594ms
+Request: {
+  "amount": 100,
+  "mId": "TEST",
+  "mOrderId": "HDO_MJ8N3VJ0_F82869C8",
+  "timestamp": "1765893016096",
+  "notifyUrl": "https://vspay.rioclub.site/api/payout/callback",
+  "bankNo": "1234567890",
+  "ifsc": "TEST0000001",
+  "name": "Test Payout",
+  "sign": "49b330dacfbce7f8f86c3c3ae9aaefac",
+  "upi": ""
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "payOrderId": "DF-1216194001852217698046984"
+  }
+}
+
+=====================================
+[2025-12-16T15:23:53.525Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 680ms
+Request: {
+  "amount": 500,
+  "mId": "TEST",
+  "mOrderId": "HDP_MJ8QG9KN_39894A1F",
+  "timestamp": "1765898632844",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/payment/complete",
+  "sign": "fbe744067e48641d048a233d314fc222"
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "timestampExpires": "2025-12-16T21:22:31.222+05:30",
+    "payOrderId": "DS-1216204001899334781129728",
+    "deepLink": {
+      "upi_phonepe": "phonepe://native?data=eyJjb250YWN0Ijp7ImNic05hbWUiOiIiLCJuaWNrTmFtZSI6IiIsInZwYSI6InRlc3QxMjM0NTZAdXBpIiwidHlwZSI6IlZQQSJ9LCJwMnBQYXltZW50Q2hlY2tvdXRQYXJhbXMiOnsibm90ZSI6IjUiLCJpc0J5RGVmYXVsdEtub3duQ29udGFjdCI6dHJ1ZSwiZW5hYmxlU3BlZWNoVG9UZXh0IjpmYWxzZSwiYWxsb3dBbW91bnRFZGl0IjpmYWxzZSwic2hvd1FyQ29kZU9wdGlvbiI6ZmFsc2UsImRpc2FibGVWaWV3SGlzdG9yeSI6dHJ1ZSwic2hvdWxkU2hvd1Vuc2F2ZWRDb250YWN0QmFubmVyIjpmYWxzZSwiaXNSZWN1cnJpbmciOmZhbHNlLCJjaGVja291dFR5cGUiOiJERUZBVUxUIiwidHJhbnNhY3Rpb25Db250ZXh0IjoicDJwIiwiaW5pdGlhbEFtb3VudCI6MTAwMDAsImRpc2FibGVOb3Rlc0VkaXQiOnRydWUsInNob3dLZXlib2FyZCI6ZmFsc2UsImN1cnJlbmN5IjoiSU5SIiwic2hvdWxkU2hvd01hc2tlZE51bWJlciI6dHJ1ZX19&id=p2ppayment",
+      "upi_paytm": "paytmmp://cash_wallet?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM&featuretype=money_transfer",
+      "upi_scan": "upi://pay?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM"
+    },
+    "paymentUrl": "https://dev.silkpay.help/#/?orderNo=DS-1216204001899334781129728"
+  }
+}
+
+=====================================
+[2025-12-16T15:24:34.287Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 510ms
+Request: {
+  "amount": 300,
+  "mId": "TEST",
+  "mOrderId": "HDP_MJ8QH569_8185AFBC",
+  "timestamp": "1765898673777",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/payment/complete",
+  "sign": "fa2aaa593a5caa3a8c18dc14aaa91f3f"
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "timestampExpires": "2025-12-16T21:23:11.933+05:30",
+    "payOrderId": "DS-1216204001899676298138633",
+    "deepLink": {
+      "upi_phonepe": "phonepe://native?data=eyJjb250YWN0Ijp7ImNic05hbWUiOiIiLCJuaWNrTmFtZSI6IiIsInZwYSI6InRlc3QxMjM0NTZAdXBpIiwidHlwZSI6IlZQQSJ9LCJwMnBQYXltZW50Q2hlY2tvdXRQYXJhbXMiOnsibm90ZSI6IjUiLCJpc0J5RGVmYXVsdEtub3duQ29udGFjdCI6dHJ1ZSwiZW5hYmxlU3BlZWNoVG9UZXh0IjpmYWxzZSwiYWxsb3dBbW91bnRFZGl0IjpmYWxzZSwic2hvd1FyQ29kZU9wdGlvbiI6ZmFsc2UsImRpc2FibGVWaWV3SGlzdG9yeSI6dHJ1ZSwic2hvdWxkU2hvd1Vuc2F2ZWRDb250YWN0QmFubmVyIjpmYWxzZSwiaXNSZWN1cnJpbmciOmZhbHNlLCJjaGVja291dFR5cGUiOiJERUZBVUxUIiwidHJhbnNhY3Rpb25Db250ZXh0IjoicDJwIiwiaW5pdGlhbEFtb3VudCI6MTAwMDAsImRpc2FibGVOb3Rlc0VkaXQiOnRydWUsInNob3dLZXlib2FyZCI6ZmFsc2UsImN1cnJlbmN5IjoiSU5SIiwic2hvdWxkU2hvd01hc2tlZE51bWJlciI6dHJ1ZX19&id=p2ppayment",
+      "upi_paytm": "paytmmp://cash_wallet?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM&featuretype=money_transfer",
+      "upi_scan": "upi://pay?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM"
+    },
+    "paymentUrl": "https://dev.silkpay.help/#/?orderNo=DS-1216204001899676298138633"
+  }
+}
+
+=====================================
+[2025-12-16T15:36:13.910Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 792ms
+Request: {
+  "amount": "190",
+  "mId": "TEST",
+  "mOrderId": "HDP_MJ8QW4SC_714A8F3D",
+  "timestamp": "1765899373117",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "http://localhost:3000/payment-success.html",
+  "sign": "372cb8f3dfaa6a181350fa0028d2ac14"
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "timestampExpires": "2025-12-16T21:34:51.623+05:30",
+    "payOrderId": "DS-1216214001905545756824585",
+    "deepLink": {
+      "upi_phonepe": "phonepe://native?data=eyJjb250YWN0Ijp7ImNic05hbWUiOiIiLCJuaWNrTmFtZSI6IiIsInZwYSI6InRlc3QxMjM0NTZAdXBpIiwidHlwZSI6IlZQQSJ9LCJwMnBQYXltZW50Q2hlY2tvdXRQYXJhbXMiOnsibm90ZSI6IjUiLCJpc0J5RGVmYXVsdEtub3duQ29udGFjdCI6dHJ1ZSwiZW5hYmxlU3BlZWNoVG9UZXh0IjpmYWxzZSwiYWxsb3dBbW91bnRFZGl0IjpmYWxzZSwic2hvd1FyQ29kZU9wdGlvbiI6ZmFsc2UsImRpc2FibGVWaWV3SGlzdG9yeSI6dHJ1ZSwic2hvdWxkU2hvd1Vuc2F2ZWRDb250YWN0QmFubmVyIjpmYWxzZSwiaXNSZWN1cnJpbmciOmZhbHNlLCJjaGVja291dFR5cGUiOiJERUZBVUxUIiwidHJhbnNhY3Rpb25Db250ZXh0IjoicDJwIiwiaW5pdGlhbEFtb3VudCI6MTAwMDAsImRpc2FibGVOb3Rlc0VkaXQiOnRydWUsInNob3dLZXlib2FyZCI6ZmFsc2UsImN1cnJlbmN5IjoiSU5SIiwic2hvdWxkU2hvd01hc2tlZE51bWJlciI6dHJ1ZX19&id=p2ppayment",
+      "upi_paytm": "paytmmp://cash_wallet?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM&featuretype=money_transfer",
+      "upi_scan": "upi://pay?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM"
+    },
+    "paymentUrl": "https://dev.silkpay.help/#/?orderNo=DS-1216214001905545756824585"
+  }
+}
+
+=====================================
+[2025-12-16T15:52:03.331Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 548ms
+Request: {
+  "amount": "190",
+  "mId": "F7070",
+  "mOrderId": "HDP_MJ8RGHJU_4711004A",
+  "timestamp": "1765900322780",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "http://localhost:3000/payment-success.html",
+  "sign": "04803f4bb859c118847dc8427a7191f0"
+}
+Response: {
+  "status": "403",
+  "message": "[[103.191.88.214]] payin IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-16T15:52:44.430Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 211ms
+Request: {
+  "amount": "1090",
+  "mId": "F7070",
+  "mOrderId": "HDP_MJ8RHDIY_BDF974A7",
+  "timestamp": "1765900364219",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "http://localhost:3000/payment-success.html",
+  "sign": "48e7ab325bcd613adb784d205bb315d5"
+}
+Response: {
+  "status": "403",
+  "message": "[[103.191.88.214]] payin IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-16T16:13:44.522Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayout
+Duration: 501ms
+Request: {
+  "amount": "300",
+  "mId": "F7070",
+  "mOrderId": "HDO_MJ8S8DF0_4EBC489C",
+  "timestamp": "1765901624007",
+  "notifyUrl": "https://vspay.rioclub.site/api/payout/callback",
+  "bankNo": "9878359480",
+  "ifsc": "SBIN00011346",
+  "name": "main",
+  "sign": "1c44b0ca88303db84104225e2452bb74",
+  "upi": ""
+}
+Response: {
+  "status": "403",
+  "message": "[[103.191.88.214]] payout IP Limited",
+  "data": null
+}

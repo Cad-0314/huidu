@@ -177,10 +177,36 @@ const translations = {
         broadcast_desc: "Send a message to all merchants who have linked their Telegram account.",
         label_message: "Message",
         btn_send_broadcast: "Send Broadcast",
+        profile_tab: "Profile",
+        profile_details: "Profile Details",
+        section_security: "Security",
+        change_password: "Change Password",
+        current_password: "Current Password",
+        new_password: "New Password",
+        btn_update_pass: "Update Password",
+        toast_pass_updated: "Password updated successfully",
+        error_pass_update: "Error updating password",
+
         toast_broadcast_sent: "Broadcast sent successfully!",
         recent_broadcast: "Broadcast Result",
         sent_success: "Sent Successfully",
-        sent_failed: "Failed"
+        sent_failed: "Failed",
+        btn_disable_2fa: "Disable 2FA & Logout",
+        warn_disable_2fa: "Disabling 2FA will lower your account security. You will be logged out.",
+        reset_2fa: "Reset 2FA",
+        toast_2fa_disabled: "2FA Disabled",
+        toast_2fa_reset: "2FA Reset Successfully",
+
+        // 2FA Setup
+        setup_2fa_title: "Enable 2FA Security",
+        setup_2fa_subtitle: "Secure Your Account",
+        setup_2fa_desc: "Two-Factor Authentication is required for security.",
+        setup_2fa_label: "Enter 6-digit Code from Authenticator App",
+        setup_2fa_step1: "1. Install Google Authenticator.",
+        setup_2fa_step2: "2. Scan the QR Code.",
+        setup_2fa_step3: "3. Enter the generated code.",
+        btn_enable_2fa: "Box Secure & Enable 2FA",
+        btn_cancel_logout: "Cancel & Logout"
     },
     zh: {
         // App Shell
@@ -359,11 +385,37 @@ const translations = {
         broadcast_title: "机器人广播",
         broadcast_desc: "向所有绑定 Telegram 的商户发送消息。",
         label_message: "消息内容",
+        profile_tab: "个人资料",
+        profile_details: "个人资料详情",
+        section_security: "账户安全",
+        change_password: "修改密码",
+        current_password: "当前密码",
+        new_password: "新密码",
+        btn_update_pass: "更新密码",
+        toast_pass_updated: "密码更新成功",
+        error_pass_update: "更新密码失败",
+
         btn_send_broadcast: "发送广播",
         toast_broadcast_sent: "广播发送成功！",
         recent_broadcast: "广播结果",
         sent_success: "发送成功",
-        sent_failed: "发送失败"
+        sent_failed: "发送失败",
+        btn_disable_2fa: "禁用 2FA 并退出",
+        warn_disable_2fa: "禁用 2FA 会降低账户安全性。您将被退出登录。",
+        reset_2fa: "重置 2FA",
+        toast_2fa_disabled: "2FA 已禁用",
+        toast_2fa_reset: "2FA 重置成功",
+
+        // 2FA Setup
+        setup_2fa_title: "开启 2FA 安全验证",
+        setup_2fa_subtitle: "保护您的账户",
+        setup_2fa_desc: "为了您的账户安全，必须开启双重验证。",
+        setup_2fa_label: "输入验证器 App 中的 6 位验证码",
+        setup_2fa_step1: "1. 安装 Google Authenticator (谷歌验证器)。",
+        setup_2fa_step2: "2. 扫描下方二维码。",
+        setup_2fa_step3: "3. 输入生成的验证码。",
+        btn_enable_2fa: "安全绑定并开启 2FA",
+        btn_cancel_logout: "取消并退出"
     }
 };
 

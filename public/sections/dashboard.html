@@ -29,30 +29,98 @@
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title" data-i18n="recent_transactions">Recent Transactions</h3>
-        <button class="btn btn-secondary btn-sm" onclick="loadSection('transactions')">
-            <span data-i18n="view_all">View All</span> <i class="fas fa-arrow-right"></i>
-        </button>
+<div class="row">
+    <div class="col-md-8 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h3 class="card-title" data-i18n="chart_overview">Transaction Overview</h3>
+                <div class="d-flex gap-2">
+                    <select class="form-control form-control-sm" id="chartPeriod" onchange="updateDashboardChart()">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body" style="height: 300px; position:relative;">
+                <canvas id="dashboardChart"></canvas>
+            </div>
+        </div>
     </div>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th data-i18n="order_id">Order ID</th>
-                    <th data-i18n="type">Type</th>
-                    <th data-i18n="amount">Amount</th>
-                    <th data-i18n="fee">Fee</th>
-                    <th data-i18n="status">Status</th>
-                    <th data-i18n="date">Date</th>
-                </tr>
-            </thead>
-            <tbody id="recentTransactions">
-                <tr>
-                    <td colspan="6" class="text-muted" style="text-align:center;" data-i18n="loading">Loading...</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <h3 class="card-title mb-3" data-i18n="performance_stats">Performance</h3>
+
+            <div class="stat-progress-item mb-4">
+                <div class="d-flex justify-between mb-1">
+                    <span>Success Rate</span>
+                    <span class="text-success" id="statSuccessRate">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progSuccess" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="stat-progress-item mb-4">
+                <div class="d-flex justify-between mb-1">
+                    <span>Conversion (Payin/Order)</span>
+                    <span class="text-primary" id="statConversion">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progConversion" style="width: 0%; background: var(--primary);">
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-mini-grid">
+                <div class="stat-mini">
+                    <div class="value" id="statTodayVol">₹0</div>
+                    <div class="label" data-i18n="today_volume">Today Volume</div>
+                </div>
+                <div class="stat-mini">
+                    <div class="value" id="statYesterdayVol">₹0</div>
+                    <div class="label" data-i18n="yesterday_volume">Yesterday</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<style>
+    .progress-bar-bg {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        height: 6px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        background: var(--success);
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+
+    .stats-mini-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .stat-mini {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-mini .value {
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+
+    .stat-mini .label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+</style>

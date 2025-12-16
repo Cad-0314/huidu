@@ -13,28 +13,77 @@ const telegramService = require('../services/telegram');
  */
 router.get('/users', authenticate, requireAdmin, async (req, res) => {
     try {
+        const { page = 1, limit = 20, search } = req.query;
+        const offset = (page - 1) * limit;
         const db = getDb();
-        const users = await db.prepare(`
-            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, created_at
+        console.log(`[ADMIN] Fetching users. Page: ${page}, Limit: ${limit}, Search: ${search}`);
+
+        // Base Query
+        let query = `
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, two_factor_enabled, created_at
             FROM users
-            ORDER BY created_at DESC
-        `).all();
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (search) {
+            query += ' AND (username LIKE ? OR name LIKE ? OR uuid LIKE ?)';
+            const term = `%${search}%`;
+            params.push(term, term, term);
+        }
+        if (req.query.status) {
+            query += ' AND status = ?';
+            params.push(req.query.status);
+        }
+
+
+        if (req.query.startDate && req.query.endDate) {
+            query += ' AND date(created_at) BETWEEN ? AND ?';
+            params.push(req.query.startDate, req.query.endDate);
+        }
+
+        query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+        params.push(parseInt(limit), offset);
+
+        const users = await db.prepare(query).all(...params);
+
+        // Count Query
+        let countQuery = 'SELECT COUNT(*) as total FROM users WHERE 1=1';
+        const countParams = [];
+        if (search) {
+            countQuery += ' AND (username LIKE ? OR name LIKE ? OR uuid LIKE ?)';
+            const term = `%${search}%`;
+            countParams.push(term, term, term);
+        }
+        if (req.query.startDate && req.query.endDate) {
+            countQuery += ' AND date(created_at) BETWEEN ? AND ?';
+            countParams.push(req.query.startDate, req.query.endDate);
+        }
+
+        const total = (await db.prepare(countQuery).get(...countParams)).total;
 
         res.json({
             code: 1,
-            data: users.map(u => ({
-                id: u.uuid,
-                username: u.username,
-                name: u.name,
-                role: u.role,
-                balance: u.balance,
-                status: u.status,
-                callbackUrl: u.callback_url,
-                merchantKey: u.merchant_key,
-                payinRate: u.payin_rate,
-                payoutRate: u.payout_rate,
-                createdAt: u.created_at
-            }))
+            data: {
+                users: users.map(u => ({
+                    id: u.uuid,
+                    username: u.username,
+                    name: u.name,
+                    role: u.role,
+                    balance: u.balance,
+                    status: u.status,
+                    callbackUrl: u.callback_url,
+                    merchantKey: u.merchant_key,
+                    payinRate: u.payin_rate,
+                    payoutRate: u.payout_rate,
+                    twoFactorEnabled: !!u.two_factor_enabled,
+                    createdAt: u.created_at
+                })),
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         console.error('Get users error:', error);
@@ -75,7 +124,7 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, 10);
         const merchantKey = generateMerchantKey();
 
-        await db.prepare(`
+        const result = await db.prepare(`
             INSERT INTO users(uuid, username, password, name, role, merchant_key, callback_url, payin_rate, payout_rate)
             VALUES(?, ?, ?, ?, 'merchant', ?, ?, ?, ?)
                 `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null, pRate, poRate);
@@ -83,10 +132,54 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         res.json({
             code: 1,
             msg: 'Merchant created successfully',
-            data: { id: uuid, username, name, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate }
+            data: { id: result.lastInsertRowid.toString(), username, name, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate }
         });
     } catch (error) {
         console.error('Create user error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
+ * GET /api/admin/users/:id
+ * Get single merchant details
+ */
+router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDb();
+        // Try finding by UUID (new system) or ID (legacy check, though users table uses integer ID but we expose UUID usually or we expose ID?
+        // In the list we return `uuid` as `id`. So we should query by `uuid`.
+        const user = await db.prepare(`
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, two_factor_enabled, created_at
+            FROM users
+            WHERE uuid = ? OR id = ?
+        `).get(id, id);
+
+        if (!user) {
+            return res.status(404).json({ code: 0, msg: 'User not found' });
+        }
+
+        res.json({
+            code: 1,
+            data: {
+                id: user.uuid, // Expose UUID as the main ID
+                dbId: user.id, // Internal ID if needed for resets
+                username: user.username,
+                name: user.name,
+                role: user.role,
+                balance: user.balance,
+                status: user.status,
+                callbackUrl: user.callback_url,
+                merchantKey: user.merchant_key,
+                payinRate: user.payin_rate,
+                payoutRate: user.payout_rate,
+                twoFactorEnabled: !!user.two_factor_enabled,
+                createdAt: user.created_at
+            }
+        });
+    } catch (error) {
+        console.error('Get user error:', error);
         res.status(500).json({ code: 0, msg: 'Server error' });
     }
 });
@@ -369,5 +462,57 @@ router.post('/users/:id/balance', authenticate, requireAdmin, async (req, res) =
         res.status(500).json({ code: 0, msg: 'Server error' });
     }
 });
+
+/**
+ * POST /api/admin/users/:id/2fa/reset
+ */
+// Reset 2FA with UUID support
+router.post('/users/:id/2fa/reset', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDb();
+
+        const result = await db.prepare('UPDATE users SET two_factor_enabled = 0, two_factor_secret = NULL WHERE uuid = ? OR id = ?').run(id, id);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ code: 0, msg: 'User not found' });
+        }
+
+        res.json({ code: 1, msg: 'User 2FA Reset Successfully' });
+    } catch (error) {
+        console.error('Reset 2FA error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
+ * POST /api/admin/users/:id/password
+ * Admin Reset User Password
+ */
+router.post('/users/:id/password', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { password } = req.body;
+
+        if (!password) return res.status(400).json({ code: 0, msg: 'Password required' });
+
+        const db = getDb();
+        const hashedPassword = bcrypt.hashSync(password, 10);
+
+        const result = await db.prepare("UPDATE users SET password = ?, updated_at = datetime('now') WHERE uuid = ? OR id = ?")
+            .run(hashedPassword, id, id);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ code: 0, msg: 'User not found' });
+        }
+
+        res.json({ code: 1, msg: 'Password reset successfully' });
+    } catch (error) {
+        console.error('Admin reset password error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+module.exports = router;
 
 module.exports = router;

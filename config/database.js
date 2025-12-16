@@ -157,6 +157,9 @@ async function initializeSchema() {
             status TEXT DEFAULT 'active',
             telegram_group_id TEXT,
             callback_url TEXT,
+            two_factor_enabled BOOLEAN DEFAULT 0,
+            two_factor_secret TEXT,
+            two_factor_temp_secret TEXT,
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         )`,
@@ -279,6 +282,21 @@ async function initializeSchema() {
     try {
         await db.exec('ALTER TABLE users ADD COLUMN payout_rate REAL DEFAULT 3.0');
         console.log('Applied migration: Added payout_rate to users');
+    } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT 0');
+        console.log('Applied migration: Added two_factor_enabled to users');
+    } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN two_factor_secret TEXT');
+        console.log('Applied migration: Added two_factor_secret to users');
+    } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN two_factor_temp_secret TEXT');
+        console.log('Applied migration: Added two_factor_temp_secret to users');
     } catch (e) { }
 }
 
