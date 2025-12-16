@@ -5,8 +5,7 @@ const axios = require('axios');
 const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
 const silkpayService = require('../services/silkpay');
-const { calculatePayinFee, getRatesFromDb } = require('../utils/rates');
-const { generateOrderId, generateSign } = require('../utils/signature');
+const { createPayinOrder } = require('../services/order');
 
 /**
  * POST /api/payin/create
@@ -15,78 +14,38 @@ router.post('/create', apiAuthenticate, async (req, res) => {
     try {
         const { orderAmount, orderId, callbackUrl, skipUrl, param } = req.body;
         const merchant = req.merchant;
-        const db = getDb();
 
         if (!orderAmount || !orderId) {
             return res.status(400).json({ code: 0, msg: 'orderAmount and orderId are required' });
         }
 
-        const amount = parseFloat(orderAmount);
-
-        // Minimum deposit: ₹100
-        if (amount < 100) {
-            return res.status(400).json({ code: 0, msg: 'Minimum deposit amount is ₹100' });
-        }
-
-        const existing = await db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
-        if (existing) {
-            return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
-        }
-
-        const rates = await getRatesFromDb(db);
-        const { fee, netAmount } = calculatePayinFee(amount, rates.payinRate);
-
-        const internalOrderId = generateOrderId('HDP');
-        const appUrl = process.env.APP_URL || 'http://localhost:3000';
-        const ourCallbackUrl = `${appUrl}/api/payin/callback`;
-        const ourSkipUrl = skipUrl || `${appUrl}/payment/complete`;
-
-        const silkpayResponse = await silkpayService.createPayin({
-            orderAmount: orderAmount,
-            orderId: internalOrderId,
-            notifyUrl: ourCallbackUrl,
-            returnUrl: ourSkipUrl
+        const result = await createPayinOrder({
+            amount: orderAmount,
+            orderId,
+            merchant,
+            callbackUrl,
+            skipUrl,
+            param
         });
-
-        if (silkpayResponse.status !== '200') {
-            return res.status(400).json({ code: 0, msg: silkpayResponse.message || 'Failed to create order' });
-        }
-
-        const txUuid = uuidv4();
-
-        // Extract deeplinks from Silkpay response
-        const deepLinks = silkpayResponse.data.deepLink || {};
-
-        // Wrap callbackUrl, original param, and deeplinks into stored param
-        const storedParam = JSON.stringify({
-            c: callbackUrl,
-            p: param,
-            deepLinks: deepLinks
-        });
-
-        // Note: we store silkpay's payOrderId in platform_order_id. mOrderId is not explicitly stored but is internalOrderId.
-        await db.prepare(`
-            INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
-            VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
-        `).run(txUuid, merchant.id, orderId, silkpayResponse.data.payOrderId || internalOrderId, amount, amount, fee, netAmount, silkpayResponse.data.paymentUrl, storedParam);
-
-        // Return local payment page URL
-        const localPaymentUrl = `${appUrl}/pay/${silkpayResponse.data.payOrderId || internalOrderId}`;
 
         res.json({
             code: 1,
             msg: 'Order created',
             data: {
-                orderId,
-                id: txUuid,
-                orderAmount: amount,
-                fee,
-                paymentUrl: localPaymentUrl
+                orderId: result.orderId,
+                id: result.id,
+                orderAmount: result.amount,
+                fee: result.fee,
+                paymentUrl: result.paymentUrl
             }
         });
+
     } catch (error) {
         console.error('Create payin error:', error);
-        res.status(500).json({ code: 0, msg: 'Server error' });
+        // Helper to return 400 for known errors, 500 for others? 
+        // For simplicity, returns 400 if message is known, or just error msg.
+        const code = error.message.includes('Minimum') || error.message.includes('exists') ? 400 : 500;
+        res.status(code).json({ code: 0, msg: error.message || 'Server error' });
     }
 });
 

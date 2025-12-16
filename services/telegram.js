@@ -1,6 +1,8 @@
 const { Telegraf } = require('telegraf');
 const { getDb } = require('../config/database');
 const silkpayService = require('./silkpay');
+const { createPayinOrder } = require('./order');
+const { generateOrderId } = require('../utils/signature');
 
 let bot = null;
 
@@ -48,6 +50,52 @@ async function initBot() {
         } catch (error) {
             console.error('Bot Bind Error:', error);
             ctx.reply('An error occurred during binding.\n绑定过程中发生错误。');
+        }
+    });
+
+    // Command: /link <AMOUNT>
+    bot.command('link', async (ctx) => {
+        try {
+            const message = ctx.message.text.split(' ');
+            if (message.length !== 2) {
+                return ctx.reply('Usage: /link <AMOUNT>\n用法: /link <金额>');
+            }
+
+            const amount = parseFloat(message[1]);
+            if (isNaN(amount) || amount <= 0) {
+                return ctx.reply('Invalid amount.\n无效金额。');
+            }
+
+            const chatId = ctx.chat.id.toString();
+            const user = await db.prepare('SELECT * FROM users WHERE telegram_group_id = ?').get(chatId);
+
+            if (!user) {
+                return ctx.reply('⚠️ This group is not bound to a merchant. Use /bind first.\n⚠️ 此群组未绑定商户。请先使用 /bind。');
+            }
+
+            // Generate Order ID
+            const orderId = generateOrderId('TG'); // TG prefix for Telegram orders
+
+            // Create Order
+            const result = await createPayinOrder({
+                amount: amount,
+                orderId: orderId,
+                merchant: user,
+                callbackUrl: user.callback_url || null, // Use merchant's default callback if available
+                skipUrl: null,
+                param: 'Telegram Link'
+            });
+
+            const msg = `✅ **Payment Link Created / 支付链接已创建**\n` +
+                `Order ID: \`${result.orderId}\`\n` +
+                `Amount: ₹${result.amount.toFixed(2)}\n\n` +
+                `🔗 **Link:**\n${result.paymentUrl}`;
+
+            ctx.replyWithMarkdown(msg);
+
+        } catch (error) {
+            console.error('Bot Link Error:', error);
+            ctx.reply(`❌ Failed to create link: ${error.message}\n❌ 创建链接失败: ${error.message}`);
         }
     });
 
@@ -218,8 +266,9 @@ async function initBot() {
     bot.start((ctx) => {
         ctx.reply(
             `Available Commands / 可用命令:\n\n` +
+            `/link <AMOUNT> - Create payment link / 创建支付链接\n` +
             `/balance - Check merchant balance & stats / 查询余额和统计\n` +
-            `/check <UTR/ID> - Check transaction status (Local & Upstream) / 查询交易状态 (本地和上游)\n` +
+            `/check <UTR/ID> - Check transaction status / 查询交易状态\n` +
             `/last - View last pending payin / 查看最后一条待处理收款\n` +
             `/bind <KEY> - Link group to merchant / 绑定商户`
         );
