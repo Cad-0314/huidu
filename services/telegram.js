@@ -16,19 +16,22 @@ async function initBot() {
     bot = new Telegraf(token);
     const db = getDb();
 
+    // Generic reply helper to quote message
+    const reply = (ctx, text) => ctx.reply(text, { reply_to_message_id: ctx.message.message_id });
+
     // Command: /bind <MERCHANT_KEY>
     bot.command('bind', async (ctx) => {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length !== 2) {
-                return ctx.reply('Usage: /bind <MERCHANT_KEY>\n用法: /bind <商户密钥>');
+                return reply(ctx, 'Usage: /bind <MERCHANT_KEY>\n用法: /bind <商户密钥>');
             }
 
             const merchantKey = message[1].trim();
             const user = await db.prepare('SELECT id, name, telegram_group_id FROM users WHERE merchant_key = ?').get(merchantKey);
 
             if (!user) {
-                return ctx.reply('Invalid Merchant Key.\n无效的商户密钥。');
+                return reply(ctx, 'Invalid Merchant Key.\n无效的商户密钥。');
             }
 
             const chatId = ctx.chat.id.toString();
@@ -36,20 +39,20 @@ async function initBot() {
             // Check if this Group is already bound to another merchant
             const existingGroup = await db.prepare('SELECT username FROM users WHERE telegram_group_id = ? AND id != ?').get(chatId, user.id);
             if (existingGroup) {
-                return ctx.reply(`⚠️ This group is already bound to merchant: ${existingGroup.username}. Unbind there first.\n⚠️ 此群组已绑定到商户: ${existingGroup.username}。请先解绑。`);
+                return reply(ctx, `⚠️ This group is already bound to merchant: ${existingGroup.username}. Unbind there first.\n⚠️ 此群组已绑定到商户: ${existingGroup.username}。请先解绑。`);
             }
 
             // Check if this Merchant is already bound to another group
             if (user.telegram_group_id && user.telegram_group_id !== chatId) {
-                return ctx.reply(`⚠️ This merchant is already bound to another group. Contact admin to reset.\n⚠️ 此商户已绑定到其他群组。请联系管理员重置。`);
+                return reply(ctx, `⚠️ This merchant is already bound to another group. Contact admin to reset.\n⚠️ 此商户已绑定到其他群组。请联系管理员重置。`);
             }
 
             await db.prepare('UPDATE users SET telegram_group_id = ? WHERE id = ?').run(chatId, user.id);
 
-            ctx.reply(`✅ Successfully bound to merchant: ${user.name}\n✅ 成功绑定商户: ${user.name}`);
+            reply(ctx, `✅ Successfully bound to merchant: ${user.name}\n✅ 成功绑定商户: ${user.name}`);
         } catch (error) {
             console.error('Bot Bind Error:', error);
-            ctx.reply('An error occurred during binding.\n绑定过程中发生错误。');
+            reply(ctx, 'An error occurred during binding.\n绑定过程中发生错误。');
         }
     });
 
@@ -58,30 +61,27 @@ async function initBot() {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length !== 2) {
-                return ctx.reply('Usage: /link <AMOUNT>\n用法: /link <金额>');
+                return reply(ctx, 'Usage: /link <AMOUNT>\n用法: /link <金额>');
             }
 
             const amount = parseFloat(message[1]);
             if (isNaN(amount) || amount <= 0) {
-                return ctx.reply('Invalid amount.\n无效金额。');
+                return reply(ctx, 'Invalid amount.\n无效金额。');
             }
 
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT * FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) {
-                return ctx.reply('⚠️ This group is not bound to a merchant. Use /bind first.\n⚠️ 此群组未绑定商户。请先使用 /bind。');
+                return reply(ctx, '⚠️ This group is not bound to a merchant. Use /bind first.\n⚠️ 此群组未绑定商户。请先使用 /bind。');
             }
 
-            // Generate Order ID
-            const orderId = generateOrderId('TG'); // TG prefix for Telegram orders
-
-            // Create Order
+            const orderId = generateOrderId('TG');
             const result = await createPayinOrder({
                 amount: amount,
                 orderId: orderId,
                 merchant: user,
-                callbackUrl: user.callback_url || null, // Use merchant's default callback if available
+                callbackUrl: user.callback_url || null,
                 skipUrl: null,
                 param: 'Telegram Link'
             });
@@ -91,11 +91,11 @@ async function initBot() {
                 `Amount: ₹${result.amount.toFixed(2)}\n\n` +
                 `🔗 **Link:**\n${result.paymentUrl}`;
 
-            ctx.replyWithMarkdown(msg);
+            ctx.replyWithMarkdown(msg, { reply_to_message_id: ctx.message.message_id });
 
         } catch (error) {
             console.error('Bot Link Error:', error);
-            ctx.reply(`❌ Failed to create link: ${error.message}\n❌ 创建链接失败: ${error.message}`);
+            reply(ctx, `❌ Failed to create link: ${error.message}\n❌ 创建链接失败: ${error.message}`);
         }
     });
 
@@ -106,10 +106,9 @@ async function initBot() {
             const user = await db.prepare('SELECT id, balance, name, username FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) {
-                return ctx.reply('⚠️ This chat is not bound to any merchant. Use /bind <KEY> first.\n⚠️ 此群组未绑定任何商户。请先使用 /bind <密钥> 绑定。');
+                return reply(ctx, '⚠️ This chat is not bound to any merchant. Use /bind <KEY> first.\n⚠️ 此群组未绑定任何商户。请先使用 /bind <密钥> 绑定。');
             }
 
-            // Stats Queries
             const todayPayin = await db.prepare(`
                 SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
                 WHERE user_id = ? AND type = 'payin' AND status = 'success' 
@@ -146,10 +145,10 @@ async function initBot() {
             msg += `Today/今日: ₹${todayPayout.total.toFixed(2)}\n`;
             msg += `Yesterday/昨日: ₹${yesterdayPayout.total.toFixed(2)}`;
 
-            ctx.reply(msg);
+            reply(ctx, msg);
         } catch (error) {
             console.error('Bot Balance Error:', error);
-            ctx.reply('Error fetching balance.\n获取余额失败。');
+            reply(ctx, 'Error fetching balance.\n获取余额失败。');
         }
     });
 
@@ -158,7 +157,7 @@ async function initBot() {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length !== 2) {
-                return ctx.reply('Usage: /check <UTR_OR_ORDER_ID>\n用法: /check <UTR或订单号>');
+                return reply(ctx, 'Usage: /check <UTR_OR_ORDER_ID>\n用法: /check <UTR或订单号>');
             }
 
             const queryId = message[1].trim();
@@ -166,21 +165,17 @@ async function initBot() {
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) {
-                return ctx.reply('⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
+                return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
             }
 
             let responseMsg = '';
 
-            // 1. Check Local DB
-            // We search platform_order_id because Silkpay uses internal ID for queries usually, but sometimes merchant ID works.
+            // Check Local
             const tx = await db.prepare('SELECT * FROM transactions WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
 
             if (tx) {
                 responseMsg += `🔎 **Local Payin Record / 本地收款记录**\nOrder ID/订单号: ${tx.order_id}\nAmount/金额: ${tx.amount}\nStatus/状态: ${tx.status.toUpperCase()}\nUTR: ${tx.utr || 'N/A'}\n\n`;
-
-                // If pending, check upstream
                 if (tx.status === 'pending') {
-                    // Try to check upstream by UTR or OrderID (platform_order_id likely)
                     try {
                         let upstream = null;
                         if (tx.utr) {
@@ -188,83 +183,66 @@ async function initBot() {
                         } else {
                             upstream = await silkpayService.queryPayin(tx.platform_order_id || tx.order_id);
                         }
-
                         if (upstream && upstream.status === '200') {
                             const data = upstream.data || {};
                             const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
-                            responseMsg += `🌐 **Upstream Status / 上游状态**\nStatus/状态: ${upStatus}\nAmount/金额: ${data.amount}`;
+                            responseMsg += `🌐 **Provider Status / 上游状态**\nStatus/状态: ${upStatus}\nAmount/金额: ${data.amount}`;
                         }
-                    } catch (e) {
-                        // Ignore upstream error
-                    }
+                    } catch (e) { }
                 }
-                return ctx.reply(responseMsg);
+                return reply(ctx, responseMsg);
             }
 
-            // Check Payouts Local
             const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
             if (payout) {
-                return ctx.reply(`📤 **Payout Details / 代付详情**\nOrder ID/订单号: ${payout.order_id}\nAmount/金额: ${payout.amount}\nStatus/状态: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}`);
+                return reply(ctx, `📤 **Payout Details / 代付详情**\nOrder ID/订单号: ${payout.order_id}\nAmount/金额: ${payout.amount}\nStatus/状态: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}`);
             }
 
-            // 2. If not found locally, Check Upstream (By UTR or Order ID)
-            ctx.reply('Searching upstream... / 正在搜寻上游...');
+            reply(ctx, 'Searching provider... / 正在搜寻上游...');
             try {
-                // Try UTR first
                 let upstream = await silkpayService.queryUtr(queryId);
-                // Silkpay UTR check returns status 200 and data.code = 1 if usable/found?
-                // Docs say: data.code: 1 means successful order processing (compensation), NO, Wait.
-                // UTR Query Order (No. 5 in payin.txt): data.code 1 means new order can be created?
-                // Actually it says "Queries order details using the UTR". Response data has "amount", "mOrderId" etc.
                 if (upstream.status === '200' && upstream.data) {
-                    return ctx.reply(`🌐 **Upstream Found (UTR) / 上游找到 (UTR)**\nOrder ID/订单号: ${upstream.data.mOrderId || 'N/A'}\nAmount/金额: ${upstream.data.amount}\nStatus/状态: ${upstream.data.code === 1 ? 'Active/Usable' : 'Used/Invalid'}\nUTR: ${queryId}`);
+                    return reply(ctx, `🌐 **Provider Found (UTR) / 上游找到 (UTR)**\nOrder ID/订单号: ${upstream.data.mOrderId || 'N/A'}\nAmount/金额: ${upstream.data.amount}\nStatus/状态: ${upstream.data.code === 1 ? 'Active/Usable' : 'Used/Invalid'}\nUTR: ${queryId}`);
                 }
             } catch (e) { }
 
             try {
-                // Try Order ID
                 let upstream = await silkpayService.queryPayin(queryId);
                 if (upstream.status === '200' && upstream.data) {
                     const data = upstream.data;
                     const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
-                    return ctx.reply(`🌐 **Upstream Found (Order) / 上游找到 (订单号)**\nOrder ID/订单号: ${data.mOrderId}\nAmount/金额: ${data.amount}\nStatus/状态: ${upStatus}`);
+                    return reply(ctx, `🌐 **Provider Found (Order) / 上游找到 (订单号)**\nOrder ID/订单号: ${data.mOrderId}\nAmount/金额: ${data.amount}\nStatus/状态: ${upStatus}`);
                 }
             } catch (e) { }
 
-            return ctx.reply('❌ Transaction not found locally or upstream.\n❌ 本地或上游未找到该交易。');
+            return reply(ctx, '❌ Transaction not found locally or upstream.\n❌ 本地或上游未找到该交易。');
 
         } catch (error) {
             console.error('Bot Check Error:', error);
-            ctx.reply('Error checking transaction.\n查询交易失败。');
+            reply(ctx, 'Error checking transaction.\n查询交易失败。');
         }
     });
 
-    // Command: /last (Last Pending Transaction)
+    // Command: /last
     bot.command('last', async (ctx) => {
         try {
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
-
-            if (!user) {
-                return ctx.reply('⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
-            }
+            if (!user) return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
 
             const tx = await db.prepare('SELECT * FROM transactions WHERE user_id = ? AND status = "pending" ORDER BY created_at DESC LIMIT 1').get(user.id);
+            if (!tx) return reply(ctx, '✅ No pending transactions found.\n✅ 无待处理交易。');
 
-            if (!tx) {
-                return ctx.reply('✅ No pending transactions found.\n✅ 无待处理交易。');
-            }
-
-            ctx.reply(`⏳ **Last Pending Payin / 最后待处理收款**\nOrder ID/订单号: ${tx.order_id}\nAmount/金额: ${tx.amount}\nCreated/时间: ${tx.created_at}`);
+            reply(ctx, `⏳ **Last Pending Payin / 最后待处理收款**\nOrder ID/订单号: ${tx.order_id}\nAmount/金额: ${tx.amount}\nCreated/时间: ${tx.created_at}`);
         } catch (error) {
             console.error('Bot Last Error:', error);
-            ctx.reply('Error fetching last transaction.\n获取最后交易失败。');
+            reply(ctx, 'Error fetching last transaction.\n获取最后交易失败。');
         }
     });
 
     // Help Command
     bot.start((ctx) => {
-        ctx.reply(
+        reply(ctx,
             `Available Commands / 可用命令:\n\n` +
             `/link <AMOUNT> - Create payment link / 创建支付链接\n` +
             `/balance - Check merchant balance & stats / 查询余额和统计\n` +
@@ -274,41 +252,33 @@ async function initBot() {
         );
     });
 
-    // If Vercel, don't launch polling. Just set webhook if needed (or assume set).
-    // Actually, Vercel functions shouldn't set webhook every time. 
-    // But we need to export the bot instance to handle updates.
-    if (!process.env.VERCEL) {
+    if (!process.env.VERCEL && process.env.USE_WEBHOOK !== 'true') {
         bot.launch().then(() => {
             console.log('Telegram Bot started (Polling)');
         }).catch(err => {
             console.error('Failed to start Telegram Bot:', err);
         });
 
-        // Graceful stop
         process.once('SIGINT', () => bot.stop('SIGINT'));
         process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    } else {
+        console.log('Telegram Bot Polling Disabled (Webhook Mode)');
     }
 }
 
-// Handler for Webhook (Vercel)
 async function handleUpdate(req, res) {
-    if (!bot) {
-        // Initialize if not already (Lazy loading on Vercel)
-        await initBot();
-    }
+    if (!bot) await initBot();
     try {
         await bot.handleUpdate(req.body, res);
     } catch (err) {
         console.error('Bot Webhook Error:', err);
-        // Ensure we send a response so Telegram stops retrying
         if (!res.headersSent) res.status(200).send('ok');
     }
 }
 
 async function broadcastMessage(text) {
     if (!bot) {
-        if (!process.env.VERCEL) return { success: 0, failed: 0 };
-        // If Vercel, bot might be null if not init. Init it.
+        if (!process.env.VERCEL && process.env.USE_WEBHOOK !== 'true') return { success: 0, failed: 0 };
         await initBot();
     }
     const db = getDb();
