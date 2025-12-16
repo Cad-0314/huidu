@@ -274,19 +274,43 @@ async function initBot() {
         );
     });
 
-    bot.launch().then(() => {
-        console.log('Telegram Bot started');
-    }).catch(err => {
-        console.error('Failed to start Telegram Bot:', err);
-    });
+    // If Vercel, don't launch polling. Just set webhook if needed (or assume set).
+    // Actually, Vercel functions shouldn't set webhook every time. 
+    // But we need to export the bot instance to handle updates.
+    if (!process.env.VERCEL) {
+        bot.launch().then(() => {
+            console.log('Telegram Bot started (Polling)');
+        }).catch(err => {
+            console.error('Failed to start Telegram Bot:', err);
+        });
 
-    // Graceful stop
-    process.once('SIGINT', () => bot.stop('SIGINT'));
-    process.once('SIGTERM', () => bot.stop('SIGTERM'));
+        // Graceful stop
+        process.once('SIGINT', () => bot.stop('SIGINT'));
+        process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    }
+}
+
+// Handler for Webhook (Vercel)
+async function handleUpdate(req, res) {
+    if (!bot) {
+        // Initialize if not already (Lazy loading on Vercel)
+        await initBot();
+    }
+    try {
+        await bot.handleUpdate(req.body, res);
+    } catch (err) {
+        console.error('Bot Webhook Error:', err);
+        // Ensure we send a response so Telegram stops retrying
+        if (!res.headersSent) res.status(200).send('ok');
+    }
 }
 
 async function broadcastMessage(text) {
-    if (!bot) return { success: 0, failed: 0 };
+    if (!bot) {
+        if (!process.env.VERCEL) return { success: 0, failed: 0 };
+        // If Vercel, bot might be null if not init. Init it.
+        await initBot();
+    }
     const db = getDb();
     const users = await db.prepare('SELECT telegram_group_id FROM users WHERE telegram_group_id IS NOT NULL').all();
 
@@ -306,4 +330,4 @@ async function broadcastMessage(text) {
     return { success, failed };
 }
 
-module.exports = { initBot, broadcastMessage };
+module.exports = { initBot, broadcastMessage, handleUpdate, getBot: () => bot };

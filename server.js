@@ -76,6 +76,12 @@ app.use('/api/merchant', require('./routes/merchant'));
 app.use('/api/payin', require('./routes/payin'));
 app.use('/api/payout', require('./routes/payout'));
 
+// Bot Webhook (For Vercel)
+app.post('/api/telegram/webhook', async (req, res) => {
+    const { handleUpdate } = require('./services/telegram');
+    await handleUpdate(req, res);
+});
+
 // Payment Page - Public Route
 app.get('/pay/:orderId', async (req, res) => {
     try {
