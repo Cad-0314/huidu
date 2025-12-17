@@ -286,10 +286,10 @@ async function initBot() {
                 return ((s.success / s.total) * 100).toFixed(2) + '%';
             };
 
-            let msg = `📊 **Success Rates / 成功率**\n\n`;
-            msg += `🕒 **5 Mins:** ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
-            msg += `🕒 **10 Mins:** ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
-            msg += `🕒 **30 Mins:** ${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})`;
+            let msg = `📊 Success Rates / 成功率\n\n`;
+            msg += `🕒 5 Mins: ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
+            msg += `🕒 10 Mins: ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
+            msg += `🕒 30 Mins:${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})`;
 
             reply(ctx, msg);
 
