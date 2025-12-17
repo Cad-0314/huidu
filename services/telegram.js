@@ -3,6 +3,7 @@ const { getDb } = require('../config/database');
 const silkpayService = require('./silkpay');
 const { createPayinOrder } = require('./order');
 const { generateOrderId } = require('../utils/signature');
+const { getUserRates } = require('../utils/rates');
 
 let bot = null;
 
@@ -156,7 +157,7 @@ async function initBot() {
     bot.command('check', async (ctx) => {
         try {
             const message = ctx.message.text.split(' ');
-            if (message.length !== 2) {
+            if (message.length < 2) {
                 return reply(ctx, 'Usage: /check <UTR_OR_ORDER_ID>\n用法: /check <UTR或订单号>');
             }
 
@@ -169,75 +170,116 @@ async function initBot() {
             }
 
             let responseMsg = '';
+            let found = false;
 
-            // Check Local
+            // 1. Check Local DB
             const tx = await db.prepare('SELECT * FROM transactions WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
+            const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
 
             if (tx) {
-                responseMsg += `🔎 **Local Payin Record / 本地收款记录**\nOrder ID/订单号: ${tx.order_id}\nAmount/金额: ${tx.amount}\nStatus/状态: ${tx.status.toUpperCase()}\nUTR: ${tx.utr || 'N/A'}\n\n`;
-                if (tx.status === 'pending') {
-                    try {
-                        let upstream = null;
-                        if (tx.utr) {
-                            upstream = await silkpayService.queryUtr(tx.utr);
-                        } else {
-                            upstream = await silkpayService.queryPayin(tx.platform_order_id || tx.order_id);
-                        }
-                        if (upstream && upstream.status === '200') {
-                            const data = upstream.data || {};
-                            const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
-                            responseMsg += `🌐 **Provider Status / 上游状态**\nStatus/状态: ${upStatus}\nAmount/金额: ${data.amount}`;
-                        }
-                    } catch (e) { }
-                }
-                return reply(ctx, responseMsg);
+                found = true;
+                responseMsg += `🔎 **Local Payin Record**\nOrder ID: ${tx.order_id}\nAmount: ${tx.amount}\nStatus: ${tx.status.toUpperCase()}\nUTR: ${tx.utr || 'N/A'}\n\n`;
             }
-
-            const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
             if (payout) {
-                responseMsg += `📤 **Local Payout Details / 本地代付详情**\nOrder ID/订单号: ${payout.order_id}\nAmount/金额: ${payout.amount}\nStatus/状态: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}\n\n`;
-
-                if (payout.status !== 'success' && payout.status !== 'failed') {
-                    try {
-                        const upstream = await silkpayService.queryPayout(payout.platform_order_id || payout.order_id);
-                        if (upstream && upstream.status === '200') {
-                            const data = upstream.data || {};
-                            // 0: Initial, 1: Processing, 2: Success, 3: Failed
-                            let upStatusStr = 'UNKNOWN';
-                            if (data.status === 2) upStatusStr = 'SUCCESS';
-                            else if (data.status === 3) upStatusStr = 'FAILED';
-                            else if (data.status === 1) upStatusStr = 'PROCESSING';
-                            else upStatusStr = 'INITIAL';
-
-                            responseMsg += `🌐 **Provider Status / 上游状态**\nStatus/状态: ${upStatusStr}\nAmount/金额: ${data.amount}`;
-                        }
-                    } catch (e) { }
-                }
-                return reply(ctx, responseMsg);
+                found = true;
+                responseMsg += `📤 **Local Payout Details**\nOrder ID: ${payout.order_id}\nAmount: ${payout.amount}\nStatus: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}\n\n`;
             }
 
             reply(ctx, 'Searching provider... / 正在搜寻上游...');
-            try {
-                let upstream = await silkpayService.queryUtr(queryId);
-                if (upstream.status === '200' && upstream.data) {
-                    return reply(ctx, `🌐 **Provider Found (UTR) / 上游找到 (UTR)**\nOrder ID/订单号: ${upstream.data.mOrderId || 'N/A'}\nAmount/金额: ${upstream.data.amount}\nStatus/状态: ${upstream.data.code === 1 ? 'Active/Usable' : 'Used/Invalid'}\nUTR: ${queryId}`);
-                }
-            } catch (e) { }
 
+            // 2. Query Provider - TRY BOTH PAYIN AND UTR ENDPOINTS
+            let providerFound = false;
+
+            // Check as Payin Order
             try {
-                let upstream = await silkpayService.queryPayin(queryId);
-                if (upstream.status === '200' && upstream.data) {
-                    const data = upstream.data;
+                let upstreamOrder = await silkpayService.queryPayin(queryId);
+                // Also try using local order id if we found it locally
+                if ((!upstreamOrder || upstreamOrder.status !== '200') && tx) {
+                    upstreamOrder = await silkpayService.queryPayin(tx.platform_order_id || tx.order_id);
+                }
+
+                if (upstreamOrder && upstreamOrder.status === '200' && upstreamOrder.data) {
+                    providerFound = true;
+                    const data = upstreamOrder.data;
                     const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
-                    return reply(ctx, `🌐 **Provider Found (Order) / 上游找到 (订单号)**\nOrder ID/订单号: ${data.mOrderId}\nAmount/金额: ${data.amount}\nStatus/状态: ${upStatus}`);
+                    responseMsg += `🌐 **Provider Order Status**\nOrder ID: ${data.mOrderId}\nAmount: ${data.amount}\nStatus: ${upStatus}\nUTR: ${data.utr || 'N/A'}\n\n`;
                 }
             } catch (e) { }
 
-            return reply(ctx, '❌ Transaction not found locally or upstream.\n❌ 本地或上游未找到该交易。');
+            // Check as UTR
+            try {
+                let upstreamUtr = await silkpayService.queryUtr(queryId);
+                // If local tx has a UTR, check that too
+                if ((!upstreamUtr || upstreamUtr.status !== '200') && tx && tx.utr) {
+                    upstreamUtr = await silkpayService.queryUtr(tx.utr);
+                }
+
+                if (upstreamUtr && upstreamUtr.status === '200' && upstreamUtr.data) {
+                    providerFound = true;
+                    // data.code: 1 = Active/Usable (can be used for compensation), other = Invalid/Used?
+                    // Based on payin.txt: code=1 means "new order can be created (for compensation)"
+                    responseMsg += `🌐 **Provider UTR Check**\nUTR: ${queryId}\nAmount: ${upstreamUtr.data.amount}\nMsg: ${upstreamUtr.data.msg}\nCode: ${upstreamUtr.data.code}\n\n`;
+                }
+            } catch (e) { }
+
+            if (!found && !providerFound) {
+                return reply(ctx, '❌ Transaction not found locally or upstream.\n❌ 本地或上游未找到该交易。');
+            }
+
+            return reply(ctx, responseMsg);
 
         } catch (error) {
             console.error('Bot Check Error:', error);
             reply(ctx, 'Error checking transaction.\n查询交易失败。');
+        }
+    });
+
+    // Command: /submit <ORDER_ID> <UTR>
+    bot.command('submit', async (ctx) => {
+        try {
+            const message = ctx.message.text.split(' ');
+            if (message.length !== 3) {
+                return reply(ctx, 'Usage: /submit <ORDER_ID> <UTR>\n用法: /submit <订单号> <UTR>');
+            }
+
+            const orderId = message[1].trim();
+            const utr = message[2].trim();
+            const chatId = ctx.chat.id.toString();
+
+            const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
+            if (!user) {
+                return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
+            }
+
+            // Verify order belongs to merchant
+            const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, user.id);
+            if (!tx) {
+                return reply(ctx, '❌ Order not found or does not belong to you.\n❌ 订单未找到或不属于您。');
+            }
+
+            if (tx.status === 'success') {
+                return reply(ctx, '⚠️ Order is already successful.\n⚠️ 订单已成功。');
+            }
+
+            reply(ctx, '⏳ Submitting UTR... / 正在提交 UTR...');
+
+            // Call Submit UTR API
+            const result = await silkpayService.submitUtr(orderId, utr);
+
+            if (result.status === '200' && result.data && result.data.code === 1) {
+                // Success from provider
+                await db.prepare('UPDATE transactions SET utr = ?, status = ? WHERE id = ?').run(utr, 'success', tx.id);
+                // Optionally trigger callback if needed, but for now just update DB
+                return reply(ctx, `✅ **Success! UTR Submitted.**\nOrder: ${orderId}\nUTR: ${utr}\nStatus: Updated to SUCCESS`);
+            } else {
+                // Failure
+                const errMsg = result.message || (result.data ? result.data.msg : 'Unknown Error');
+                return reply(ctx, `❌ **Submission Failed**\nProvider Response: ${errMsg}`);
+            }
+
+        } catch (error) {
+            console.error('Bot Submit Error:', error);
+            reply(ctx, 'Error submitting UTR.\n提交 UTR 失败。');
         }
     });
 
@@ -299,6 +341,49 @@ async function initBot() {
         }
     });
 
+    // Command: /apidetails - Show merchant API details
+    bot.command('apidetails', async (ctx) => {
+        try {
+            const chatId = ctx.chat.id.toString();
+            const user = await db.prepare('SELECT * FROM users WHERE telegram_group_id = ?').get(chatId);
+
+            if (!user) {
+                return reply(ctx, '⚠️ This chat is not bound to any merchant. Use /bind <KEY> first.\n⚠️ 此群组未绑定任何商户。请先使用 /bind <密钥> 绑定。');
+            }
+
+            const appUrl = process.env.APP_URL || 'http://localhost:3000';
+            const docsUrl = `${appUrl}/docs`;
+
+            // Fetch User Rates
+            const rates = await getUserRates(db, user.id);
+            const payinRate = (rates.payinRate * 100).toFixed(2);
+            const payoutRate = (rates.payoutRate * 100).toFixed(2);
+            const payoutFixed = rates.payoutFixed;
+
+            const msg = `🔐 **Merchant API Credentials / 商户 API 凭证**\n\n` +
+                `👤 **Merchant Name:** ${user.name}\n` +
+                `🆔 **Merchant ID (mId):** ${user.merchant_key}\n` +
+                `🔑 **Merchant Key:** ${user.merchant_key}\n` +
+                `*(Secret Key hidden for security. Check Dashboard)*\n\n` +
+                `📊 **Your Rates / 您的费率**\n` +
+                `📥 Payin: ${payinRate}%\n` +
+                `📤 Payout: ${payoutRate}% + ₹${payoutFixed}\n\n` +
+                `🖥️ **Dashboard Access / 后台登录**\n` +
+                `URL: ${appUrl}/login\n` +
+                `*Password: Please contact admin / 密码请咨询管理员*\n\n` +
+                `📚 **API Documentation:**\n${docsUrl}\n\n` +
+                `⚠️ **Rules / 规则:**\n` +
+                `1. Keep your Secret Key private.\n` +
+                `2. Validate all callback signatures.\n` +
+                `3. Use the correct endpoints for Payin/Payout.`;
+
+            reply(ctx, msg);
+        } catch (error) {
+            console.error('Bot API Details Error:', error);
+            reply(ctx, 'Error fetching details.\n获取详情失败。');
+        }
+    });
+
     // Command: /upi - Query UPI listing and available
     bot.command('upi', async (ctx) => {
         // Just listing available methods as requested
@@ -320,6 +405,8 @@ async function initBot() {
             `/link <AMOUNT> - Create payment link / 创建支付链接\n` +
             `/balance - Check merchant balance & stats / 查询余额和统计\n` +
             `/check <UTR/ID> - Check transaction status / 查询交易状态\n` +
+            `/submit <ID> <UTR> - Submit UTR for Order / 提交补单\n` +
+            `/apidetails - View API Credentials / 查看 API 凭证\n` +
             `/stats - Check success rate / 查询成功率\n` +
             `/upi - List UPI options / UPI 列表\n` +
             `/last - View last pending payin / 查看最后一条待处理收款\n` +
