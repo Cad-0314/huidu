@@ -18,42 +18,40 @@ async function initBot() {
     const db = getDb();
 
     // Generic reply helper to quote message
-    const reply = (ctx, text) => ctx.reply(text, { reply_to_message_id: ctx.message.message_id });
+    const reply = (ctx, text) => ctx.reply(text, { reply_to_message_id: ctx.message.message_id, parse_mode: 'Markdown' });
 
     // Command: /bind <MERCHANT_KEY>
     bot.command('bind', async (ctx) => {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length !== 2) {
-                return reply(ctx, 'Usage: /bind <MERCHANT_KEY>\n用法: /bind <商户密钥>');
+                return reply(ctx, '❌ **格式错误**\n用法: `/bind <商户密钥>`\nUsage: `/bind <MERCHANT_KEY>`');
             }
 
             const merchantKey = message[1].trim();
-            const user = await db.prepare('SELECT id, name, telegram_group_id FROM users WHERE merchant_key = ?').get(merchantKey);
+            const user = await db.prepare('SELECT id, name, username, telegram_group_id FROM users WHERE merchant_key = ?').get(merchantKey);
 
             if (!user) {
-                return reply(ctx, 'Invalid Merchant Key.\n无效的商户密钥。');
+                return reply(ctx, '❌ **绑定失败**\n无效的商户密钥 (Invalid Merchant Key)。');
             }
 
             const chatId = ctx.chat.id.toString();
 
-            // Check if this Group is already bound to another merchant
             const existingGroup = await db.prepare('SELECT username FROM users WHERE telegram_group_id = ? AND id != ?').get(chatId, user.id);
             if (existingGroup) {
-                return reply(ctx, `⚠️ This group is already bound to merchant: ${existingGroup.username}. Unbind there first.\n⚠️ 此群组已绑定到商户: ${existingGroup.username}。请先解绑。`);
+                return reply(ctx, `⚠️ **无法绑定**\n此群组已绑定到商户: \`${existingGroup.username}\`。\n请先在原商户处解绑。`);
             }
 
-            // Check if this Merchant is already bound to another group
             if (user.telegram_group_id && user.telegram_group_id !== chatId) {
-                return reply(ctx, `⚠️ This merchant is already bound to another group. Contact admin to reset.\n⚠️ 此商户已绑定到其他群组。请联系管理员重置。`);
+                return reply(ctx, `⚠️ **商户已占用**\n此商户已绑定到其他群组。如需更换，请联系管理员。`);
             }
 
             await db.prepare('UPDATE users SET telegram_group_id = ? WHERE id = ?').run(chatId, user.id);
 
-            reply(ctx, `✅ Successfully bound to merchant: ${user.name}\n✅ 成功绑定商户: ${user.name}`);
+            reply(ctx, `✅ **绑定成功**\n商户名称: \`${user.name}\`\n该群组现在可以正常执行指令。`);
         } catch (error) {
             console.error('Bot Bind Error:', error);
-            reply(ctx, 'An error occurred during binding.\n绑定过程中发生错误。');
+            reply(ctx, '❌ **绑定过程中发生系统错误**');
         }
     });
 
@@ -62,19 +60,19 @@ async function initBot() {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length !== 2) {
-                return reply(ctx, 'Usage: /link <AMOUNT>\n用法: /link <金额>');
+                return reply(ctx, '❌ **格式错误**\n用法: `/link <金额>`\nUsage: `/link <AMOUNT>`');
             }
 
             const amount = parseFloat(message[1]);
             if (isNaN(amount) || amount <= 0) {
-                return reply(ctx, 'Invalid amount.\n无效金额。');
+                return reply(ctx, '❌ **金额无效**\n请输入正确的数字。');
             }
 
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT * FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) {
-                return reply(ctx, '⚠️ This group is not bound to a merchant. Use /bind first.\n⚠️ 此群组未绑定商户。请先使用 /bind。');
+                return reply(ctx, '⚠️ **权限拒绝**\n此群组未绑定商户。请先使用 `/bind`。');
             }
 
             const orderId = generateOrderId('TG');
@@ -87,16 +85,17 @@ async function initBot() {
                 param: 'Telegram Link'
             });
 
-            const msg = `✅ **Payment Link Created / 支付链接已创建**\n` +
-                `Order ID: \`${result.orderId}\`\n` +
-                `Amount: ₹${result.amount.toFixed(2)}\n\n` +
-                `🔗 **Link:**\n${result.paymentUrl}`;
+            const msg = `✨ **支付链接已创建**\n` +
+                `⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
+                `📦 订单编号: \`${result.orderId}\`\n` +
+                `💰 支付金额: **₹${result.amount.toFixed(2)}**\n\n` +
+                `🔗 **点击下方链接支付:**\n${result.paymentUrl}`;
 
             ctx.replyWithMarkdown(msg, { reply_to_message_id: ctx.message.message_id });
 
         } catch (error) {
             console.error('Bot Link Error:', error);
-            reply(ctx, `❌ Failed to create link: ${error.message}\n❌ 创建链接失败: ${error.message}`);
+            reply(ctx, `❌ **创建失败**: ${error.message}`);
         }
     });
 
@@ -107,7 +106,7 @@ async function initBot() {
             const user = await db.prepare('SELECT id, balance, name, username FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) {
-                return reply(ctx, '⚠️ This chat is not bound to any merchant. Use /bind <KEY> first.\n⚠️ 此群组未绑定任何商户。请先使用 /bind <密钥> 绑定。');
+                return reply(ctx, '⚠️ **未绑定商户**\n请先使用 `/bind <密钥>` 进行绑定。');
             }
 
             const todayPayin = await db.prepare(`
@@ -136,20 +135,21 @@ async function initBot() {
                 AND created_at < datetime('now', 'start of day', 'localtime')
             `).get(user.id);
 
-            let msg = `💰 **Merchant Details / 商户详情**\n`;
-            msg += `Name/名称: ${user.name} (@${user.username})\n`;
-            msg += `Balance/余额: ₹${user.balance.toFixed(2)}\n\n`;
-            msg += `📥 **Collections / 收款 (INR)**\n`;
-            msg += `Today/今日: ₹${todayPayin.total.toFixed(2)}\n`;
-            msg += `Yesterday/昨日: ₹${yesterdayPayin.total.toFixed(2)}\n\n`;
-            msg += `📤 **Payouts / 代付 (INR)**\n`;
-            msg += `Today/今日: ₹${todayPayout.total.toFixed(2)}\n`;
-            msg += `Yesterday/昨日: ₹${yesterdayPayout.total.toFixed(2)}`;
+            let msg = `💳 **商户资产概览**\n` +
+                `⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
+                `👤 商户: \`${user.name}\` (@${user.username})\n` +
+                `💰 余额: **₹${user.balance.toFixed(2)}**\n\n` +
+                `📥 **收款统计 (Collections)**\n` +
+                `今日: ₹${todayPayin.total.toFixed(2)}\n` +
+                `昨日: ₹${yesterdayPayin.total.toFixed(2)}\n\n` +
+                `📤 **下发统计 (Payouts)**\n` +
+                `今日: ₹${todayPayout.total.toFixed(2)}\n` +
+                `昨日: ₹${yesterdayPayout.total.toFixed(2)}`;
 
             reply(ctx, msg);
         } catch (error) {
             console.error('Bot Balance Error:', error);
-            reply(ctx, 'Error fetching balance.\n获取余额失败。');
+            reply(ctx, '❌ **获取数据失败**');
         }
     });
 
@@ -158,79 +158,63 @@ async function initBot() {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length < 2) {
-                return reply(ctx, 'Usage: /check <UTR_OR_ORDER_ID>\n用法: /check <UTR或订单号>');
+                return reply(ctx, '❌ **格式错误**\n用法: `/check <UTR或订单号>`');
             }
 
             const queryId = message[1].trim();
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
 
-            if (!user) {
-                return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
-            }
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
 
-            let responseMsg = '';
+            let responseMsg = `🔍 **查询结果: ${queryId}**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n`;
             let found = false;
 
-            // 1. Check Local DB
             const tx = await db.prepare('SELECT * FROM transactions WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
             const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
 
             if (tx) {
                 found = true;
-                responseMsg += `🔎 **Local Payin Record**\nOrder ID: ${tx.order_id}\nAmount: ${tx.amount}\nStatus: ${tx.status.toUpperCase()}\nUTR: ${tx.utr || 'N/A'}\n\n`;
+                responseMsg += `📥 **本地收款记录**\n单号: \`${tx.order_id}\`\n金额: ₹${tx.amount}\n状态: ${tx.status.toUpperCase()}\nUTR: \`${tx.utr || 'N/A'}\`\n\n`;
             }
             if (payout) {
                 found = true;
-                responseMsg += `📤 **Local Payout Details**\nOrder ID: ${payout.order_id}\nAmount: ${payout.amount}\nStatus: ${payout.status.toUpperCase()}\nUTR: ${payout.utr || 'N/A'}\n\n`;
+                responseMsg += `📤 **本地下发记录**\n单号: \`${payout.order_id}\`\n金额: ₹${payout.amount}\n状态: ${payout.status.toUpperCase()}\nUTR: \`${payout.utr || 'N/A'}\`\n\n`;
             }
 
-            reply(ctx, 'Searching provider... / 正在搜寻上游...');
-
-            // 2. Query Provider - TRY BOTH PAYIN AND UTR ENDPOINTS
             let providerFound = false;
-
-            // Check as Payin Order
             try {
                 let upstreamOrder = await silkpayService.queryPayin(queryId);
-                // Also try using local order id if we found it locally
                 if ((!upstreamOrder || upstreamOrder.status !== '200') && tx) {
                     upstreamOrder = await silkpayService.queryPayin(tx.platform_order_id || tx.order_id);
                 }
-
                 if (upstreamOrder && upstreamOrder.status === '200' && upstreamOrder.data) {
                     providerFound = true;
                     const data = upstreamOrder.data;
-                    const upStatus = data.status === 1 ? 'SUCCESS' : (data.status === 2 ? 'FAILED' : 'PENDING/INIT');
-                    responseMsg += `🌐 **Provider Order Status**\nOrder ID: ${data.mOrderId}\nAmount: ${data.amount}\nStatus: ${upStatus}\nUTR: ${data.utr || 'N/A'}\n\n`;
+                    const upStatus = data.status === 1 ? '✅ SUCCESS' : (data.status === 2 ? '❌ FAILED' : '⏳ PENDING');
+                    responseMsg += `🌐 **上游订单状态**\n单号: \`${data.mOrderId}\`\n金额: ₹${data.amount}\n状态: ${upStatus}\nUTR: \`${data.utr || 'N/A'}\`\n\n`;
                 }
             } catch (e) { }
 
-            // Check as UTR
             try {
                 let upstreamUtr = await silkpayService.queryUtr(queryId);
-                // If local tx has a UTR, check that too
                 if ((!upstreamUtr || upstreamUtr.status !== '200') && tx && tx.utr) {
                     upstreamUtr = await silkpayService.queryUtr(tx.utr);
                 }
-
                 if (upstreamUtr && upstreamUtr.status === '200' && upstreamUtr.data) {
                     providerFound = true;
-                    // data.code: 1 = Active/Usable (can be used for compensation), other = Invalid/Used?
-                    // Based on payin.txt: code=1 means "new order can be created (for compensation)"
-                    responseMsg += `🌐 **Provider UTR Check**\nUTR: ${queryId}\nAmount: ${upstreamUtr.data.amount}\nMsg: ${upstreamUtr.data.msg}\nCode: ${upstreamUtr.data.code}\n\n`;
+                    responseMsg += `🌐 **上游 UTR 核查**\n状态: ${upstreamUtr.data.msg}\n金额: ₹${upstreamUtr.data.amount}\n代码: ${upstreamUtr.data.code}\n\n`;
                 }
             } catch (e) { }
 
             if (!found && !providerFound) {
-                return reply(ctx, '❌ Transaction not found locally or upstream.\n❌ 本地或上游未找到该交易。');
+                return reply(ctx, '❌ **未找到记录**\n本地及上游数据库中均无此交易信息。');
             }
 
             return reply(ctx, responseMsg);
-
         } catch (error) {
             console.error('Bot Check Error:', error);
-            reply(ctx, 'Error checking transaction.\n查询交易失败。');
+            reply(ctx, '❌ **查询失败**');
         }
     });
 
@@ -239,7 +223,7 @@ async function initBot() {
         try {
             const message = ctx.message.text.split(' ');
             if (message.length !== 3) {
-                return reply(ctx, 'Usage: /submit <ORDER_ID> <UTR>\n用法: /submit <订单号> <UTR>');
+                return reply(ctx, '❌ **格式错误**\n用法: `/submit <订单号> <UTR>`');
             }
 
             const orderId = message[1].trim();
@@ -247,39 +231,27 @@ async function initBot() {
             const chatId = ctx.chat.id.toString();
 
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
-            if (!user) {
-                return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
-            }
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
 
-            // Verify order belongs to merchant
             const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, user.id);
-            if (!tx) {
-                return reply(ctx, '❌ Order not found or does not belong to you.\n❌ 订单未找到或不属于您。');
-            }
+            if (!tx) return reply(ctx, '❌ **订单不存在**\n请检查订单号是否属于该商户。');
 
-            if (tx.status === 'success') {
-                return reply(ctx, '⚠️ Order is already successful.\n⚠️ 订单已成功。');
-            }
+            if (tx.status === 'success') return reply(ctx, '⚠️ **订单已成功**\n无需重复提交。');
 
-            reply(ctx, '⏳ Submitting UTR... / 正在提交 UTR...');
+            reply(ctx, '⏳ **正在提交上游补单...**');
 
-            // Call Submit UTR API
             const result = await silkpayService.submitUtr(orderId, utr);
 
             if (result.status === '200' && result.data && result.data.code === 1) {
-                // Success from provider
                 await db.prepare('UPDATE transactions SET utr = ?, status = ? WHERE id = ?').run(utr, 'success', tx.id);
-                // Optionally trigger callback if needed, but for now just update DB
-                return reply(ctx, `✅ **Success! UTR Submitted.**\nOrder: ${orderId}\nUTR: ${utr}\nStatus: Updated to SUCCESS`);
+                return reply(ctx, `✅ **补单成功**\n订单号: \`${orderId}\`\nUTR: \`${utr}\`\n系统状态已更新为: **SUCCESS**`);
             } else {
-                // Failure
-                const errMsg = result.message || (result.data ? result.data.msg : 'Unknown Error');
-                return reply(ctx, `❌ **Submission Failed**\nProvider Response: ${errMsg}`);
+                const errMsg = result.message || (result.data ? result.data.msg : '未知错误');
+                return reply(ctx, `❌ **补单失败**\n上游返回: ${errMsg}`);
             }
-
         } catch (error) {
             console.error('Bot Submit Error:', error);
-            reply(ctx, 'Error submitting UTR.\n提交 UTR 失败。');
+            reply(ctx, '❌ **提交 UTR 失败**');
         }
     });
 
@@ -288,27 +260,27 @@ async function initBot() {
         try {
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
-            if (!user) return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
 
             const tx = await db.prepare('SELECT * FROM transactions WHERE user_id = ? AND status = "pending" ORDER BY created_at DESC LIMIT 1').get(user.id);
-            if (!tx) return reply(ctx, '✅ No pending transactions found.\n✅ 无待处理交易。');
+            if (!tx) return reply(ctx, '✅ **暂无待处理订单**');
 
-            reply(ctx, `⏳ **Last Pending Payin / 最后待处理收款**\nOrder ID/订单号: ${tx.order_id}\nAmount/金额: ${tx.amount}\nCreated/时间: ${tx.created_at}`);
+            reply(ctx, `⏳ **最后一条待处理收款**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n📦 订单号: \`${tx.order_id}\`\n💰 金额: **₹${tx.amount}**\n📅 时间: \`${tx.created_at}\``);
         } catch (error) {
             console.error('Bot Last Error:', error);
-            reply(ctx, 'Error fetching last transaction.\n获取最后交易失败。');
+            reply(ctx, '❌ **查询失败**');
         }
     });
 
-    // Command: /stats - Query success rate (5m, 10m, 30m)
+    // Command: /stats
     bot.command('stats', async (ctx) => {
         try {
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
-            if (!user) return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
 
             const getStats = async (minutes) => {
-                const res = await db.prepare(`
+                return await db.prepare(`
                     SELECT 
                         COUNT(*) as total,
                         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
@@ -316,7 +288,6 @@ async function initBot() {
                     WHERE user_id = ? AND type = 'payin'
                     AND created_at >= datetime('now', '-' || ? || ' minutes', 'localtime')
                 `).get(user.id, minutes);
-                return res;
             };
 
             const stats5 = await getStats(5);
@@ -324,94 +295,80 @@ async function initBot() {
             const stats30 = await getStats(30);
 
             const formatRate = (s) => {
-                if (!s || s.total === 0) return '0.00%';
-                return ((s.success / s.total) * 100).toFixed(2) + '%';
+                if (!s || s.total === 0) return '`0.00%`';
+                return `**${((s.success / s.total) * 100).toFixed(2)}%**`;
             };
 
-            let msg = `📊 Success Rates / 成功率\n\n`;
-            msg += `🕒 5 Mins: ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
-            msg += `🕒 10 Mins: ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
-            msg += `🕒 30 Mins:${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})`;
+            let msg = `📊 **支付成功率监控**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n`;
+            msg += `🕒 05分钟: ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
+            msg += `🕒 10分钟: ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
+            msg += `🕒 30分钟: ${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})`;
 
             reply(ctx, msg);
-
         } catch (error) {
             console.error('Bot Stats Error:', error);
-            reply(ctx, 'Error fetching stats.\n获取统计失败。');
+            reply(ctx, '❌ **统计数据获取失败**');
         }
     });
 
-    // Command: /apidetails - Show merchant API details
+    // Command: /apidetails
     bot.command('apidetails', async (ctx) => {
         try {
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT * FROM users WHERE telegram_group_id = ?').get(chatId);
 
-            if (!user) {
-                return reply(ctx, '⚠️ This chat is not bound to any merchant. Use /bind <KEY> first.\n⚠️ 此群组未绑定任何商户。请先使用 /bind <密钥> 绑定。');
-            }
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
 
             const appUrl = process.env.APP_URL || 'http://localhost:3000';
-            const docsUrl = `${appUrl}/docs`;
-
-            // Fetch User Rates
             const rates = await getUserRates(db, user.id);
-            const payinRate = (rates.payinRate * 100).toFixed(2);
-            const payoutRate = (rates.payoutRate * 100).toFixed(2);
-            const payoutFixed = rates.payoutFixed;
 
-            const msg = `🔐 **Merchant API Credentials / 商户 API 凭证**\n\n` +
-                `👤 **Merchant Name:** ${user.name}\n` +
-                `🆔 **Merchant ID (mId):** ${user.merchant_key}\n` +
-                `🔑 **Merchant Key:** ${user.merchant_key}\n` +
-                `*(Secret Key hidden for security. Check Dashboard)*\n\n` +
-                `📊 **Your Rates / 您的费率**\n` +
-                `📥 Payin: ${payinRate}%\n` +
-                `📤 Payout: ${payoutRate}% + ₹${payoutFixed}\n\n` +
-                `🖥️ **Dashboard Access / 后台登录**\n` +
-                `URL: ${appUrl}/login\n` +
-                `*Password: Please contact admin / 密码请咨询管理员*\n\n` +
-                `📚 **API Documentation:**\n${docsUrl}\n\n` +
-                `⚠️ **Rules / 规则:**\n` +
-                `1. Keep your Secret Key private.\n` +
-                `2. Validate all callback signatures.\n` +
-                `3. Use the correct endpoints for Payin/Payout.`;
+            const msg = `🔐 **商户接入详情**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
+                `👤 商户名称: \`${user.name}\`\n` +
+                `🆔 商户 ID: \`${user.merchant_key}\`\n` +
+                `🔑 商户密钥: \`${user.merchant_key}\`\n` +
+                `*(安全起见，Secret Key 请在后台查看)*\n\n` +
+                `📊 **当前费率**\n` +
+                `📥 收款 (Payin): ${(rates.payinRate * 100).toFixed(2)}%\n` +
+                `📤 下发 (Payout): ${(rates.payoutRate * 100).toFixed(2)}% + ₹${rates.payoutFixed}\n\n` +
+                `🖥️ **商户后台**\n` +
+                `地址: ${appUrl}/login\n` +
+                `📚 **API 文档**: ${appUrl}/docs\n\n` +
+                `⚠️ **接入规则**:\n` +
+                `1. 请妥善保管您的 Secret Key\n` +
+                `2. 必须校验回调签名 (Sign)\n` +
+                `3. 生产环境请使用 HTTPS 回调`;
 
             reply(ctx, msg);
         } catch (error) {
             console.error('Bot API Details Error:', error);
-            reply(ctx, 'Error fetching details.\n获取详情失败。');
+            reply(ctx, '❌ **获取详情失败**');
         }
     });
 
-    // Command: /upi - Query UPI listing and available
+    // Command: /upi
     bot.command('upi', async (ctx) => {
-        // Just listing available methods as requested
-        const msg = `📱 **Available UPI Methods / 可用 UPI 方式**\n\n` +
-            `🔹 PhonePe\n` +
-            `🔹 Paytm\n` +
+        const msg = `📱 **支持的 UPI 支付方式**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
+            `🔹 PhonePe | Paytm\n` +
             `🔹 Google Pay (GPay)\n` +
-            `🔹 BHIM / UPI Apps\n\n` +
-            `✅ All UPI apps supported via Intent/DeepLink.\n` +
-            `✅ 支持所有 UPI 应用跳转支付。`;
-
+            `🔹 BHIM | Any UPI App\n\n` +
+            `✅ 系统支持所有合规 UPI 应用跳转支付 (Intent/DeepLink)。`;
         reply(ctx, msg);
     });
 
-    // Help Command
+    // Help / Start Command
     bot.start((ctx) => {
-        reply(ctx,
-            `Available Commands / 可用命令:\n\n` +
-            `/link <AMOUNT> - Create payment link / 创建支付链接\n` +
-            `/balance - Check merchant balance & stats / 查询余额和统计\n` +
-            `/check <UTR/ID> - Check transaction status / 查询交易状态\n` +
-            `/submit <ID> <UTR> - Submit UTR for Order / 提交补单\n` +
-            `/apidetails - View API Credentials / 查看 API 凭证\n` +
-            `/stats - Check success rate / 查询成功率\n` +
-            `/upi - List UPI options / UPI 列表\n` +
-            `/last - View last pending payin / 查看最后一条待处理收款\n` +
-            `/bind <KEY> - Link group to merchant / 绑定商户`
-        );
+        const msg = `🤖 **收银助手机器人已就绪**\n` +
+            `您可以发送以下命令进行操作:\n\n` +
+            `🔹 /link <金额> - 创建支付链接\n` +
+            `🔹 /balance - 查询余额与统计\n` +
+            `🔹 /check <单号/UTR> - 查询交易状态\n` +
+            `🔹 /submit <单号> <UTR> - 提交补单\n` +
+            `🔹 /stats - 查询实时成功率\n` +
+            `🔹 /last - 查看最后一条待处理\n` +
+            `🔹 /apidetails - 查看 API 接入信息\n` +
+            `🔹 /upi - 查看支持的支付方式\n` +
+            `🔹 /bind <密钥> - 绑定群组到商户`;
+        reply(ctx, msg);
     });
 
     if (!process.env.VERCEL && process.env.USE_WEBHOOK !== 'true') {
@@ -420,11 +377,8 @@ async function initBot() {
         }).catch(err => {
             console.error('Failed to start Telegram Bot:', err);
         });
-
         process.once('SIGINT', () => bot.stop('SIGINT'));
         process.once('SIGTERM', () => bot.stop('SIGTERM'));
-    } else {
-        console.log('Telegram Bot Polling Disabled (Webhook Mode)');
     }
 }
 
@@ -452,7 +406,7 @@ async function broadcastMessage(text) {
     for (const u of users) {
         if (!u.telegram_group_id) continue;
         try {
-            await bot.telegram.sendMessage(u.telegram_group_id, text);
+            await bot.telegram.sendMessage(u.telegram_group_id, text, { parse_mode: 'Markdown' });
             success++;
         } catch (e) {
             console.error(`Failed to send to ${u.telegram_group_id}:`, e.message);
