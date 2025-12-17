@@ -340,6 +340,44 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Desktop Detection and Redirect Logic
+            if (/Windows|Macintosh|Linux/i.test(navigator.userAgent) && !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                // Determine fallback URL
+                const fallbackUrl = document.getElementById('fallbackUrl').value;
+
+                // Show overlay
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(255,255,255,0.95)';
+                overlay.style.zIndex = '9999';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.fontFamily = 'Inter, sans-serif';
+                overlay.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h2 style="color: #1a365d; margin-bottom: 10px;">PC Detected</h2>
+                        <p style="color: #4a5568; margin-bottom: 20px;">UPI deep links are not supported on desktop.<br>Skipping intent and redirecting to payment page...</p>
+                        <div class="loader-spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                        <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+                        <a href="${fallbackUrl}" style="display: inline-block; margin-top: 20px; color: #3182ce; text-decoration: none; font-weight: 500;">Click here if not redirected</a>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                // Redirect after delay
+                setTimeout(() => {
+                    window.location.href = fallbackUrl;
+                }, 2500);
+
+                return; // Stop further execution on desktop
+            }
+
             const options = document.querySelectorAll('.payment-option');
             const payBtn = document.getElementById('payBtn');
             const fallbackUrl = document.getElementById('fallbackUrl').value;

@@ -1327,16 +1327,16 @@ async function updateUser(userId) {
 function showAdjustBalanceModal(userId, userName, currentBalance) {
     document.getElementById('modalTitle').textContent = `Adjust Balance - ${userName}`;
     document.getElementById('modalBody').innerHTML = `
-        < p class= "text-muted mb-2" style = "font-size: 0.75rem;" > Current Balance: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p >
+        <p class="text-muted mb-2" style="font-size: 0.75rem;">Current Balance: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p>
         <form id="adjustBalanceForm">
             <div class="form-group">
                 <label>Adjustment Amount *</label>
-                <input type="number" id="adjustAmount" step="0.01" placeholder="Enter amount (positive to add, negative to deduct)" required>
+                <input type="number" id="adjustAmount" step="0.01" placeholder="Enter amount (positive to add, negative to deduct)" required class="form-control" style="padding: 12px; font-size: 1.1rem; border-radius: 8px;">
                     <small class="text-muted">Use positive value to add funds, negative to deduct</small>
             </div>
             <div class="form-group">
                 <label>Reason (optional)</label>
-                <input type="text" id="adjustReason" placeholder="Reason for adjustment">
+                <input type="text" id="adjustReason" placeholder="Reason for adjustment" class="form-control" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
             </div>
         </form>
     `;
