@@ -60,6 +60,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const storedParam = JSON.stringify({
         c: callbackUrl,
         p: param,
+        s: skipUrl, // Store skipUrl for expiration return
         deepLinks: deepLinks
     });
 

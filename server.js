@@ -99,19 +99,62 @@ app.get('/pay/:orderId', async (req, res) => {
             return res.send('<h1>Payment already completed</h1>');
         }
 
-        let html = fs.readFileSync(path.join(__dirname, 'public', 'pay.html'), 'utf8');
+        // Check Expiration (20 minutes)
+        // Check Expiration (20 minutes)
+        const createdAt = new Date(tx.created_at + 'Z'); // Ensure UTC parsing
+        const now = new Date();
+        const diffMs = now - createdAt; // diff in ms
+        const twentyMinsMs = 20 * 60 * 1000;
 
         let deepLinks = {};
+        let skipUrl = '';
         try {
             if (tx.param) {
                 const parsed = JSON.parse(tx.param);
                 if (parsed.deepLinks) {
                     deepLinks = parsed.deepLinks;
                 }
+                if (parsed.s) {
+                    skipUrl = parsed.s;
+                }
             }
         } catch (e) {
-            console.error('Failed to parse deeplinks:', e);
+            console.error('Failed to parse params:', e);
         }
+
+        if (diffMs > twentyMinsMs) {
+            // Expired
+            const returnLink = skipUrl || '#';
+            const returnAttr = skipUrl ? `href="${skipUrl}"` : 'href="#" onclick="history.back()"';
+
+            return res.send(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Payment Expired</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f5f7fa; text-align: center; padding: 20px; }
+                        .card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; width: 100%; }
+                        h2 { color: #e53e3e; margin-bottom: 16px; }
+                        p { color: #4a5568; margin-bottom: 24px; line-height: 1.5; }
+                        .btn { display: inline-block; padding: 12px 24px; background: #3182ce; color: white; text-decoration: none; border-radius: 8px; font-weight: 500; transition: background 0.2s; }
+                        .btn:hover { background: #2c5282; }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <h2>Details Expired</h2>
+                        <p>Time has expired if you have paid please wait it will sucess soon</p>
+                        <a ${returnAttr} class="btn">Return</a>
+                    </div>
+                </body>
+                </html>
+             `);
+        }
+
+        let html = fs.readFileSync(path.join(__dirname, 'public', 'pay.html'), 'utf8');
 
         html = html.replace(/\{\{AMOUNT\}\}/g, parseFloat(tx.amount).toFixed(2));
         html = html.replace('{{ORDER_ID}}', tx.order_id);
@@ -120,6 +163,31 @@ app.get('/pay/:orderId', async (req, res) => {
 
         html = html.replace('{{DEEPLINK_PHONEPE}}', deepLinks.upi_phonepe || '');
         html = html.replace('{{DEEPLINK_PAYTM}}', deepLinks.upi_paytm || '');
+
+        // Generate Google Pay link if not present
+        let gpayLink = deepLinks.upi_gpay || '';
+        if (!gpayLink) {
+            try {
+                // Try to get params from specific deep links or main payment URL
+                const sourceUrl = deepLinks.upi_scan || deepLinks.upi_phonepe || tx.payment_url || '';
+                const urlObj = new URL(sourceUrl.startsWith('http') ? sourceUrl : sourceUrl.replace(/^[a-zA-Z]+:\/\//, 'http://'));
+                const params = new URLSearchParams(urlObj.search);
+
+                const pa = params.get('pa');
+                const pn = params.get('pn');
+                const tn = params.get('tn');
+                const am = params.get('am');
+                const cu = params.get('cu') || 'INR';
+
+                if (pa && am) {
+                    gpayLink = `tez://upi/pay?pa=${pa}&pn=${encodeURIComponent(pn || '')}&tn=${encodeURIComponent(tn || '')}&am=${am}&cu=${cu}`;
+                }
+            } catch (err) {
+                console.error('Error generating GPay link:', err);
+            }
+        }
+        html = html.replace('{{DEEPLINK_GPAY}}', gpayLink);
+
         html = html.replace('{{DEEPLINK_UPI}}', deepLinks.upi_scan || tx.payment_url || '');
 
         res.send(html);
