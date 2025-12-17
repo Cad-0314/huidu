@@ -36,8 +36,8 @@
                 <h3 class="card-title" data-i18n="chart_overview">Transaction Overview</h3>
                 <div class="d-flex gap-2">
                     <select class="form-control form-control-sm" id="chartPeriod" onchange="updateDashboardChart()">
-                        <option value="7">Last 7 Days</option>
-                        <option value="30">Last 30 Days</option>
+                        <option value="7" data-i18n="chart_last_7d">Last 7 Days</option>
+                        <option value="30" data-i18n="chart_last_30d">Last 30 Days</option>
                     </select>
                 </div>
             </div>
@@ -52,7 +52,7 @@
 
             <div class="stat-progress-item mb-4">
                 <div class="d-flex justify-between mb-1">
-                    <span>Success Rate</span>
+                    <span data-i18n="stat_success_rate">Success Rate</span>
                     <span class="text-success" id="statSuccessRate">0%</span>
                 </div>
                 <div class="progress-bar-bg">
@@ -62,7 +62,7 @@
 
             <div class="stat-progress-item mb-4">
                 <div class="d-flex justify-between mb-1">
-                    <span>Conversion (Payin/Order)</span>
+                    <span data-i18n="stat_conversion">Conversion (Payin/Order)</span>
                     <span class="text-primary" id="statConversion">0%</span>
                 </div>
                 <div class="progress-bar-bg">

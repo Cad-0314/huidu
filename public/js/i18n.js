@@ -156,7 +156,7 @@ const translations = {
         label_payin_rate: "Pay-in Rate",
         label_payout_rate: "Payout Rate",
         label_settlement: "Settlement",
-        val_settlement: "Instant (T+0)",
+        val_settlement: "Instant (D+0)",
         section_api: "API Integration",
         label_base_url: "Base URL",
         btn_copy_message: "Copy Shareable Message",
@@ -206,7 +206,38 @@ const translations = {
         setup_2fa_step2: "2. Scan the QR Code.",
         setup_2fa_step3: "3. Enter the generated code.",
         btn_enable_2fa: "Box Secure & Enable 2FA",
-        btn_cancel_logout: "Cancel & Logout"
+        btn_cancel_logout: "Cancel & Logout",
+
+        // Admin Detail Keys
+        back_to_list: "Back to List",
+        merchant_details: "Merchant Details",
+        overview: "Overview",
+        label_name_only: "Name",
+        active: "Active",
+        suspended: "Suspended",
+        save_overview: "Save Overview",
+        financials: "Financials",
+        adjust_balance: "Adjust Balance",
+        label_payout_rate_plus: "Payout Rate (%) + 6 INR",
+        update_rates: "Update Rates",
+        integration: "Integration",
+        update_callback: "Update Callback",
+        status_2fa: "2FA Status",
+        reset_password_label: "Reset Password",
+        set_new_pass_btn: "Set New Password",
+
+        // Dashboard & Links
+        chart_overview: "Transaction Overview",
+        performance_stats: "Performance",
+        today_volume: "Today Volume",
+        yesterday_volume: "Yesterday",
+        chart_last_7d: "Last 7 Days",
+        chart_last_30d: "Last 30 Days",
+        stat_success_rate: "Success Rate",
+        stat_conversion: "Conversion (Payin/Order)",
+        label_amount_only: "Amount",
+        label_order_id_optional: "Order ID (optional)",
+        label_callback_optional: "Callback URL (optional)"
     },
     zh: {
         // App Shell
@@ -365,7 +396,7 @@ const translations = {
         label_payin_rate: "充值费率",
         label_payout_rate: "代付费率",
         label_settlement: "结算周期",
-        val_settlement: "即时 (T+0)",
+        val_settlement: "即时 (D+0)",
         section_api: "API 集成",
         label_base_url: "基础 URL",
         btn_copy_message: "复制分享信息",
@@ -415,7 +446,38 @@ const translations = {
         setup_2fa_step2: "2. 扫描下方二维码。",
         setup_2fa_step3: "3. 输入生成的验证码。",
         btn_enable_2fa: "安全绑定并开启 2FA",
-        btn_cancel_logout: "取消并退出"
+        btn_cancel_logout: "取消并退出",
+
+        // Admin Detail Keys
+        back_to_list: "返回列表",
+        merchant_details: "商户详情",
+        overview: "概览",
+        label_name_only: "名称",
+        active: "活跃",
+        suspended: "已暂停",
+        save_overview: "保存概览",
+        financials: "财务信息",
+        adjust_balance: "调整余额",
+        label_payout_rate_plus: "代付费率 (%) + 6 卢比",
+        update_rates: "更新费率",
+        integration: "集成信息",
+        update_callback: "更新回调",
+        status_2fa: "2FA 状态",
+        reset_password_label: "重置密码",
+        set_new_pass_btn: "设置新密码",
+
+        // Dashboard & Links
+        chart_overview: "交易概览",
+        performance_stats: "性能统计",
+        today_volume: "今日交易量",
+        yesterday_volume: "昨日交易量",
+        chart_last_7d: "最近 7 天",
+        chart_last_30d: "最近 30 天",
+        stat_success_rate: "成功率",
+        stat_conversion: "转化率 (充值/订单)",
+        label_amount_only: "金额",
+        label_order_id_optional: "订单号 (可选)",
+        label_callback_optional: "回调 URL (可选)"
     }
 };
 

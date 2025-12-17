@@ -258,27 +258,40 @@ async function initBot() {
         }
     });
 
-    // Command: /stats - Query success rate
+    // Command: /stats - Query success rate (5m, 10m, 30m)
     bot.command('stats', async (ctx) => {
         try {
             const chatId = ctx.chat.id.toString();
             const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
             if (!user) return reply(ctx, '⚠️ This chat is not bound to any merchant.\n⚠️ 此群组未绑定任何商户。');
 
-            // Success Rate = (Total Success / Total Orders) * 100
-            const stats = await db.prepare(`
-                SELECT 
-                    COUNT(*) as total_orders,
-                    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_orders
-                FROM transactions 
-                WHERE user_id = ? AND type = 'payin'
-            `).get(user.id);
+            const getStats = async (minutes) => {
+                const res = await db.prepare(`
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                    FROM transactions 
+                    WHERE user_id = ? AND type = 'payin'
+                    AND created_at >= datetime('now', '-' || ? || ' minutes', 'localtime')
+                `).get(user.id, minutes);
+                return res;
+            };
 
-            const total = stats.total_orders || 0;
-            const success = stats.success_orders || 0;
-            const rate = total > 0 ? ((success / total) * 100).toFixed(2) : '0.00';
+            const stats5 = await getStats(5);
+            const stats10 = await getStats(10);
+            const stats30 = await getStats(30);
 
-            reply(ctx, `📊 **Success Rate / 成功率**\nTotal Orders/总订单: ${total}\nSuccess/成功: ${success}\nRate/成功率: ${rate}%`);
+            const formatRate = (s) => {
+                if (!s || s.total === 0) return '0.00%';
+                return ((s.success / s.total) * 100).toFixed(2) + '%';
+            };
+
+            let msg = `📊 **Success Rates / 成功率**\n\n`;
+            msg += `🕒 **5 Mins:** ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
+            msg += `🕒 **10 Mins:** ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
+            msg += `🕒 **30 Mins:** ${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})`;
+
+            reply(ctx, msg);
 
         } catch (error) {
             console.error('Bot Stats Error:', error);
