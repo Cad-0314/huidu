@@ -411,7 +411,21 @@
                             // But usually browser might block simple redirect if no user interaction.
                             // Confirm is safer.
                             if (confirm('Unable to open UPI app. Open payment page instead?')) {
-                                window.location.href = fallbackUrl;
+                                // Create full-screen iframe
+                                const iframe = document.createElement('iframe');
+                                iframe.src = fallbackUrl;
+                                iframe.style.position = 'fixed';
+                                iframe.style.top = '0';
+                                iframe.style.left = '0';
+                                iframe.style.width = '100%';
+                                iframe.style.height = '100%';
+                                iframe.style.border = 'none';
+                                iframe.style.zIndex = '9999';
+                                iframe.allow = "payment";
+
+                                // Clear body and append iframe
+                                document.body.innerHTML = '';
+                                document.body.appendChild(iframe);
                             }
                         }
                     }, 2500);
