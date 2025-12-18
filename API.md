@@ -131,7 +131,7 @@ If an order is pending but customer has paid, submit the UTR for verification.
 | `account` | String | **Yes** | Beneficiary Account Number. |
 | `ifsc` | String | **Yes** | Beneficiary IFSC Code. |
 | `personName` | String | **Yes** | Beneficiary Name. |
-| `code` | String | **Yes** | 2FA Google Auth Code. |
+| `code` | String | **Optional** | 2FA Code (Required for Dashboard, Optional for API). |
 
 ### 2.2 USDT Payout (TRC20)
 **Endpoint:** `POST /api/payout/usdt`
@@ -141,7 +141,7 @@ If an order is pending but customer has paid, submit the UTR for verification.
 | `orderId` | String | **Yes** | Unique Payout ID. |
 | `amount` | Number | **Yes** | Amount in INR (Min equivalent of 500 USDT). |
 | `walletAddress` | String | **Yes** | USDT TRC20 Address. |
-| `code` | String | **Yes** | 2FA Google Auth Code. |
+| `code` | String | **Optional** | 2FA Code (Required for Dashboard, Optional for API). |
 
 ### 2.3 Query Payout Status
 **Endpoint:** `POST /api/payout/query`

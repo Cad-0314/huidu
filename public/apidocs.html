@@ -503,8 +503,8 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
                 </tr>
                 <tr>
                     <td><code>code</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>2FA Google Auth Code.</td>
+                    <td>String <span class="optional">Optional</span></td>
+                    <td>2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
         </section>
@@ -537,8 +537,8 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
                 </tr>
                 <tr>
                     <td><code>code</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>2FA Google Auth Code.</td>
+                    <td>String <span class="optional">Optional</span></td>
+                    <td>2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
         </section>
