@@ -97,7 +97,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
                 `);
 
                 for (const upiId of upiIds) {
-                    await insertStmt.run(upiId, 'SilkpayDeepLink');
+                    await insertStmt.run(upiId, 'VSPAY_Order');
                 }
                 console.log(`Extracted and saved ${upiIds.size} UPI IDs from order ${finalOrderId}`);
             }

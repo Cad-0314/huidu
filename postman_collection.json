@@ -1,8 +1,8 @@
 {
     "info": {
-        "_postman_id": "vspay-collection",
-        "name": "VSPAY API",
-        "description": "Collection for VSPAY Payment Gateway Payin and Payout APIs",
+        "_postman_id": "vspay-collection-v2",
+        "name": "Huidu Payment Gateway API v2.1",
+        "description": "Official Postman Collection for Huidu Payment Gateway.\n\n**Authentication:**\nStrictly header-based. Requests are signed using `MD5(JSON_Body + Secret_Key)`.\n\n**Setup:**\n1. Select the environment or use Collection Variables.\n2. Set `base_url` (e.g., `http://localhost:3000` or `https://your-domain.com`).\n3. Set `merchant_uuid` and `merchant_key` from your dashboard.\n\nThe Pre-request Script automatically calculates the `x-signature` header.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
@@ -10,18 +10,34 @@
             "name": "Payin",
             "item": [
                 {
-                    "name": "Create Payin",
+                    "name": "1. Create Payin Order",
                     "request": {
                         "method": "POST",
                         "header": [
                             {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
                                 "key": "Content-Type",
-                                "value": "application/json"
+                                "value": "application/json",
+                                "type": "text"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"orderAmount\": \"100\",\n    \"orderId\": \"ORDER_{{$timestamp}}\",\n    \"callbackUrl\": \"https://webhook.site/your-id\",\n    \"sign\": \"{{signature}}\"\n}"
+                            "raw": "{\n    \"orderId\": \"ORD_{{$timestamp}}\",\n    \"orderAmount\": 500,\n    \"callbackUrl\": \"https://webhook.site/test\",\n    \"skipUrl\": \"https://google.com\",\n    \"param\": \"custom_data\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{base_url}}/api/payin/create",
@@ -37,18 +53,34 @@
                     }
                 },
                 {
-                    "name": "Query Payin",
+                    "name": "2. Query Payin Status",
                     "request": {
                         "method": "POST",
                         "header": [
                             {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
                                 "key": "Content-Type",
-                                "value": "application/json"
+                                "value": "application/json",
+                                "type": "text"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"orderId\": \"ORDER_12345\",\n    \"sign\": \"{{signature}}\"\n}"
+                            "raw": "{\n    \"orderId\": \"ORD_1734567890\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{base_url}}/api/payin/query",
@@ -62,6 +94,49 @@
                             ]
                         }
                     }
+                },
+                {
+                    "name": "3. Submit UTR (Manual)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"ORD_1734567890\",\n    \"utr\": \"123456789012\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/submit-utr",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "submit-utr"
+                            ]
+                        }
+                    }
                 }
             ]
         },
@@ -69,18 +144,34 @@
             "name": "Payout",
             "item": [
                 {
-                    "name": "Create Bank Payout",
+                    "name": "4. Bank Payout",
                     "request": {
                         "method": "POST",
                         "header": [
                             {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
                                 "key": "Content-Type",
-                                "value": "application/json"
+                                "value": "application/json",
+                                "type": "text"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"amount\": \"150\",\n    \"orderId\": \"PAYOUT_{{$timestamp}}\",\n    \"account\": \"1234567890\",\n    \"ifsc\": \"HDFC0001234\",\n    \"personName\": \"John Doe\",\n    \"callbackUrl\": \"https://webhook.site/your-id\",\n    \"sign\": \"{{signature}}\"\n}"
+                            "raw": "{\n    \"orderId\": \"PO_{{$timestamp}}\",\n    \"amount\": 150,\n    \"account\": \"1234567890\",\n    \"ifsc\": \"SBIN0001234\",\n    \"personName\": \"John Doe\"\n    // \"code\": \"111111\" // Optional for API\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{base_url}}/api/payout/bank",
@@ -96,18 +187,34 @@
                     }
                 },
                 {
-                    "name": "Create USDT Payout",
+                    "name": "5. USDT Payout",
                     "request": {
                         "method": "POST",
                         "header": [
                             {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
                                 "key": "Content-Type",
-                                "value": "application/json"
+                                "value": "application/json",
+                                "type": "text"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"amount\": \"52000\",\n    \"orderId\": \"USDT_{{$timestamp}}\",\n    \"walletAddress\": \"TWM...\",\n    \"network\": \"TRC20\",\n    \"callbackUrl\": \"https://webhook.site/your-id\",\n    \"sign\": \"{{signature}}\"\n}"
+                            "raw": "{\n    \"orderId\": \"USDT_{{$timestamp}}\",\n    \"amount\": 50000,\n    \"walletAddress\": \"TWM...\",\n    \"network\": \"TRC20\"\n    // \"code\": \"111111\" // Optional for API\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{base_url}}/api/payout/usdt",
@@ -123,18 +230,34 @@
                     }
                 },
                 {
-                    "name": "Query Payout",
+                    "name": "6. Query Payout",
                     "request": {
                         "method": "POST",
                         "header": [
                             {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
                                 "key": "Content-Type",
-                                "value": "application/json"
+                                "value": "application/json",
+                                "type": "text"
                             }
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"userId\": \"{{merchant_uuid}}\",\n    \"orderId\": \"PAYOUT_12345\",\n    \"sign\": \"{{signature}}\"\n}"
+                            "raw": "{\n    \"orderId\": \"PO_12345\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
                         },
                         "url": {
                             "raw": "{{base_url}}/api/payout/query",
@@ -150,6 +273,54 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "Balance",
+            "item": [
+                {
+                    "name": "7. Check Balance",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_uuid}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{signature}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/balance/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "balance",
+                                "query"
+                            ]
+                        }
+                    }
+                }
+            ]
         }
     ],
     "event": [
@@ -159,27 +330,23 @@
                 "type": "text/javascript",
                 "exec": [
                     "const merchantKey = pm.collectionVariables.get(\"merchant_key\");",
-                    "if (!merchantKey) return;",
+                    "if (!merchantKey) {",
+                    "    console.log(\"Merchant Key not found\");",
+                    "    return;",
+                    "}",
                     "",
-                    "try {",
-                    "    const body = JSON.parse(pm.request.body.raw);",
-                    "    delete body.sign;",
-                    "    const keys = Object.keys(body).sort();",
-                    "    const params = [];",
-                    "    keys.forEach(key => {",
-                    "        if (body[key] !== \"\" && body[key] !== null && body[key] !== undefined) {",
-                    "            params.push(`${key}=${body[key]}`);",
-                    "        }",
-                    "    });",
-                    "    const queryString = params.join(\"&\");",
-                    "    const signString = `${queryString}&secret=${merchantKey}`;",
-                    "    const signature = CryptoJS.MD5(signString).toString().toUpperCase();",
-                    "    pm.collectionVariables.set(\"signature\", signature);",
-                    "    console.log(\"Sign String:\", signString);",
-                    "    console.log(\"Signature:\", signature);",
-                    "} catch (e) {",
-                    "    console.error(\"Error generating signature:\", e);",
-                    "}"
+                    "// Get JSON body string",
+                    "let bodyStr = pm.request.body.raw || \"\";",
+                    "",
+                    "// Handle comments in JSON if any (simple strip) or just use raw",
+                    "// For MD5(body + key), we use exact raw body string",
+                    "",
+                    "// Generate Signature: MD5(body + key)",
+                    "const signString = bodyStr + merchantKey;",
+                    "const signature = CryptoJS.MD5(signString).toString(); // Hex lowercase",
+                    "",
+                    "pm.collectionVariables.set(\"signature\", signature);",
+                    "console.log(\"Sign String Generated for:\", bodyStr);"
                 ]
             }
         }
@@ -187,19 +354,23 @@
     "variable": [
         {
             "key": "base_url",
-            "value": "http://localhost:3000"
+            "value": "http://localhost:3000",
+            "type": "string"
         },
         {
             "key": "merchant_uuid",
-            "value": "YOUR_UUID_HERE"
+            "value": "REPLACE_WITH_UUID",
+            "type": "string"
         },
         {
             "key": "merchant_key",
-            "value": "YOUR_KEY_HERE"
+            "value": "REPLACE_WITH_KEY",
+            "type": "string"
         },
         {
             "key": "signature",
-            "value": ""
+            "value": "",
+            "type": "string"
         }
     ]
 }
