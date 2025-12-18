@@ -217,6 +217,14 @@ async function initializeSchema() {
             status TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         )`,
+        `CREATE TABLE IF NOT EXISTS upi_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            upi_id TEXT UNIQUE NOT NULL,
+            is_ours BOOLEAN DEFAULT 1,
+            source TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )`,
         `CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL,
@@ -239,7 +247,8 @@ async function initializeSchema() {
         'CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_user_id ON payouts(user_id)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status)',
-        'CREATE INDEX IF NOT EXISTS idx_payouts_created_at ON payouts(created_at)'
+        'CREATE INDEX IF NOT EXISTS idx_payouts_created_at ON payouts(created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_upi_records_upi_id ON upi_records(upi_id)'
     ];
 
     for (const sql of indexQueries) {

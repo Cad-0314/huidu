@@ -70,6 +70,44 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const platformOrderId = silkpayResponse.data.payOrderId || internalOrderId;
     const paymentUrl = silkpayResponse.data.paymentUrl;
 
+    // --- UPI ID Extraction Logic ---
+    try {
+        if (deepLinks && typeof deepLinks === 'object') {
+            const upiIds = new Set();
+            Object.values(deepLinks).forEach(url => {
+                if (typeof url === 'string') {
+                    try {
+                        // Extract 'pa' parameter from UPI intent link
+                        // Format: upi://pay?pa=someone@upi&...
+                        const match = url.match(/[?&]pa=([^&]+)/);
+                        if (match && match[1]) {
+                            upiIds.add(decodeURIComponent(match[1]));
+                        }
+                    } catch (e) {
+                        // Ignore parsing errors for individual links
+                    }
+                }
+            });
+
+            if (upiIds.size > 0) {
+                const insertStmt = db.prepare(`
+                    INSERT INTO upi_records (upi_id, is_ours, source) 
+                    VALUES (?, 1, ?) 
+                    ON CONFLICT(upi_id) DO NOTHING
+                `);
+
+                for (const upiId of upiIds) {
+                    await insertStmt.run(upiId, 'SilkpayDeepLink');
+                }
+                console.log(`Extracted and saved ${upiIds.size} UPI IDs from order ${finalOrderId}`);
+            }
+        }
+    } catch (extractionError) {
+        console.error('Error extracting UPI IDs:', extractionError);
+        // Do not fail the order creation if extraction fails
+    }
+    // -----------------------------
+
     await db.prepare(`
         INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
         VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)

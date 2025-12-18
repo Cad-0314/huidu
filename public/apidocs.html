@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VSPAY - API Documentation</title>
+    <title>Huidu Payment Gateway - API Reference</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
         rel="stylesheet">
@@ -25,6 +25,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            scroll-behavior: smooth;
         }
 
         body {
@@ -118,11 +119,14 @@
             margin-top: 3rem;
             margin-bottom: 1.5rem;
             color: var(--primary);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
         }
 
         h3 {
             font-size: 1.25rem;
             margin-top: 2rem;
+            color: #e2e8f0;
         }
 
         p,
@@ -149,6 +153,13 @@
         code {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.85rem;
+            color: #a5b4fc;
+        }
+
+        p code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
             color: #e2e8f0;
         }
 
@@ -167,9 +178,15 @@
             color: #818cf8;
         }
 
+        .get {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
         .endpoint {
             font-family: 'JetBrains Mono', monospace;
             color: #e2e8f0;
+            font-size: 1rem;
         }
 
         .param-table {
@@ -189,16 +206,34 @@
         .param-table th {
             color: #fff;
             font-weight: 600;
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .param-table td {
             color: var(--text-muted);
+            vertical-align: top;
         }
 
         .required {
             color: #f43f5e;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
+            background: rgba(244, 63, 94, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
             margin-left: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .optional {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            background: rgba(148, 163, 184, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 600;
         }
 
         .badge {
@@ -209,14 +244,10 @@
             font-weight: 500;
         }
 
-        .badge-deprecated {
-            background: rgba(239, 68, 68, 0.1);
-            color: #f87171;
-        }
-
-        .badge-active {
-            background: rgba(34, 197, 94, 0.1);
-            color: #4ade80;
+        .badge-warning {
+            background: rgba(234, 179, 8, 0.1);
+            color: #facc15;
+            border: 1px solid rgba(234, 179, 8, 0.2);
         }
     </style>
 </head>
@@ -224,8 +255,8 @@
 <body>
     <aside class="sidebar">
         <div class="logo">
-            <img src="/images/logo.png" alt="VSPAY">
-            <h1>API Reference</h1>
+            <!-- <img src="/images/logo.png" alt="Logo"> -->
+            <h1>Huidu API</h1>
         </div>
         <nav>
             <div class="nav-group">Getting Started</div>
@@ -235,56 +266,85 @@
             <div class="nav-group">Pay-In (Deposits)</div>
             <a href="#payin-create" class="nav-item">Create Order</a>
             <a href="#payin-query" class="nav-item">Query Status</a>
-            <a href="#payin-callback" class="nav-item">Callback Handling</a>
+            <a href="#payin-submit-utr" class="nav-item">Submit UTR</a>
 
             <div class="nav-group">Pay-Out (Withdrawals)</div>
             <a href="#payout-bank" class="nav-item">Bank Transfer</a>
             <a href="#payout-usdt" class="nav-item">USDT Transfer</a>
-            <a href="#payout-check" class="nav-item">Check Status (Public)</a>
-            <a href="#payout-callback" class="nav-item">Callback Handling</a>
+            <a href="#payout-query" class="nav-item">Query Status</a>
 
-            <div class="nav-group">Reference</div>
-            <a href="#status-codes" class="nav-item">Status Codes</a>
+            <div class="nav-group">Utilities</div>
+            <a href="#balance-query" class="nav-item">Check Balance</a>
+            <a href="#callbacks" class="nav-item">Webhooks</a>
         </nav>
     </aside>
 
     <main class="main">
         <section id="intro">
             <h1>Introduction</h1>
-            <p>Welcome to the VSPAY API documentation. Our API allows you to integrate payment collection (Pay-In) and
-                disbursement (Pay-Out) capabilities directly into your application.</p>
-            <p><strong>Base URL:</strong> <code>http://localhost:3000/api</code></p>
-            <p>All requests must be made over HTTP/HTTPS with <code>Content-Type: application/json</code>.</p>
+            <p>Welcome to the Huidu Payment Gateway API. This documentation provides a comprehensive guide to
+                integrating our secure payment solutions for deposits (Pay-In) and withdrawals (Pay-Out).</p>
+            <p><strong>Version:</strong> 2.1<br>
+                <strong>Base URL:</strong> <code>https://your-domain.com</code>
+            </p>
+            <p>All requests must be made over HTTPS with <code>Content-Type: application/json</code>.</p>
         </section>
 
         <section id="auth">
             <h2>Authentication</h2>
-            <p>We use a signature-based authentication mechanism. You must generate a signature using your
-                <strong>Merchant Key</strong> (found in the dashboard) and include it in the request body.</p>
+            <p>We strictly use <strong>Header-Based Authentication</strong> using HMAC-MD5 signatures. Every request
+                must be authenticated.</p>
 
-            <h3>Calculating Signature</h3>
-            <p>1. Sort all request parameters (excluding <code>sign</code>) alphabetically by key.</p>
-            <p>2. Create a query string: <code>key1=value1&key2=value2...</code></p>
-            <p>3. Append your Merchant Key: <code>...&secret=YOUR_MERCHANT_KEY</code></p>
-            <p>4. Generate MD5 hash of the string and convert to UPPERCASE.</p>
+            <h3>Required Headers</h3>
+            <table class="param-table">
+                <tr>
+                    <th>Header</th>
+                    <th>Example Value</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>x-merchant-id</code></td>
+                    <td><code>550e8400-e29b...</code></td>
+                    <td>Your unique Merchant UUID.</td>
+                </tr>
+                <tr>
+                    <td><code>x-signature</code></td>
+                    <td><code>a1b2c3d4e5...</code></td>
+                    <td>The MD5 hash of your request body.</td>
+                </tr>
+            </table>
+
+            <h3>Generating the Signature</h3>
+            <div class="badge badge-warning">Formula</div>
+            <p><code>Signature = MD5( JSON_String_Body + Merchant_Secret_Key )</code></p>
 
             <h3>Node.js Example</h3>
             <pre><code>const crypto = require('crypto');
 
-function generateSign(params, key) {
-    const sortedKeys = Object.keys(params).sort();
-    const signString = sortedKeys.map(k => `${k}=${params[k]}`).join('&') + `&secret=${key}`;
-    return crypto.createHash('md5').update(signString).digest('hex').toUpperCase();
-}</code></pre>
+// 1. Prepare Body (Must match exactly what you send)
+const body = JSON.stringify({
+    orderId: "ORD-123",
+    amount: 100
+});
 
-            <div class="badge badge-deprecated" style="margin-top: 1rem;">NOTE: Signature verification is currently
-                DISABLED for testing.</div>
+// 2. Your Secret Key
+const secretKey = "YOUR_MERCHANT_SECRET_KEY";
+
+// 3. Generate MD5 Hash
+const signature = crypto.createHash('md5').update(body + secretKey).digest('hex');
+
+// 4. Send Request
+// Headers: { 
+//   'Content-Type': 'application/json',
+//   'x-merchant-id': 'YOUR_UUID',
+//   'x-signature': signature 
+// }</code></pre>
         </section>
 
         <section id="payin-create">
             <h2>Create Pay-In Order</h2>
-            <p>Create a deposit order to collect payments from your users.</p>
-            <p><span class="method post">POST</span> <span class="endpoint">/payin/create</span></p>
+            <p>Generate a payment link to collect funds from a user.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payin/create</span></p>
 
             <table class="param-table">
                 <tr>
@@ -293,48 +353,57 @@ function generateSign(params, key) {
                     <th>Description</th>
                 </tr>
                 <tr>
-                    <td>userId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Your Merchant UUID</td>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Unique Order ID (Max 64 chars).</td>
                 </tr>
                 <tr>
-                    <td>orderId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Unique Order ID (Max 30 chars)</td>
+                    <td><code>orderAmount</code></td>
+                    <td>Number <span class="required">Required</span></td>
+                    <td>Amount to collect (Min 100).</td>
                 </tr>
                 <tr>
-                    <td>orderAmount</td>
-                    <td>number<span class="required">required</span></td>
-                    <td>Amount in INR (Min: 100)</td>
+                    <td><code>callbackUrl</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Your HTTPS URL to receive webhook notifications.</td>
                 </tr>
                 <tr>
-                    <td>callbackUrl</td>
-                    <td>string</td>
-                    <td>Override default callback URL</td>
+                    <td><code>skipUrl</code></td>
+                    <td>String <span class="optional">Optional</span></td>
+                    <td>Redirect URL for the user after payment.</td>
                 </tr>
                 <tr>
-                    <td>sign</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>MD5 Signature</td>
+                    <td><code>param</code></td>
+                    <td>String <span class="optional">Optional</span></td>
+                    <td>Custom data to return in callback.</td>
                 </tr>
             </table>
 
-            <h3>Response</h3>
+            <h3>Example Request</h3>
+            <pre><code>{
+    "orderId": "MC001-998877",
+    "orderAmount": 500,
+    "callbackUrl": "https://mysite.com/webhook",
+    "skipUrl": "https://mysite.com/success"
+}</code></pre>
+
+            <h3>Success Response</h3>
             <pre><code>{
     "code": 1,
     "msg": "Order created",
     "data": {
-        "orderId": "ORD12345",
-        "id": "uuid-v4-string",
-        "rechargeUrl": "https://gateway.com/pay/..."
+        "orderId": "MC001-998877",
+        "id": "e0b5...88",
+        "orderAmount": 500,
+        "paymentUrl": "https://gateway.com/pay/MC001-998877"
     }
 }</code></pre>
         </section>
 
         <section id="payin-query">
             <h2>Query Pay-In Status</h2>
-            <p>Check the status of an existing pay-in order.</p>
-            <p><span class="method post">POST</span> <span class="endpoint">/payin/query</span></p>
+            <p>Check the real-time status of a deposit.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payin/query</span></p>
 
             <table class="param-table">
                 <tr>
@@ -343,19 +412,9 @@ function generateSign(params, key) {
                     <th>Description</th>
                 </tr>
                 <tr>
-                    <td>userId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Your Merchant UUID</td>
-                </tr>
-                <tr>
-                    <td>orderId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Your Order ID</td>
-                </tr>
-                <tr>
-                    <td>sign</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>MD5 Signature</td>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Your unique Order ID.</td>
                 </tr>
             </table>
 
@@ -363,34 +422,53 @@ function generateSign(params, key) {
             <pre><code>{
     "code": 1,
     "data": {
-        "status": "success",     // success, pending, failed
-        "amount": 1000,
-        "utr": "123456789012"    // Bank UTR / Reference
+        "orderId": "MC001-998877",
+        "status": "success", // pending, success, failed
+        "amount": 500,
+        "utr": "123456789012",
+        "createdAt": "2025-01-01T12:00:00Z"
     }
 }</code></pre>
         </section>
 
-        <section id="payin-callback">
-            <h2>Pay-In Callback</h2>
-            <p>We send a POST request to your <code>callbackUrl</code> when a payment is completed.</p>
-            <pre><code>POST Your_Callback_URL
-Content-Type: application/json
+        <section id="payin-submit-utr">
+            <h2>Submit UTR (Manual Claim)</h2>
+            <p>If a user has paid but the order is pending, submit the UTR for verification.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payin/submit-utr</span></p>
 
-{
-    "status": 1,                // 1 = Success, 0 = Failed
-    "amount": 1000,             // Net amount credited
-    "orderAmount": 1000,        // Original order amount
-    "orderId": "ORD12345",      // Your Order ID
-    "utr": "123456789012",      // UTR / Reference No
-    "sign": "MD5_SIGNATURE"
+            <table class="param-table">
+                <tr>
+                    <th>Parameter</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>The pending Order ID.</td>
+                </tr>
+                <tr>
+                    <td><code>utr</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>The 12-digit UTR/Reference Number.</td>
+                </tr>
+            </table>
+
+            <h3>Response</h3>
+            <pre><code>{
+    "code": 1,
+    "msg": "UTR Submitted successfully",
+    "data": {
+        "orderId": "MC001-998877",
+        "status": "processing"
+    }
 }</code></pre>
-            <p>You MUST return <code>success</code> (plain text) to acknowledge receipt.</p>
         </section>
 
         <section id="payout-bank">
             <h2>Bank Payout</h2>
-            <p>Initiate a withdrawal to a bank account via IMPS/NEFT.</p>
-            <p><span class="method post">POST</span> <span class="endpoint">/payout/bank</span></p>
+            <p>Transfer funds to a bank account via IMPS/NEFT.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payout/bank</span></p>
 
             <table class="param-table">
                 <tr>
@@ -399,47 +477,42 @@ Content-Type: application/json
                     <th>Description</th>
                 </tr>
                 <tr>
-                    <td>userId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Your Merchant UUID</td>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Unique Transaction ID.</td>
                 </tr>
                 <tr>
-                    <td>orderId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Unique Order ID</td>
+                    <td><code>amount</code></td>
+                    <td>Number <span class="required">Required</span></td>
+                    <td>Amount to withdraw (Min 100).</td>
                 </tr>
                 <tr>
-                    <td>amount</td>
-                    <td>number<span class="required">required</span></td>
-                    <td>Amount to withdraw (Min: 100)</td>
+                    <td><code>account</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Beneficiary Account Number.</td>
                 </tr>
                 <tr>
-                    <td>account</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Bank Account Number</td>
+                    <td><code>ifsc</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Beneficiary IFSC Code.</td>
                 </tr>
                 <tr>
-                    <td>ifsc</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>IFSC Code</td>
+                    <td><code>personName</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Account Holder Name.</td>
                 </tr>
                 <tr>
-                    <td>personName</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Account Holder Name</td>
-                </tr>
-                <tr>
-                    <td>sign</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>MD5 Signature</td>
+                    <td><code>code</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>2FA Google Auth Code.</td>
                 </tr>
             </table>
         </section>
 
-        <section id="payout-check">
-            <h2>Check Payout (Public)</h2>
-            <p>Check payout status without signature (for client-side verification). </p>
-            <p><span class="method post">POST</span> <span class="endpoint">/payout/check</span></p>
+        <section id="payout-usdt">
+            <h2>USDT Payout</h2>
+            <p>Transfer funds to a crypto wallet (TRC20).</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payout/usdt</span></p>
 
             <table class="param-table">
                 <tr>
@@ -448,27 +521,66 @@ Content-Type: application/json
                     <th>Description</th>
                 </tr>
                 <tr>
-                    <td>userId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Your Merchant UUID</td>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Unique Transaction ID.</td>
                 </tr>
                 <tr>
-                    <td>orderId</td>
-                    <td>string<span class="required">required</span></td>
-                    <td>Your Order ID</td>
+                    <td><code>amount</code></td>
+                    <td>Number <span class="required">Required</span></td>
+                    <td>Amount in INR (Min equivalent of 500 USDT).</td>
+                </tr>
+                <tr>
+                    <td><code>walletAddress</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>TRC20 Wallet Address.</td>
+                </tr>
+                <tr>
+                    <td><code>code</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>2FA Google Auth Code.</td>
                 </tr>
             </table>
+        </section>
+
+        <section id="balance-query">
+            <h2>Check Balance</h2>
+            <p>Get your current available balance.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/balance/query</span></p>
+            <p><strong>Body:</strong> <code>{}</code> (Empty JSON Object)</p>
 
             <h3>Response</h3>
             <pre><code>{
     "code": 1,
-    "msg": "Payout found",
+    "msg": "Success",
     "data": {
-        "status": "processing",
-        "utr": null
+        "availableAmount": 10050.00,
+        "pendingAmount": 0,
+        "totalAmount": 10050.00
     }
 }</code></pre>
         </section>
+
+        <section id="callbacks">
+            <h2>Webhooks (Callbacks)</h2>
+            <p>We send a POST request to your <code>callbackUrl</code> when a transaction reaches a final state.</p>
+
+            <h3>Notification Structure</h3>
+            <pre><code>{
+    "status": 1,                // 1 = Success, 0 = Failed
+    "amount": 500,              // Final Amount
+    "orderId": "MC001-998877",  // Your Order ID
+    "utr": "123456789012",      // Bank UTR
+    "sign": "a1b2c3d4..."       // MD5 Signature
+}</code></pre>
+
+            <h3>Verifying Callback Signature</h3>
+            <p>You <strong>must</strong> verify the signature to ensure the request is from us.</p>
+            <div class="badge badge-warning">Formula</div>
+            <p><code>sign == MD5( JSON_String_Body + Merchant_Secret_Key )</code></p>
+            <p>Depending on your server framework, ensure you allow us to send the raw JSON body.</p>
+        </section>
+
     </main>
 </body>
 

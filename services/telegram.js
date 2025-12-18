@@ -345,14 +345,49 @@ async function initBot() {
         }
     });
 
-    // Command: /upi
+    // Command: /upi [UPI_ID]
     bot.command('upi', async (ctx) => {
-        const msg = `📱 **支持的 UPI 支付方式**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
-            `🔹 PhonePe | Paytm\n` +
-            `🔹 Google Pay (GPay)\n` +
-            `🔹 BHIM | Any UPI App\n\n` +
-            `✅ 系统支持所有合规 UPI 应用跳转支付 (Intent/DeepLink)。`;
-        reply(ctx, msg);
+        try {
+            const message = ctx.message.text.split(' ');
+            let upiIdToCheck = null;
+
+            // Case 1: Argument provided (/upi someone@upi)
+            if (message.length > 1) {
+                upiIdToCheck = message[1].trim();
+            }
+            // Case 2: Reply to a message containing a UPI ID
+            else if (ctx.message.reply_to_message && ctx.message.reply_to_message.text) {
+                const replyText = ctx.message.reply_to_message.text;
+                // Simple regex to find something that looks like a UPI ID
+                const match = replyText.match(/[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}/);
+                if (match) {
+                    upiIdToCheck = match[0];
+                }
+            }
+
+            if (upiIdToCheck) {
+                // Check database
+                const record = await db.prepare('SELECT * FROM upi_records WHERE upi_id = ?').get(upiIdToCheck);
+
+                if (record && record.is_ours) {
+                    return reply(ctx, `✅ **验证通过**\nUPI ID: \`${upiIdToCheck}\`\n状态: **属于我们要** (Belongs to us)\n来源: ${record.source}`);
+                } else {
+                    return reply(ctx, `❌ **验证失败**\nUPI ID: \`${upiIdToCheck}\`\n状态: **不属于我们要** (Not in our records)`);
+                }
+            } else {
+                // Default info message if no ID provided
+                const msg = `📱 **UPI 验证工具**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
+                    `用法:\n` +
+                    `1. 发送 \`/upi <upi_id>\`\n` +
+                    `2. 回复包含 UPI ID 的消息并发送 \`/upi\`\n\n` +
+                    `🔹 **支持的支付方式**\n` +
+                    `PhonePe | Paytm | GPay | BHIM | Any UPI App`;
+                reply(ctx, msg);
+            }
+        } catch (error) {
+            console.error('Bot UPI Command Error:', error);
+            reply(ctx, '❌ **验证时发生错误**');
+        }
     });
 
     // Help / Start Command

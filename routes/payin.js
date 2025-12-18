@@ -15,8 +15,8 @@ router.post('/create', apiAuthenticate, async (req, res) => {
         const { orderAmount, orderId, callbackUrl, skipUrl, param } = req.body;
         const merchant = req.merchant;
 
-        if (!orderAmount || !orderId) {
-            return res.status(400).json({ code: 0, msg: 'orderAmount and orderId are required' });
+        if (!orderAmount || !orderId || !callbackUrl) {
+            return res.status(400).json({ code: 0, msg: 'orderAmount, orderId, and callbackUrl are required' });
         }
 
         const result = await createPayinOrder({
@@ -196,6 +196,76 @@ router.post('/check-utr', async (req, res) => {
         return res.status(404).json({ code: 0, msg: 'Transaction not found' });
     } catch (error) {
         console.error('Check UTR error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+
+/**
+ * POST /api/payin/submit-utr
+ * Allow merchants to submit UTR for an order (manual callback trigger/compensation).
+ */
+router.post('/submit-utr', apiAuthenticate, async (req, res) => {
+    try {
+        const { orderId, utr } = req.body;
+        const merchant = req.merchant;
+        const db = getDb();
+
+        if (!orderId || !utr) {
+            return res.status(400).json({ code: 0, msg: 'orderId and utr are required' });
+        }
+
+        // Find transaction
+        const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, merchant.id);
+
+        if (!tx) {
+            return res.status(404).json({ code: 0, msg: 'Order not found' });
+        }
+
+        if (tx.status === 'success') {
+            return res.status(400).json({ code: 0, msg: 'Order already successful' });
+        }
+
+        // Call Silkpay Submit UTR
+        // Platform Order ID needed? Upstream usually needs its own order ID or merchant's.
+        // Silkpay docs say: "mOrderId" (Merchant's Order ID).
+
+        // Note: Silkpay might require the original mOrderId sent during creation.
+        // tx.order_id IS our mOrderId sent to Silkpay (based on createPayinOrder logic).
+
+        try {
+            const result = await silkpayService.submitUtr(tx.order_id, utr);
+
+            if (result.status === '200' && result.data && result.data.code === 1) {
+                // Success upstream. We can mark it as success immediately OR wait for callback.
+                // Usually better to wait, but if "code: 1" means "Success" as per docs, we can update local.
+                // Docs say: "1 for successful order processing".
+
+                // Let's rely on callback for full confirmation, BUT we can proactively update UTR in DB.
+                await db.prepare('UPDATE transactions SET utr = ? WHERE id = ?').run(utr, tx.id);
+
+                return res.json({
+                    code: 1,
+                    msg: 'UTR Submitted successfully',
+                    data: {
+                        orderId: tx.order_id,
+                        utr: utr,
+                        status: 'processing' // Upstream says success, but usually means "accepted for processing"
+                    }
+                });
+            } else {
+                return res.status(400).json({
+                    code: 0,
+                    msg: result.message || (result.data ? result.data.msg : 'Upstream rejected UTR')
+                });
+            }
+        } catch (upstreamError) {
+            console.error('Silkpay Submit UTR Error:', upstreamError);
+            return res.status(502).json({ code: 0, msg: 'Failed to communicate with payment provider' });
+        }
+
+    } catch (error) {
+        console.error('Submit UTR error:', error);
         res.status(500).json({ code: 0, msg: 'Server error' });
     }
 });
