@@ -474,3 +474,26 @@ Response: {
   "message": "[[103.191.88.214]] payout IP Limited",
   "data": null
 }
+
+=====================================
+[2025-12-18T04:21:32.743Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayout
+Duration: 564ms
+Request: {
+  "amount": 100,
+  "mId": "F7070",
+  "mOrderId": "HDO_MJAXO6MS_A0A3FA62",
+  "timestamp": "1766031692178",
+  "notifyUrl": "https://vspay.rioclub.site/api/payout/callback",
+  "bankNo": "1234567890",
+  "ifsc": "SBIN0001234",
+  "name": "Test User",
+  "sign": "11c117e4039e802ed84210b375e962cc",
+  "upi": ""
+}
+Response: {
+  "status": "403",
+  "message": "[[157.49.54.9]] payout IP Limited",
+  "data": null
+}

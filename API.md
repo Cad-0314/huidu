@@ -205,4 +205,4 @@ We send POST requests to your `callbackUrl` for final status updates.
 | `500` | Server Error | Internal system error. |
 
 ---
-*Generated for Huidu Payment Gateway*
+* for VS Payment Gateway*

@@ -86,6 +86,7 @@ async function apiAuthenticate(req, res, next) {
         }
 
         req.merchant = user;
+        req.isApiRequest = true; // Use this to bypass 2FA in routes
         next();
     } catch (error) {
         console.error('API Auth Error:', error);

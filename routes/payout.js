@@ -34,35 +34,34 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         const merchant = req.merchant;
         const db = getDb();
 
-        if (!amount || !orderId || !account || !ifsc || !personName || !code) {
-            return res.status(400).json({ code: 0, msg: 'amount, orderId, account, ifsc, personName, and 2FA code are required' });
+        if (!amount || !orderId || !account || !ifsc || !personName) {
+            return res.status(400).json({ code: 0, msg: 'amount, orderId, account, ifsc, and personName are required' });
+        }
+
+        if (!req.isApiRequest && !code) {
+            return res.status(400).json({ code: 0, msg: '2FA code is required' });
         }
 
         // Verify 2FA (Payouts require strict 2FA enabled, or if not enabled, default code?
         // Requirement: "bind for first time ... login ... use for payout". 
         // This implies 2FA MUST be enabled to payout.
 
-        let verified = false;
-        if (merchant.two_factor_enabled && merchant.two_factor_secret) {
-            verified = speakeasy.totp.verify({
-                secret: merchant.two_factor_secret,
-                encoding: 'base32',
-                token: code,
-                window: 6 // Allow 3 minutes drift
-            });
-        } else {
-            // For safety, if not enabled, maybe allow default code or BLOCK?
-            // "add to his device which he later use for payout and login"
-            // This suggests they MUST have it to payout.
-            // But if they are pre-binding, can they payout with 111111?
-            // Let's allow 111111 if NOT enabled, but maybe we force enable on login?
-            // Login flow forces setup if not enabled. So by the time they are here, it should be enabled OR they bypassed setup check (unlikely if we enforce on frontend). 
-            // But valid backend logic: If enabled -> TOTP. If disabled -> 111111.
-            verified = (code === '111111');
-        }
+        if (!req.isApiRequest) {
+            let verified = false;
+            if (merchant.two_factor_enabled && merchant.two_factor_secret) {
+                verified = speakeasy.totp.verify({
+                    secret: merchant.two_factor_secret,
+                    encoding: 'base32',
+                    token: code,
+                    window: 6 // Allow 3 minutes drift
+                });
+            } else {
+                verified = (code === '111111');
+            }
 
-        if (!verified) {
-            return res.status(400).json({ code: 0, msg: 'Invalid 2FA code' });
+            if (!verified) {
+                return res.status(400).json({ code: 0, msg: 'Invalid 2FA code' });
+            }
         }
 
         const payoutAmount = parseFloat(amount);
@@ -141,25 +140,31 @@ router.post('/usdt', unifiedAuth, async (req, res) => {
         const merchant = req.merchant;
         const db = getDb();
 
-        if (!amount || !orderId || !walletAddress || !network || !code) {
-            return res.status(400).json({ code: 0, msg: 'amount, orderId, walletAddress, network, and 2FA code are required' });
+        if (!amount || !orderId || !walletAddress || !network) {
+            return res.status(400).json({ code: 0, msg: 'amount, orderId, walletAddress, and network are required' });
+        }
+
+        if (!req.isApiRequest && !code) {
+            return res.status(400).json({ code: 0, msg: '2FA code is required' });
         }
 
         // Verify 2FA
-        let verified = false;
-        if (merchant.two_factor_enabled && merchant.two_factor_secret) {
-            verified = speakeasy.totp.verify({
-                secret: merchant.two_factor_secret,
-                encoding: 'base32',
-                token: code,
-                window: 6 // Allow 3 minutes drift
-            });
-        } else {
-            verified = (code === '111111');
-        }
+        if (!req.isApiRequest) {
+            let verified = false;
+            if (merchant.two_factor_enabled && merchant.two_factor_secret) {
+                verified = speakeasy.totp.verify({
+                    secret: merchant.two_factor_secret,
+                    encoding: 'base32',
+                    token: code,
+                    window: 6 // Allow 3 minutes drift
+                });
+            } else {
+                verified = (code === '111111');
+            }
 
-        if (!verified) {
-            return res.status(400).json({ code: 0, msg: 'Invalid 2FA code' });
+            if (!verified) {
+                return res.status(400).json({ code: 0, msg: 'Invalid 2FA code' });
+            }
         }
 
         const payoutAmount = parseFloat(amount);
