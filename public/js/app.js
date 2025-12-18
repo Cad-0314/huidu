@@ -1604,9 +1604,9 @@ async function loadApprovalsData() {
 
         if (data.code === 1 && data.data.length > 0) {
             container.innerHTML = data.data.map(p => `
-        < tr >
+                <tr>
                     <td><code>${p.orderId}</code></td>
-                    <td>${p.merchantName}<br><small class="text-muted">${p.merchantEmail}</small></td>
+                    <td>${p.merchantName}<br><small class="text-muted">@${p.merchantUsername}</small></td>
                     <td>₹${parseFloat(p.amount).toFixed(2)}<br><small class="text-muted">${t('fee')}: ₹${parseFloat(p.fee).toFixed(2)}</small></td>
                     <td><code style="font-size: 0.75rem;">${p.walletAddress}</code></td>
                     <td><span class="badge badge-processing">${p.network}</span></td>
@@ -1619,11 +1619,11 @@ async function loadApprovalsData() {
                             <i class="fas fa-times"></i>
                         </button>
                     </td>
-                </tr >
+                </tr>
             `).join('');
         } else {
             container.innerHTML = `
-            < tr > <td colspan="7" class="text-muted" style="text-align:center;">${t('no_pending')}</td></tr >
+            <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_pending')}</td></tr>
                 `;
         }
     } catch (error) {

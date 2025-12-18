@@ -18,7 +18,22 @@ async function initBot() {
     const db = getDb();
 
     // Generic reply helper to quote message
-    const reply = (ctx, text) => ctx.reply(text, { reply_to_message_id: ctx.message.message_id, parse_mode: 'Markdown' });
+    // Generic reply helper to quote message with fallback
+    const reply = async (ctx, text) => {
+        try {
+            await ctx.reply(text, { reply_to_message_id: ctx.message.message_id, parse_mode: 'Markdown' });
+        } catch (e) {
+            console.warn('Reply Markdown Error, retrying plain:', e.message);
+            try {
+                // Determine if we need to strip markdown chars or just send raw
+                // Simplest fallback: just send the text. 
+                // Note: If text contains strict markdown symbols they might look odd, but at least message sends.
+                await ctx.reply(text, { reply_to_message_id: ctx.message.message_id });
+            } catch (e2) {
+                console.error('Reply Fatal Error:', e2.message);
+            }
+        }
+    };
 
     // Command: /bind <MERCHANT_KEY>
     bot.command('bind', async (ctx) => {
@@ -359,7 +374,7 @@ async function initBot() {
             else if (ctx.message.reply_to_message && ctx.message.reply_to_message.text) {
                 const replyText = ctx.message.reply_to_message.text;
                 // Simple regex to find something that looks like a UPI ID
-                const match = replyText.match(/[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}/);
+                const match = replyText.match(/[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z0-9]{2,64}/);
                 if (match) {
                     upiIdToCheck = match[0];
                 }
