@@ -484,7 +484,7 @@ router.post('/payin/create', authenticate, async (req, res) => {
         const internalOrderId = generateOrderId('HDP');
         const appUrl = process.env.APP_URL || 'http://localhost:3000';
         const ourCallbackUrl = `${appUrl}/api/payin/callback`;
-        const ourSkipUrl = skipUrl || `${appUrl}/payment/complete`;
+        const ourSkipUrl = `${appUrl}/api/payin/redirect?url=${encodeURIComponent(skipUrl || `${appUrl}/payment/complete`)}`;
 
         console.log('[MERCHANT PAYIN] Calling Silkpay API...');
 

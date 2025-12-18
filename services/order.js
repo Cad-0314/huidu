@@ -40,7 +40,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const internalOrderId = generateOrderId('HDP'); // Internal ID for Silkpay interaction
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     const ourCallbackUrl = `${appUrl}/api/payin/callback`;
-    const ourSkipUrl = skipUrl || `${appUrl}/payment/complete`;
+    const ourSkipUrl = `${appUrl}/api/payin/redirect?url=${encodeURIComponent(skipUrl || `${appUrl}/payment/complete`)}`;
 
     // Call Silkpay
     const silkpayResponse = await silkpayService.createPayin({
