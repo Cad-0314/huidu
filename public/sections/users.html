@@ -1,7 +1,7 @@
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Merchants</h3>
-        <button class="btn btn-primary btn-sm" onclick="showCreateUserModal()">
+        <h3 class="card-title" data-i18n="users_tab">Merchants</h3>
+        <button class="btn btn-primary btn-sm" onclick="showCreateUserModal()" data-i18n="btn_add_merchant">
             <i class="fas fa-plus"></i> Add Merchant
         </button>
     </div>
@@ -9,20 +9,20 @@
         <table>
             <thead>
                 <tr>
-                    <th>User ID</th>
-                    <th>Key</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Rates</th>
-                    <th>Balance</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th data-i18n="merchant_id">User ID</th>
+                    <th data-i18n="label_merchant_key">Key</th>
+                    <th data-i18n="name">Name</th>
+                    <th data-i18n="email">Email</th>
+                    <th data-i18n="rates">Rates</th>
+                    <th data-i18n="balance">Balance</th>
+                    <th data-i18n="status">Status</th>
+                    <th data-i18n="created">Created</th>
+                    <th data-i18n="actions">Actions</th>
                 </tr>
             </thead>
             <tbody id="usersList">
                 <tr>
-                    <td colspan="7" class="text-muted" style="text-align:center;">Loading...</td>
+                    <td colspan="9" class="text-muted" style="text-align:center;" data-i18n="loading">Loading...</td>
                 </tr>
             </tbody>
         </table>

@@ -107,29 +107,29 @@ async function showSetup2faModal() {
     const closeBtn = overlay.querySelector('.modal-close');
     if (closeBtn) closeBtn.style.display = 'none';
 
-    document.getElementById('modalTitle').textContent = 'Enable 2FA Security';
+    document.getElementById('modalTitle').textContent = t('setup_2fa_title');
     document.getElementById('modalBody').innerHTML = `
         <div class="text-center full-screen-content">
-            <h2 class="mb-4">Secure Your Account</h2>
-            <p class="mb-4">Two-Factor Authentication is required for security.</p>
+            <h2 class="mb-4" data-i18n="setup_2fa_title">${t('setup_2fa_title')}</h2>
+            <p class="mb-4" data-i18n="toast_2fa_enabled">${t('toast_2fa_enabled')}</p>
             <div id="qrCodeContainer" class="my-3 qr-container">
-                <div class="loader"></div> Generating QR...
+                <div class="loader"></div> ${t('loading')}...
             </div>
             <div class="form-group setup-2fa-input">
-                <label>Enter 6-digit Code from Authenticator App</label>
+                <label data-i18n="toast_enter_code">${t('toast_enter_code')}</label>
                 <input type="text" id="setup2faCode" placeholder="000 000" style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;" maxlength="6">
             </div>
             <div class="alert alert-info">
-                1. Install Google Authenticator.<br>
-                2. Scan the QR Code.<br>
-                3. Enter the generated code.
+                1. ${t('intro_desc')}<br>
+                2. ${t('click_generate_desc')}<br>
+                3. ${t('toast_copied')}
             </div>
-            <button class="btn btn-danger btn-sm mt-3" onclick="window.location.href='/login.html'">Cancel & Logout</button>
+            <button class="btn btn-danger btn-sm mt-3" onclick="window.location.href='/login.html'">${t('btn_cancel')}</button>
         </div>
     `;
     // No standard footer, custom button above
     document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-primary btn-block btn-lg" onclick="enable2fa()">Box Secure & Enable 2FA</button>
+        <button class="btn btn-primary btn-block btn-lg" onclick="enable2fa()">${t('btn_submit')}</button>
     `;
 
     // Fetch QR Code
@@ -141,39 +141,39 @@ async function showSetup2faModal() {
                 <p class="text-muted mt-2"><small>Secret: ${data.data.secret}</small></p>
              `;
         } else {
-            document.getElementById('qrCodeContainer').textContent = 'Failed to generate QR';
+            document.getElementById('qrCodeContainer').textContent = t('toast_verify_failed');
         }
     } catch (e) {
-        document.getElementById('qrCodeContainer').textContent = 'Error loading QR';
+        document.getElementById('qrCodeContainer').textContent = t('toast_verify_failed');
     }
 }
 
 async function enable2fa() {
     const code = document.getElementById('setup2faCode').value;
     if (!code) {
-        showToast('Please enter the code', 'error');
+        showToast(t('toast_enter_code'), 'error');
         return;
     }
 
     try {
         const data = await API.post('/auth/2fa/enable', { code });
         if (data.code === 1) {
-            showToast('2FA Enabled Successfully!', 'success');
+            showToast(t('toast_2fa_enabled'), 'success');
             // Update local user state
             currentUser.twoFactorEnabled = true;
             localStorage.setItem('vspay_user', JSON.stringify(currentUser));
             closeModal();
         } else {
-            showToast(data.msg || 'Invalid code', 'error');
+            showToast(data.msg || t('toast_invalid_code'), 'error');
         }
     } catch (e) {
-        showToast('Verification failed', 'error');
+        showToast(t('toast_verify_failed'), 'error');
     }
 }
 
 function updateUserInfo() {
     document.getElementById('userName').textContent = currentUser.name;
-    document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrator' : 'Merchant';
+    document.getElementById('userRole').textContent = currentUser.role === 'admin' ? t('role_admin') : t('role_merchant');
     document.getElementById('userAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
 }
 
@@ -237,7 +237,7 @@ async function loadSection(section) {
         'dashboard': t('dashboard_tab'),
         'transactions': t('transactions_tab'),
         'payouts': t('payouts_tab'),
-        'settlement': 'Settlement Request',
+        'settlement': t('settlement_request'),
         'payment-links': t('create_payment_link'),
         'api-docs': t('api_docs_tab'),
         'credentials': t('credentials_tab'),
@@ -245,7 +245,7 @@ async function loadSection(section) {
         'approvals': t('approvals_tab'),
         'all-transactions': t('all_transactions_tab')
     };
-    document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
+    document.getElementById('pageTitle').textContent = titles[section] || t('dashboard_tab');
 
     // Load content
     const contentArea = document.getElementById('contentArea');
@@ -269,7 +269,7 @@ async function loadSection(section) {
 
     try {
         const response = await fetch(`/sections/${filename}.html`);
-        if (!response.ok) throw new Error('Section not found');
+        if (!response.ok) throw new Error(t('error_transactions'));
         const html = await response.text();
 
         // Cache and render
@@ -280,7 +280,7 @@ async function loadSection(section) {
         initSection(section);
     } catch (error) {
         console.error('Error loading section:', error);
-        contentArea.innerHTML = `<div class="alert alert-error">Failed to load content: ${error.message}</div>`;
+        contentArea.innerHTML = `<div class="alert alert-error">${t('error_transactions')}: ${error.message}</div>`;
     }
 }
 
@@ -397,7 +397,7 @@ function renderDashboardChart(labels, payinData, payoutData) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Pay-in',
+                    label: t('total_payin'),
                     data: payinData,
                     borderColor: '#10b981', // Success Green
                     backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -405,7 +405,7 @@ function renderDashboardChart(labels, payinData, payoutData) {
                     fill: true
                 },
                 {
-                    label: 'Payout',
+                    label: t('total_payout'),
                     data: payoutData,
                     borderColor: '#ef4444', // Red
                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -524,12 +524,12 @@ async function loadPayoutsData(page = 1) {
                 container.innerHTML = payouts.map(p => `
                 <tr>
                     <td><code>${p.orderId}</code></td>
-                    <td>${p.type || 'bank'}</td>
+                    <td>${p.type === 'bank' ? t('bank_transfer') : t('usdt_transfer')}</td>
                     <td>₹${parseFloat(p.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(p.fee).toFixed(2)}</td>
                     <td>
                         <small>
-                            ${p.account ? `Acc: ${p.account}<br>IFSC: ${p.ifsc}` : `Wallet: ${p.wallet}<br>Net: ${p.network}`}
+                            ${p.account ? `${t('label_account')}: ${p.account}<br>${t('label_ifsc')}: ${p.ifsc}` : `${t('label_wallet')}: ${p.wallet}<br>${t('label_network')}: ${p.network}`}
                         </small>
                     </td>
                     <td><span class="badge badge-${getStatusClass(p.status)}">${t('status_' + p.status)}</span></td>
@@ -557,7 +557,7 @@ async function showBankPayoutModal() {
         if (data.code === 1) {
             balanceText = `₹${parseFloat(data.data.balance).toFixed(2)}`;
         }
-    } catch (e) { balanceText = 'Error loading'; }
+    } catch (e) { balanceText = t('toast_verify_failed'); }
 
     document.getElementById('modalTitle').textContent = t('bank_payout_title');
     document.getElementById('modalBody').innerHTML = `
@@ -587,8 +587,8 @@ async function showBankPayoutModal() {
                 <input type="text" id="bankName" placeholder="John Doe" required>
             </div>
             <div class="form-group">
-                <label>2FA Code</label>
-                <input type="text" id="bank2fa" placeholder="6-digit Authenticator Code" required>
+                <label data-i18n="label_2fa">${t('label_2fa')}</label>
+                <input type="text" id="bank2fa" placeholder="${t('toast_enter_code')}" required>
             </div>
         </form>
     `;
@@ -631,7 +631,7 @@ async function submitBankPayout() {
             loadPayouts();
             loadBalance();
         } else {
-            showToast(data.msg || 'Failed to create payout', 'error');
+            showToast(data.msg || t('toast_payout_create_failed'), 'error');
         }
     } catch (error) {
         showToast(t('toast_error'), 'error');
@@ -677,8 +677,8 @@ async function showUsdtPayoutModal() {
                 </select>
             </div>
             <div class="form-group">
-                <label>2FA Code</label>
-                <input type="text" id="usdt2fa" placeholder="6-digit Authenticator Code" required>
+                <label data-i18n="label_2fa">${t('label_2fa')}</label>
+                <input type="text" id="usdt2fa" placeholder="${t('toast_enter_code')}" required>
             </div>
         </form>
     `;
@@ -718,7 +718,7 @@ async function submitUsdtPayout() {
             loadPayouts();
             loadBalance();
         } else {
-            showToast(data.msg || 'Failed to create payout', 'error');
+            showToast(data.msg || t('toast_payout_create_failed'), 'error');
         }
     } catch (error) {
         showToast(t('toast_error'), 'error');
@@ -775,25 +775,25 @@ async function generatePaymentLink() {
 
             document.getElementById('generatedLinkResult').innerHTML = `
                 <div class="payment-link-result">
-                    <label>Payment Link Generated Successfully!</label>
+                    <label data-i18n="toast_success_bank">${t('toast_success_bank')}</label>
                     <div class="d-flex gap-1 mt-1">
                         <input type="text" id="generatedLink" value="${paymentUrl}" readonly style="flex: 1;">
                         <button class="btn btn-primary btn-sm" onclick="copyGeneratedLink()">
-                            <i class="fas fa-copy"></i> Copy
+                            <i class="fas fa-copy"></i> ${t('toast_id_copied').split(' ')[1]}
                         </button>
                         ${paymentUrl.startsWith('http') ? `<a href="${paymentUrl}" target="_blank" class="btn btn-success btn-sm">
-                            <i class="fas fa-external-link-alt"></i> Open
+                            <i class="fas fa-external-link-alt"></i> ${t('all')}
                         </a>` : ''}
                     </div>
                     <div class="mt-2" style="font-size: 0.6875rem; color: var(--text-muted);">
-                        <strong>Order ID:</strong> ${orderId} | <strong>Amount:</strong> ₹${parseFloat(amount).toFixed(2)}
+                        <strong>${t('label_order_id')}:</strong> ${orderId} | <strong>${t('amount')}:</strong> ₹${parseFloat(amount).toFixed(2)}
                     </div>
                 </div>
             `;
             document.getElementById('generatedLinkResult').classList.remove('hidden');
             showToast(t('link_generated'), 'success');
         } else {
-            showToast(response.msg || 'Failed to generate link', 'error');
+            showToast(response.msg || t('toast_gen_link_failed'), 'error');
             // Log error to console for server-side logging
             console.error('Payment link generation error:', response);
         }
@@ -827,7 +827,7 @@ async function loadCredentialsData() {
             document.getElementById('credCallback').value = data.data.callbackUrl || '';
         }
     } catch (error) {
-        showToast('Failed to load credentials', 'error');
+        showToast(t('toast_load_credentials_failed'), 'error');
     }
 }
 
@@ -907,7 +907,7 @@ async function loadUsersData(page = 1) {
                     <td>
                         <div style="display:flex; align-items:center; gap:5px;">
                             <code style="font-size: 0.75rem;">${u.id}</code>
-                            <i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.id}').then(() => showToast('ID copied', 'success'))" title="Copy ID"></i>
+                            <i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.id}').then(() => showToast(t('toast_id_copied'), 'success'))" title="Copy ID"></i>
                         </div>
                     </td>
                     <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
@@ -937,7 +937,7 @@ async function loadUsersData(page = 1) {
 
             } else {
                 container.innerHTML = `
-                <tr><td colspan="9" class="text-muted" style="text-align:center;">No merchants found</td></tr>
+                <tr><td colspan="9" class="text-muted" style="text-align:center;">${t('error_no_payouts')}</td></tr>
             `;
                 updatePaginationControls('usersPagination', { page: 1, pages: 1 }, 'loadUsersData');
             }
@@ -981,7 +981,7 @@ async function openMerchantDetail(userId) {
 
         loadAdminUserDetail(userId);
     } catch (e) {
-        showToast('Failed to load detail view', 'error');
+        showToast(t('error_transactions'), 'error');
         loadSection('users');
     }
 }
@@ -1015,7 +1015,7 @@ async function loadAdminUserDetail(userId) {
         // Security
         const is2fa = u.twoFactorEnabled;
         const s2fa = document.getElementById('detail2faStatus');
-        s2fa.textContent = is2fa ? 'Enabled' : 'Disabled';
+        s2fa.textContent = is2fa ? t('success') : t('failed');
         s2fa.className = `badge badge-${is2fa ? 'success' : 'warning'}`;
 
         if (is2fa) {
@@ -1025,13 +1025,13 @@ async function loadAdminUserDetail(userId) {
         }
 
     } catch (e) {
-        showToast('Error loading user details', 'error');
+        showToast(t('error_transactions'), 'error');
     }
 }
 
 function copyDetailKey() {
     const key = document.getElementById('detailKey').value;
-    navigator.clipboard.writeText(key).then(() => showToast('Key copied', 'success'));
+    navigator.clipboard.writeText(key).then(() => showToast(t('toast_key_copied'), 'success'));
 }
 
 async function saveDetailOverview() {
@@ -1056,13 +1056,13 @@ async function saveDetailOverview() {
         });
 
         if (data.code === 1) {
-            showToast('Overview updated', 'success');
+            showToast(t('toast_overview_updated'), 'success');
             loadAdminUserDetail(currentDetailUserId); // Refresh to update badges etc
         } else {
-            showToast(data.msg, 'error');
+            showToast(data.msg || t('toast_update_failed'), 'error');
         }
     } catch (e) {
-        showToast('Update failed', 'error');
+        showToast(t('toast_update_failed'), 'error');
     }
 }
 
@@ -1077,7 +1077,7 @@ async function saveDetailCallback() {
 }
 
 async function resetDetail2fa() {
-    if (!confirm('Are you sure you want to disable 2FA for this user?')) return;
+    if (!confirm(t('warn_disable_2fa'))) return;
 
     try {
         // API uses the internal ID or UUID? 
@@ -1100,19 +1100,19 @@ async function resetDetail2fa() {
 
         const data = await API.post(`/admin/users/${currentDetailUserId}/2fa/reset`);
         if (data.code === 1) {
-            showToast('2FA Reset Successfully', 'success');
+            showToast(t('toast_2fa_reset_success'), 'success');
             loadAdminUserDetail(currentDetailUserId);
         } else {
-            showToast(data.msg, 'error');
+            showToast(data.msg || t('toast_reset_failed'), 'error');
         }
     } catch (e) {
-        showToast('Reset failed', 'error');
+        showToast(t('toast_reset_failed'), 'error');
     }
 }
 
 async function adminResetPassword() {
     const newPass = document.getElementById('detailNewPass').value;
-    if (!newPass) return showToast('Enter a new password', 'error');
+    if (!newPass) return showToast(t('toast_enter_new_pass'), 'error');
 
     // We need an endpoint for Admin to set password without old password.
     // `PUT /users/:id` doesn't update password.
@@ -1124,13 +1124,13 @@ async function adminResetPassword() {
     try {
         const data = await API.post(`/admin/users/${currentDetailUserId}/password`, { password: newPass });
         if (data.code === 1) {
-            showToast('Password reset successfully', 'success');
+            showToast(t('toast_pass_reset_success'), 'success');
             document.getElementById('detailNewPass').value = '';
         } else {
-            showToast(data.msg, 'error');
+            showToast(data.msg || t('toast_reset_failed'), 'error');
         }
     } catch (e) {
-        showToast('Error resetting password', 'error');
+        showToast(t('toast_error_reset_pass'), 'error');
     }
 }
 
@@ -1152,44 +1152,44 @@ async function openAdjustBalanceDetail() {
 }
 
 function showCreateUserModal() {
-    document.getElementById('modalTitle').textContent = 'Create Merchant';
+    document.getElementById('modalTitle').textContent = t('btn_create_merchant');
     document.getElementById('modalBody').innerHTML = `
         <form id="createUserForm">
             <div class="row">
                 <div class="col-md-6 form-group">
-                    <label>Name</label>
-                    <input type="text" id="newUserName" class="form-control" placeholder="Merchant name" required>
+                    <label data-i18n="label_name">${t('label_name')}</label>
+                    <input type="text" id="newUserName" class="form-control" placeholder="${t('label_name')}" required>
                 </div>
                 <div class="col-md-6 form-group">
-                    <label>Username</label>
-                    <input type="text" id="newUserUsername" class="form-control" placeholder="Login username" required>
+                    <label data-i18n="username">${t('username')}</label>
+                    <input type="text" id="newUserUsername" class="form-control" placeholder="${t('username')}" required>
                 </div>
             </div>
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="newUserPassword" class="form-control" placeholder="Password" required>
+                <label data-i18n="label_password">${t('label_password')}</label>
+                <input type="password" id="newUserPassword" class="form-control" placeholder="${t('label_password')}" required>
             </div>
             <div class="form-group">
-                <label>Callback URL (optional)</label>
-                <input type="url" id="newUserCallback" class="form-control" placeholder="https://merchant-domain.com/callback">
+                <label data-i18n="label_callback_url">${t('label_callback_url')} (optional)</label>
+                <input type="url" id="newUserCallback" class="form-control" placeholder="${t('placeholder_callback_url')}">
             </div>
             <div class="row">
                 <div class="col-md-6 form-group">
-                    <label>Pay-in Rate (%)</label>
+                    <label data-i18n="label_payin_rate">${t('label_payin_rate')}</label>
                     <input type="number" id="newUserPayinRate" class="form-control" value="5.0" step="0.1" min="5.0">
-                    <small class="text-muted">Must be 5.0 or more</small>
+                    <small class="text-muted" data-i18n="btn_save">${t('btn_save')}</small>
                 </div>
                 <div class="col-md-6 form-group">
-                    <label>Payout Rate (%)</label>
+                    <label data-i18n="label_payout_rate">${t('label_payout_rate')}</label>
                     <input type="number" id="newUserPayoutRate" class="form-control" value="3.0" step="0.1" min="3.0">
-                    <small class="text-muted">Must be 3.0 or more</small>
+                    <small class="text-muted" data-i18n="btn_save">${t('btn_save')}</small>
                 </div>
             </div>
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="createUser()">Create Merchant</button>
+        <button class="btn btn-secondary" onclick="closeModal()">${t('btn_cancel')}</button>
+        <button class="btn btn-primary" onclick="createUser()">${t('btn_create_merchant')}</button>
     `;
     document.getElementById('modalOverlay').classList.add('active');
 }
@@ -1224,7 +1224,7 @@ async function createUser() {
             loadUsersData();
             showWelcomeModal(data.data); // Show the fancy welcome popup
         } else {
-            showToast(data.msg || 'Failed to create merchant', 'error');
+            showToast(data.msg || t('toast_payout_create_failed'), 'error');
             // If failed, maybe reopen the create modal? For now just show toast.
         }
     } catch (error) {
@@ -1236,66 +1236,73 @@ async function createUser() {
 async function showEditUserModal(userId) {
     let user = null;
     try {
-        // We reuse the list to find user since we don't have a single user get endpoint exposed easily to frontend yet, 
-        // or we can just fetch all and filter. For efficiency, let's use what we have or fetch fresh.
-        // Actually, we can assume the user info is in the row, but cleaner to fetch.
-        // Let's use the list endpoint again or assume we can find it in the DOM?
-        // Better: Fetch fresh list to find the user or just iterate current data if we stored it globally?
-        // Simplest: Fetch list again or add a specific GET /admin/users/:id endpoint.
-        // I'll stick to fetching the full list for now as it's already there, or we can just pass the data? 
-        // Passing data as params is messy with quotes.
-        // Let's just fetch the list again internally or filter from a global variable if I had one.
-        // I will do a quick fetch of all users and find logic.
-        const data = await API.get('/admin/users');
+        const data = await API.get(`/admin/users/${userId}`);
         if (data.code === 1) {
-            user = data.data.find(u => u.id === userId);
+            user = data.data;
         }
     } catch (e) { console.error(e); }
 
     if (!user) {
-        showToast('User not found', 'error');
+        showToast(t('toast_user_not_found'), 'error');
         return;
     }
 
-    document.getElementById('modalTitle').textContent = 'Edit Merchant';
+    document.getElementById('modalTitle').textContent = t('merchants_list');
+    const overlay = document.getElementById('modalOverlay');
+    overlay.classList.add('active');
+
     document.getElementById('modalBody').innerHTML = `
         <form id="editUserForm">
-            <div class="row">
-                <div class="col-md-6 form-group">
-                    <label>Name</label>
-                    <input type="text" id="editUserName" class="form-control" value="${user.name}" required>
+            <div class="row" style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1">
+                    <label data-i18n="label_name">${t('label_name')}</label>
+                    <input type="text" id="editUserName" value="${user.name}" required>
                 </div>
-                <div class="col-md-6 form-group">
-                    <label>Status</label>
-                    <select id="editUserStatus" class="form-control">
-                        <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
-                        <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
+                <div class="form-group" style="flex:1">
+                    <label data-i18n="status">${t('status')}</label>
+                    <select id="editUserStatus">
+                        <option value="active" ${user.status === 'active' ? 'selected' : ''} data-i18n="success">${t('success')}</option>
+                        <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''} data-i18n="failed">${t('failed')}</option>
                     </select>
                 </div>
             </div>
+            
             <div class="form-group">
-                <label>Callback URL</label>
-                <input type="url" id="editUserCallback" class="form-control" value="${user.callbackUrl || ''}" placeholder="https://merchant-domain.com/callback">
+                <label data-i18n="label_callback_url">${t('label_callback_url')}</label>
+                <input type="url" id="editUserCallback" value="${user.callbackUrl || ''}" placeholder="${t('placeholder_callback_url')}">
             </div>
-            <div class="row">
-                <div class="col-md-6 form-group">
-                    <label>Pay-in Rate (%)</label>
-                    <input type="number" id="editUserPayinRate" class="form-control" value="${user.payinRate || 5.0}" step="0.1" min="5.0">
-                    <small class="text-muted">Must be 5.0 or more</small>
+             <div class="d-flex gap-2">
+                <div class="form-group" style="flex:1">
+                    <label data-i18n="label_payin_rate">${t('label_payin_rate')}</label>
+                    <input type="number" id="editUserPayinRate" value="${user.payinRate || 5.0}" step="0.1" min="5.0">
+                    <small class="text-muted" data-i18n="btn_save">${t('btn_save')}</small>
                 </div>
-                <div class="col-md-6 form-group">
-                    <label>Payout Rate (%)</label>
-                    <input type="number" id="editUserPayoutRate" class="form-control" value="${user.payoutRate || 3.0}" step="0.1" min="3.0">
-                    <small class="text-muted">Must be 3.0 or more</small>
+                <div class="form-group" style="flex:1">
+                    <label data-i18n="label_payout_rate">${t('label_payout_rate')}</label>
+                    <input type="number" id="editUserPayoutRate" value="${user.payoutRate || 3.0}" step="0.1" min="3.0">
+                    <small class="text-muted" data-i18n="btn_save">${t('btn_save')}</small>
                 </div>
+            </div>
+
+            <hr>
+            <h4 class="mb-2" data-i18n="authentication">${t('authentication')}</h4>
+            <div class="d-flex align-center justify-between p-2 mb-2" style="background:var(--bg-main); border-radius:8px;">
+                 <div>
+                     <strong data-i18n="2fa_status">${t('2fa_status')}</strong>: 
+                     <span class="badge ${user.twoFactorEnabled ? 'badge-success' : 'badge-pending'}">
+                        ${user.twoFactorEnabled ? t('success') : t('failed')}
+                     </span>
+                 </div>
+                 ${user.twoFactorEnabled ?
+            `<button type="button" class="btn btn-danger btn-sm" onclick="resetUser2fa('${user.id}')" data-i18n="btn_reset_2fa">${t('btn_reset_2fa')}</button>`
+            : `<small class="text-muted" data-i18n="status_pending">${t('status_pending')}</small>`}
             </div>
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="updateUser('${user.id}')">Update</button>
+        <button class="btn btn-secondary" onclick="closeModal()">${t('btn_cancel')}</button>
+        <button class="btn btn-primary" onclick="updateUser('${user.id}')" data-i18n="btn_update">${t('btn_update')}</button>
     `;
-    document.getElementById('modalOverlay').classList.add('active');
 }
 
 async function updateUser(userId) {
@@ -1313,37 +1320,37 @@ async function updateUser(userId) {
         });
 
         if (data.code === 1) {
-            showToast('Merchant updated successfully', 'success');
+            showToast(t('toast_merchant_update_success'), 'success');
             closeModal();
             loadUsersData();
         } else {
-            showToast(data.msg || 'Failed to update', 'error');
+            showToast(data.msg || t('toast_update_failed'), 'error');
         }
     } catch (error) {
-        showToast('Error updating merchant', 'error');
+        showToast(t('toast_error_update_merchant'), 'error');
     }
 }
 
 function showAdjustBalanceModal(userId, userName, currentBalance) {
-    document.getElementById('modalTitle').textContent = `Adjust Balance - ${userName}`;
+    document.getElementById('modalTitle').textContent = `${t('settlement_request')} - ${userName}`;
     document.getElementById('modalBody').innerHTML = `
-        <p class="text-muted mb-2" style="font-size: 0.75rem;">Current Balance: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p>
+        <p class="text-muted mb-2" style="font-size: 0.75rem;">${t('balance')}: <strong>₹${parseFloat(currentBalance).toFixed(2)}</strong></p>
         <form id="adjustBalanceForm">
             <div class="form-group">
-                <label>Adjustment Amount *</label>
-                <input type="number" id="adjustAmount" step="0.01" placeholder="Enter amount (positive to add, negative to deduct)" required class="form-control" style="padding: 12px; font-size: 1.1rem; border-radius: 8px;">
-                    <small class="text-muted">Use positive value to add funds, negative to deduct</small>
+                <label data-i18n="amount">${t('amount')} *</label>
+                <input type="number" id="adjustAmount" step="0.01" placeholder="${t('amount')}" required class="form-control" style="padding: 12px; font-size: 1.1rem; border-radius: 8px;">
+                    <small class="text-muted" data-i18n="intro_desc">${t('intro_desc')}</small>
             </div>
             <div class="form-group">
-                <label>Reason (optional)</label>
-                <input type="text" id="adjustReason" placeholder="Reason for adjustment" class="form-control" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
+                <label data-i18n="broadcast_title">${t('broadcast_title')} (optional)</label>
+                <input type="text" id="adjustReason" placeholder="${t('broadcast_title')}" class="form-control" style="padding: 12px; font-size: 1rem; border-radius: 8px;">
             </div>
         </form>
     `;
     document.getElementById('modalFooter').innerHTML = `
-            < button class= "btn btn-secondary" onclick = "closeModal()" > Cancel</button >
+            <button class="btn btn-secondary" onclick="closeModal()">${t('btn_cancel')}</button>
         <button class="btn btn-success" onclick="adjustBalance('${userId}')">
-            <i class="fas fa-plus"></i> Add Balance
+            <i class="fas fa-plus"></i> ${t('settlement_request')}
         </button>
     `;
     document.getElementById('modalOverlay').classList.add('active');
@@ -1364,11 +1371,11 @@ async function adjustBalance(userId) {
         console.log('Balance adjustment response:', data);
 
         if (data.code === 1) {
-            showToast(`Balance adjusted! New balance: ₹${data.data.newBalance.toFixed(2)}`, 'success');
+            showToast(`${t('toast_2fa_enabled')}! ${t('balance')}: ₹${data.data.newBalance.toFixed(2)}`, 'success');
             closeModal();
             loadUsersData(); // Fix function name
         } else {
-            showToast(data.msg || 'Failed to adjust balance', 'error');
+            showToast(data.msg || t('toast_update_failed'), 'error');
         }
     } catch (error) {
         console.error('Adjust balance error:', error);
@@ -1388,12 +1395,12 @@ async function disable2fa() {
             showToast(data.msg || 'Failed', 'error');
         }
     } catch (e) {
-        showToast('Error disabling 2FA', 'error');
+        showToast(t('toast_verify_failed'), 'error');
     }
 }
 
 async function resetUser2fa(userId) {
-    if (!confirm('Are you sure you want to disable 2FA for this user?')) return;
+    if (!confirm(t('warn_disable_2fa'))) return;
 
     try {
         const data = await API.post(`/admin/users/${userId}/2fa/reset`);
@@ -1405,86 +1412,11 @@ async function resetUser2fa(userId) {
             showToast(data.msg || 'Failed', 'error');
         }
     } catch (e) {
-        showToast('Error resetting 2FA', 'error');
+        showToast(t('toast_verify_failed'), 'error');
     }
 }
 
-async function showEditUserModal(userId) {
-    let user = null;
-    try {
-        const data = await API.get('/admin/users');
-        if (data.code === 1) {
-            user = data.data.find(u => u.id === userId);
-        }
-    } catch (e) { console.error(e); }
 
-    if (!user) {
-        showToast('User not found', 'error');
-        return;
-    }
-
-    document.getElementById('modalTitle').textContent = 'Edit Merchant'; // Could use i18n
-    // Enhanced full "window" feel or just robust modal
-    const overlay = document.getElementById('modalOverlay');
-    overlay.classList.add('active');
-
-    document.getElementById('modalBody').innerHTML = `
-        <div class="tabs mb-3">
-             <button class="btn btn-sm btn-primary">Profile</button>
-             <!-- Placeholder for future tabs -->
-        </div>
-        <form id="editUserForm">
-            <div class="row" style="display:flex; gap:10px;">
-                <div class="form-group" style="flex:1">
-                    <label>Name</label>
-                    <input type="text" id="editUserName" value="${user.name}" required>
-                </div>
-                <div class="form-group" style="flex:1">
-                    <label>Status</label>
-                    <select id="editUserStatus">
-                        <option value="active" ${user.status === 'active' ? 'selected' : ''}>Active</option>
-                        <option value="suspended" ${user.status === 'suspended' ? 'selected' : ''}>Suspended</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Callback URL</label>
-                <input type="url" id="editUserCallback" value="${user.callbackUrl || ''}" placeholder="https://merchant-domain.com/callback">
-            </div>
-             <div class="d-flex gap-2">
-                <div class="form-group" style="flex:1">
-                    <label>Pay-in Rate (%)</label>
-                    <input type="number" id="editUserPayinRate" value="${user.payinRate || 5.0}" step="0.1" min="5.0">
-                    <small class="text-muted">Must be 5.0 or more</small>
-                </div>
-                <div class="form-group" style="flex:1">
-                    <label>Payout Rate (%)</label>
-                    <input type="number" id="editUserPayoutRate" value="${user.payoutRate || 3.0}" step="0.1" min="3.0">
-                    <small class="text-muted">Must be 3.0 or more</small>
-                </div>
-            </div>
-
-            <hr>
-            <h4 class="mb-2">Security</h4>
-            <div class="d-flex align-center justify-between p-2 mb-2" style="background:var(--bg-main); border-radius:8px;">
-                 <div>
-                     <strong>2FA Status</strong>: 
-                     <span class="badge ${user.twoFactorEnabled ? 'badge-success' : 'badge-pending'}">
-                        ${user.twoFactorEnabled ? 'Enabled' : 'Disabled'}
-                     </span>
-                 </div>
-                 ${user.twoFactorEnabled ?
-            `<button type="button" class="btn btn-danger btn-sm" onclick="resetUser2fa('${user.id}')">Reset 2FA</button>`
-            : '<small class="text-muted">Not enabled</small>'}
-            </div>
-        </form>
-    `;
-    document.getElementById('modalFooter').innerHTML = `
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="updateUser('${user.id}')">Update Merchant</button>
-    `;
-}
 
 // ========================================
 // SETTLEMENT
@@ -1535,7 +1467,7 @@ async function submitSettlement(type) {
         const code = document.getElementById('settleBankCode').value;
 
         if (!account || !ifsc || !name || !amount || !code) {
-            showToast('Please fill all fields', 'error');
+            showToast(t('toast_fill_fields'), 'error');
             return;
         }
 
@@ -1544,7 +1476,7 @@ async function submitSettlement(type) {
                 amount, orderId, account, ifsc, personName: name, code
             });
             if (res.code === 1) {
-                showToast('Bank Settlement Submitted', 'success');
+                showToast(t('toast_success_bank'), 'success');
                 loadBalance(); // Refresh balance
                 document.getElementById('settleBankAccount').value = '';
                 document.getElementById('settleBankAmount').value = '';
@@ -1564,7 +1496,7 @@ async function submitSettlement(type) {
         const code = document.getElementById('settleUsdtCode').value;
 
         if (!address || !amount || !code) {
-            showToast('Please fill all fields', 'error');
+            showToast(t('toast_fill_fields'), 'error');
             return;
         }
 
@@ -1573,7 +1505,7 @@ async function submitSettlement(type) {
                 amount, orderId, walletAddress: address, network, code
             });
             if (res.code === 1) {
-                showToast('USDT Settlement Submitted', 'success');
+                showToast(t('toast_success_usdt'), 'success');
                 loadBalance();
                 document.getElementById('settleUsdtAddress').value = '';
                 document.getElementById('settleUsdtAmount').value = '';
@@ -1627,7 +1559,7 @@ async function loadApprovalsData() {
                 `;
         }
     } catch (error) {
-        showToast('Failed to load approvals', 'error');
+        showToast(t('toast_approvals_load_failed'), 'error');
     }
 }
 
@@ -1635,7 +1567,7 @@ async function approvePayout(id) {
     const utr = prompt(t('prompt_utr'));
 
     try {
-        const data = await API.post(`/ admin / payouts / ${id}/approve`, { utr });
+        const data = await API.post(`/admin/payouts/${id}/approve`, { utr });
         if (data.code === 1) {
             showToast(t('toast_approved'), 'success');
             loadApprovals();
@@ -1644,7 +1576,7 @@ async function approvePayout(id) {
             showToast(data.msg || 'Failed to approve', 'error');
         }
     } catch (error) {
-        showToast('Error approving payout', 'error');
+        showToast(t('toast_verify_failed'), 'error');
     }
 }
 
@@ -1662,7 +1594,7 @@ async function rejectPayout(id) {
             showToast(data.msg || 'Failed to reject', 'error');
         }
     } catch (error) {
-        showToast('Error rejecting payout', 'error');
+        showToast(t('toast_verify_failed'), 'error');
     }
 }
 
@@ -1816,7 +1748,7 @@ async function sendBroadcast() {
     const btn = document.getElementById('btnSendBroadcast');
     const originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('sending')}`;
 
     try {
         const data = await API.post('/admin/broadcast', { message });
@@ -1826,10 +1758,10 @@ async function sendBroadcast() {
             document.getElementById('broadcastSuccess').textContent = data.data.success;
             document.getElementById('broadcastFailed').textContent = data.data.failed;
         } else {
-            showToast(data.msg || 'Broadcast failed', 'error');
+            showToast(data.msg || t('toast_broadcast_failed'), 'error');
         }
     } catch (error) {
-        showToast('Error sending broadcast', 'error');
+        showToast(t('toast_broadcast_failed'), 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -1901,7 +1833,7 @@ async function exportData(section) {
 
         if (!url) return;
 
-        showToast('Generating export...', 'info');
+        showToast(t('exporting'), 'info');
 
         // Use fetch directly to handle Blob and Auth
         const token = localStorage.getItem('token');
@@ -1909,7 +1841,7 @@ async function exportData(section) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!response.ok) throw new Error('Export failed');
+        if (!response.ok) throw new Error(t('export_failed'));
 
         const blob = await response.blob();
         const downloadUrl = window.URL.createObjectURL(blob);
@@ -1922,7 +1854,7 @@ async function exportData(section) {
 
     } catch (e) {
         console.error(e);
-        showToast('Export failed', 'error');
+        showToast(t('export_failed'), 'error');
     }
 }
 window.exportData = exportData;
@@ -2022,7 +1954,7 @@ function updatePaginationControls(elementId, { page, pages, total }, onPageChang
             <button class="btn btn-sm btn-secondary" ${page <= 1 ? 'disabled' : ''} onclick="${onPageChangeName}(${page - 1})">
                 <i class="fas fa-chevron-left"></i>
             </button>
-            <span class="text-muted">Page ${page} of ${pages}</span>
+            <span class="text-muted">${t('page_of').replace('${page}', page).replace('${pages}', pages)}</span>
             <button class="btn btn-sm btn-secondary" ${page >= pages ? 'disabled' : ''} onclick="${onPageChangeName}(${page + 1})">
                 <i class="fas fa-chevron-right"></i>
             </button>

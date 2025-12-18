@@ -255,70 +255,78 @@
 <body>
     <aside class="sidebar">
         <div class="logo">
-            <!-- <img src="/images/logo.png" alt="Logo"> -->
-            <h1>Huidu API</h1>
+            <h1>VSPAY API</h1>
+        </div>
+        <div style="padding: 0 1.5rem 1rem;">
+            <button id="langToggle" class="btn btn-secondary btn-sm" onclick="window.changeLanguage()"
+                style="width: 100%; justify-content: start;">
+                <span style="font-size:1.2rem; margin-right:5px;">🇺🇸</span> EN
+            </button>
         </div>
         <nav>
-            <div class="nav-group">Getting Started</div>
-            <a href="#intro" class="nav-item">Introduction</a>
-            <a href="#auth" class="nav-item">Authentication</a>
+            <div class="nav-group" data-i18n="getting_started">Getting Started</div>
+            <a href="#intro" class="nav-item" data-i18n="introduction">Introduction</a>
+            <a href="#auth" class="nav-item" data-i18n="authentication">Authentication</a>
 
-            <div class="nav-group">Pay-In (Deposits)</div>
-            <a href="#payin-create" class="nav-item">Create Order</a>
-            <a href="#payin-query" class="nav-item">Query Status</a>
-            <a href="#payin-submit-utr" class="nav-item">Submit UTR</a>
+            <div class="nav-group" data-i18n="pay_in_deposits">Pay-In (Deposits)</div>
+            <a href="#payin-create" class="nav-item" data-i18n="create_order">Create Order</a>
+            <a href="#payin-query" class="nav-item" data-i18n="query_status">Query Status</a>
+            <a href="#payin-submit-utr" class="nav-item" data-i18n="submit_utr">Submit UTR</a>
 
-            <div class="nav-group">Pay-Out (Withdrawals)</div>
-            <a href="#payout-bank" class="nav-item">Bank Transfer</a>
-            <a href="#payout-usdt" class="nav-item">USDT Transfer</a>
-            <a href="#payout-query" class="nav-item">Query Status</a>
+            <div class="nav-group" data-i18n="pay_out_withdrawals">Pay-Out (Withdrawals)</div>
+            <a href="#payout-bank" class="nav-item" data-i18n="bank_transfer">Bank Transfer</a>
+            <a href="#payout-usdt" class="nav-item" data-i18n="usdt_transfer">USDT Transfer</a>
+            <a href="#payout-query" class="nav-item" data-i18n="query_status">Query Status</a>
 
-            <div class="nav-group">Utilities</div>
-            <a href="#balance-query" class="nav-item">Check Balance</a>
-            <a href="#callbacks" class="nav-item">Webhooks</a>
+            <div class="nav-group" data-i18n="utilities">Utilities</div>
+            <a href="#balance-query" class="nav-item" data-i18n="check_balance">Check Balance</a>
+            <a href="#callbacks" class="nav-item" data-i18n="webhooks">Webhooks</a>
         </nav>
     </aside>
 
     <main class="main">
         <section id="intro">
-            <h1>Introduction</h1>
-            <p>Welcome to the Huidu Payment Gateway API. This documentation provides a comprehensive guide to
+            <h1 data-i18n="introduction">Introduction</h1>
+            <p data-i18n="intro_desc">Welcome to the VSPAY Payment Gateway API. This documentation provides a
+                comprehensive guide to
                 integrating our secure payment solutions for deposits (Pay-In) and withdrawals (Pay-Out).</p>
-            <p><strong>Version:</strong> 2.1<br>
-                <strong>Base URL:</strong> <code>https://your-domain.com</code>
+            <p><strong data-i18n="version">Version:</strong> 2.1<br>
+                <strong data-i18n="base_url">Base URL:</strong> <code>https://your-domain.com</code>
             </p>
-            <p>All requests must be made over HTTPS with <code>Content-Type: application/json</code>.</p>
+            <p data-i18n="req_https">All requests must be made over HTTPS with
+                <code>Content-Type: application/json</code>.</p>
         </section>
 
         <section id="auth">
-            <h2>Authentication</h2>
-            <p>We strictly use <strong>Header-Based Authentication</strong> using HMAC-MD5 signatures. Every request
+            <h2 data-i18n="authentication">Authentication</h2>
+            <p data-i18n="auth_desc">We strictly use <strong>Header-Based Authentication</strong> using HMAC-MD5
+                signatures. Every request
                 must be authenticated.</p>
 
-            <h3>Required Headers</h3>
+            <h3 data-i18n="req_headers">Required Headers</h3>
             <table class="param-table">
                 <tr>
-                    <th>Header</th>
-                    <th>Example Value</th>
-                    <th>Description</th>
+                    <th data-i18n="header_name">Header</th>
+                    <th data-i18n="example_val">Example Value</th>
+                    <th data-i18n="description">Description</th>
                 </tr>
                 <tr>
                     <td><code>x-merchant-id</code></td>
                     <td><code>550e8400-e29b...</code></td>
-                    <td>Your unique Merchant UUID.</td>
+                    <td data-i18n="merchant_uuid_desc">Your unique Merchant UUID.</td>
                 </tr>
                 <tr>
                     <td><code>x-signature</code></td>
                     <td><code>a1b2c3d4e5...</code></td>
-                    <td>The MD5 hash of your request body.</td>
+                    <td data-i18n="sig_desc">The MD5 hash of your request body.</td>
                 </tr>
             </table>
 
-            <h3>Generating the Signature</h3>
-            <div class="badge badge-warning">Formula</div>
+            <h3 data-i18n="gen_sig">Generating the Signature</h3>
+            <div class="badge badge-warning" data-i18n="formula">Formula</div>
             <p><code>Signature = MD5( JSON_String_Body + Merchant_Secret_Key )</code></p>
 
-            <h3>Node.js Example</h3>
+            <h3 data-i18n="node_ex">Node.js Example</h3>
             <pre><code>const crypto = require('crypto');
 
 // 1. Prepare Body (Must match exactly what you send)
@@ -342,44 +350,44 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
         </section>
 
         <section id="payin-create">
-            <h2>Create Pay-In Order</h2>
-            <p>Generate a payment link to collect funds from a user.</p>
+            <h2 data-i18n="create_order">Create Pay-In Order</h2>
+            <p data-i18n="create_payin_desc">Generate a payment link to collect funds from a user.</p>
             <p><span class="method post">POST</span> <span class="endpoint">/api/payin/create</span></p>
 
             <table class="param-table">
                 <tr>
-                    <th>Parameter</th>
-                    <th>Type</th>
-                    <th>Description</th>
+                    <th data-i18n="parameter">Parameter</th>
+                    <th data-i18n="param_type">Type</th>
+                    <th data-i18n="description">Description</th>
                 </tr>
                 <tr>
                     <td><code>orderId</code></td>
-                    <td>String <span class="required">Required</span></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
                     <td>Unique Order ID (Max 64 chars).</td>
                 </tr>
                 <tr>
                     <td><code>orderAmount</code></td>
-                    <td>Number <span class="required">Required</span></td>
-                    <td>Amount to collect (Min 100).</td>
+                    <td>Number <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="placeholder_min_100">Amount to collect (Min 100).</td>
                 </tr>
                 <tr>
                     <td><code>callbackUrl</code></td>
-                    <td>String <span class="required">Required</span></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
                     <td>Your HTTPS URL to receive webhook notifications.</td>
                 </tr>
                 <tr>
                     <td><code>skipUrl</code></td>
-                    <td>String <span class="optional">Optional</span></td>
+                    <td>String <span class="optional" data-i18n="optional">Optional</span></td>
                     <td>Redirect URL for the user after payment.</td>
                 </tr>
                 <tr>
                     <td><code>param</code></td>
-                    <td>String <span class="optional">Optional</span></td>
-                    <td>Custom data to return in callback.</td>
+                    <td>String <span class="optional" data-i18n="optional">Optional</span></td>
+                    <td data-i18n="placeholder_min_100">Custom data to return in callback.</td>
                 </tr>
             </table>
 
-            <h3>Example Request</h3>
+            <h3 data-i18n="ex_request">Example Request</h3>
             <pre><code>{
     "orderId": "MC001-998877",
     "orderAmount": 500,
@@ -387,7 +395,7 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
     "skipUrl": "https://mysite.com/success"
 }</code></pre>
 
-            <h3>Success Response</h3>
+            <h3 data-i18n="success_response">Success Response</h3>
             <pre><code>{
     "code": 1,
     "msg": "Order created",
@@ -401,24 +409,24 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
         </section>
 
         <section id="payin-query">
-            <h2>Query Pay-In Status</h2>
-            <p>Check the real-time status of a deposit.</p>
+            <h2 data-i18n="query_status">Query Pay-In Status</h2>
+            <p data-i18n="query_payin_desc">Check the real-time status of a deposit.</p>
             <p><span class="method post">POST</span> <span class="endpoint">/api/payin/query</span></p>
 
             <table class="param-table">
                 <tr>
-                    <th>Parameter</th>
-                    <th>Type</th>
-                    <th>Description</th>
+                    <th data-i18n="parameter">Parameter</th>
+                    <th data-i18n="param_type">Type</th>
+                    <th data-i18n="description">Description</th>
                 </tr>
                 <tr>
                     <td><code>orderId</code></td>
-                    <td>String <span class="required">Required</span></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
                     <td>Your unique Order ID.</td>
                 </tr>
             </table>
 
-            <h3>Response</h3>
+            <h3 data-i18n="success_response">Response</h3>
             <pre><code>{
     "code": 1,
     "data": {
@@ -432,29 +440,30 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
         </section>
 
         <section id="payin-submit-utr">
-            <h2>Submit UTR (Manual Claim)</h2>
-            <p>If a user has paid but the order is pending, submit the UTR for verification.</p>
+            <h2 data-i18n="submit_utr">Submit UTR (Manual Claim)</h2>
+            <p data-i18n="submit_utr_desc">If a user has paid but the order is pending, submit the UTR for verification.
+            </p>
             <p><span class="method post">POST</span> <span class="endpoint">/api/payin/submit-utr</span></p>
 
             <table class="param-table">
                 <tr>
-                    <th>Parameter</th>
-                    <th>Type</th>
-                    <th>Description</th>
+                    <th data-i18n="parameter">Parameter</th>
+                    <th data-i18n="param_type">Type</th>
+                    <th data-i18n="description">Description</th>
                 </tr>
                 <tr>
                     <td><code>orderId</code></td>
-                    <td>String <span class="required">Required</span></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
                     <td>The pending Order ID.</td>
                 </tr>
                 <tr>
                     <td><code>utr</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>The 12-digit UTR/Reference Number.</td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="placeholder_utr_12">The 12-digit UTR/Reference Number.</td>
                 </tr>
             </table>
 
-            <h3>Response</h3>
+            <h3 data-i18n="success_response">Response</h3>
             <pre><code>{
     "code": 1,
     "msg": "UTR Submitted successfully",
@@ -466,90 +475,90 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
         </section>
 
         <section id="payout-bank">
-            <h2>Bank Payout</h2>
-            <p>Transfer funds to a bank account via IMPS/NEFT.</p>
+            <h2 data-i18n="bank_transfer">Bank Payout</h2>
+            <p data-i18n="bank_payout_desc">Transfer funds to a bank account via IMPS/NEFT.</p>
             <p><span class="method post">POST</span> <span class="endpoint">/api/payout/bank</span></p>
 
             <table class="param-table">
                 <tr>
-                    <th>Parameter</th>
-                    <th>Type</th>
-                    <th>Description</th>
+                    <th data-i18n="parameter">Parameter</th>
+                    <th data-i18n="param_type">Type</th>
+                    <th data-i18n="description">Description</th>
                 </tr>
                 <tr>
                     <td><code>orderId</code></td>
-                    <td>String <span class="required">Required</span></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
                     <td>Unique Transaction ID.</td>
                 </tr>
                 <tr>
                     <td><code>amount</code></td>
-                    <td>Number <span class="required">Required</span></td>
-                    <td>Amount to withdraw (Min 100).</td>
+                    <td>Number <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="placeholder_min_100">Amount to withdraw (Min 100).</td>
                 </tr>
                 <tr>
                     <td><code>account</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>Beneficiary Account Number.</td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="label_account_number">Beneficiary Account Number.</td>
                 </tr>
                 <tr>
                     <td><code>ifsc</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>Beneficiary IFSC Code.</td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="label_ifsc">Beneficiary IFSC Code.</td>
                 </tr>
                 <tr>
                     <td><code>personName</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>Account Holder Name.</td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="label_holder_name">Account Holder Name.</td>
                 </tr>
                 <tr>
                     <td><code>code</code></td>
-                    <td>String <span class="optional">Optional</span></td>
-                    <td>2FA Code (Required for Dashboard, Optional for API).</td>
+                    <td>String <span class="optional" data-i18n="optional">Optional</span></td>
+                    <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
         </section>
 
         <section id="payout-usdt">
-            <h2>USDT Payout</h2>
-            <p>Transfer funds to a crypto wallet (TRC20).</p>
+            <h2 data-i18n="usdt_transfer">USDT Payout</h2>
+            <p data-i18n="usdt_payout_desc">Transfer funds to a crypto wallet (TRC20).</p>
             <p><span class="method post">POST</span> <span class="endpoint">/api/payout/usdt</span></p>
 
             <table class="param-table">
                 <tr>
-                    <th>Parameter</th>
-                    <th>Type</th>
-                    <th>Description</th>
+                    <th data-i18n="parameter">Parameter</th>
+                    <th data-i18n="param_type">Type</th>
+                    <th data-i18n="description">Description</th>
                 </tr>
                 <tr>
                     <td><code>orderId</code></td>
-                    <td>String <span class="required">Required</span></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
                     <td>Unique Transaction ID.</td>
                 </tr>
                 <tr>
                     <td><code>amount</code></td>
-                    <td>Number <span class="required">Required</span></td>
-                    <td>Amount in INR (Min equivalent of 500 USDT).</td>
+                    <td>Number <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="placeholder_inr_min_500usdt">Amount in INR (Min equivalent of 500 USDT).</td>
                 </tr>
                 <tr>
                     <td><code>walletAddress</code></td>
-                    <td>String <span class="required">Required</span></td>
-                    <td>TRC20 Wallet Address.</td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td data-i18n="label_wallet_address">TRC20 Wallet Address.</td>
                 </tr>
                 <tr>
                     <td><code>code</code></td>
-                    <td>String <span class="optional">Optional</span></td>
-                    <td>2FA Code (Required for Dashboard, Optional for API).</td>
+                    <td>String <span class="optional" data-i18n="optional">Optional</span></td>
+                    <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
         </section>
 
         <section id="balance-query">
-            <h2>Check Balance</h2>
-            <p>Get your current available balance.</p>
+            <h2 data-i18n="check_balance">Check Balance</h2>
+            <p data-i18n="check_balance_desc">Get your current available balance.</p>
             <p><span class="method post">POST</span> <span class="endpoint">/api/balance/query</span></p>
             <p><strong>Body:</strong> <code>{}</code> (Empty JSON Object)</p>
 
-            <h3>Response</h3>
+            <h3 data-i18n="success_response">Response</h3>
             <pre><code>{
     "code": 1,
     "msg": "Success",
@@ -562,10 +571,11 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
         </section>
 
         <section id="callbacks">
-            <h2>Webhooks (Callbacks)</h2>
-            <p>We send a POST request to your <code>callbackUrl</code> when a transaction reaches a final state.</p>
+            <h2 data-i18n="webhooks">Webhooks (Callbacks)</h2>
+            <p data-i18n="webhook_desc">We send a POST request to your <code>callbackUrl</code> when a transaction
+                reaches a final state.</p>
 
-            <h3>Notification Structure</h3>
+            <h3 data-i18n="webhook_struct">Notification Structure</h3>
             <pre><code>{
     "status": 1,                // 1 = Success, 0 = Failed
     "amount": 500,              // Final Amount
@@ -574,14 +584,22 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
     "sign": "a1b2c3d4..."       // MD5 Signature
 }</code></pre>
 
-            <h3>Verifying Callback Signature</h3>
-            <p>You <strong>must</strong> verify the signature to ensure the request is from us.</p>
-            <div class="badge badge-warning">Formula</div>
+            <h3 data-i18n="verify_webhook_sig">Verifying Callback Signature</h3>
+            <p data-i18n="verify_webhook_desc">You <strong>must</strong> verify the signature to ensure the request is
+                from us.</p>
+            <div class="badge badge-warning" data-i18n="formula">Formula</div>
             <p><code>sign == MD5( JSON_String_Body + Merchant_Secret_Key )</code></p>
             <p>Depending on your server framework, ensure you allow us to send the raw JSON body.</p>
         </section>
 
     </main>
+    <script src="/js/i18n.js"></script>
+    <script>
+        // Initialize Language
+        if (window.initLanguage) {
+            window.initLanguage();
+        }
+    </script>
 </body>
 
 </html>

@@ -25,7 +25,7 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
-                    <div class="nav-section-title">Main</div>
+                    <div class="nav-section-title" data-i18n="nav_main">Main</div>
                     <a class="nav-item active" data-section="dashboard">
                         <i class="fas fa-th-large"></i>
                         <span data-i18n="dashboard_tab">Dashboard</span>
@@ -49,7 +49,7 @@
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Integration</div>
+                    <div class="nav-section-title" data-i18n="nav_integration">Integration</div>
                     <a href="/apidocs" target="_blank" class="nav-item">
                         <i class="fas fa-book"></i>
                         <span data-i18n="api_docs">API Documentation</span>
@@ -66,7 +66,7 @@
 
                 <!-- Admin Section -->
                 <div class="nav-section admin-only hidden" id="adminNav">
-                    <div class="nav-section-title">Administration</div>
+                    <div class="nav-section-title" data-i18n="nav_admin">Administration</div>
                     <a class="nav-item" data-section="users">
                         <i class="fas fa-users"></i>
                         <span data-i18n="users_tab">Merchants</span>
@@ -103,29 +103,37 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
-            <header class="main-header">
-                <div class="d-flex align-center gap-2">
-                    <button class="btn btn-secondary btn-sm" id="mobileMenuBtn" style="display: none;">
+        <main>
+            <!-- Header -->
+            <div class="header d-flex justify-between align-center">
+                <div class="header-left d-flex align-center gap-3">
+                    <button id="sidebarToggle" class="sidebar-toggle">
                         <i class="fas fa-bars"></i>
                     </button>
-                    <h1 class="page-title" id="pageTitle">Dashboard</h1>
+                    <h2 id="sectionTitle" data-i18n="dashboard_tab">Dashboard</h2>
                 </div>
-                <div class="header-actions">
-                    <select id="langSwitcher" class="form-control form-control-sm"
-                        onchange="window.changeLanguage(this.value)" style="width: auto; margin-right: 10px;">
-                        <option value="en">English</option>
-                        <option value="zh">中文</option>
-                    </select>
-                    <div class="balance-pill" id="balanceDisplay">
-                        <i class="fas fa-wallet"></i>
-                        <span data-i18n="balance">₹0.00</span>
+                <div class="header-right d-flex align-center gap-4">
+                    <!-- Language Toggle -->
+                    <button id="langToggle" class="btn btn-secondary btn-sm" onclick="window.changeLanguage()">
+                        <span style="font-size:1.2rem; margin-right:5px;">🇺🇸</span> EN
+                    </button>
+
+                    <div class="user-greeting">
+                        <span data-i18n="welcome_user">Welcome, </span>
+                        <strong id="userName">Admin</strong>
                     </div>
                 </div>
-            </header>
+            </div>
 
-            <div class="content-area" id="contentArea">
-                <!-- Content loaded dynamically -->
+            <!-- Content Area -->
+            <div class="content">
+                <div id="mainContent">
+                    <!-- Sections will be loaded here -->
+                    <div class="loading-state">
+                        <div class="loader"></div>
+                        <p data-i18n="loading">Loading dashboard...</p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

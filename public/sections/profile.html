@@ -1,7 +1,7 @@
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card">
-            <h3 class="mb-3" data-i18n="profile_details">Profile Details</h3>
+            <h3 class="mb-3" data-i18n="profile_tab">Profile Details</h3>
 
             <div class="form-group">
                 <label data-i18n="label_name">Name</label>
@@ -32,40 +32,40 @@
 
     <div class="col-md-6 mb-4">
         <div class="card bg-darker">
-            <h3 class="mb-3" data-i18n="section_security">Security</h3>
+            <h3 class="mb-3" data-i18n="authentication">Security</h3>
 
             <!-- 2FA Section -->
             <div class="mb-4">
-                <h5 class="text-muted mb-2">Two-Factor Authentication</h5>
+                <h5 class="text-muted mb-2" data-i18n="label_2fa">Two-Factor Authentication</h5>
                 <div class="p-3" style="background: rgba(255,255,255,0.05); border-radius: 8px;">
                     <div class="d-flex align-center justify-between">
                         <div id="profile2faStatus">
                             <!-- Injected by JS -->
-                            <span class="badge badge-success">Enabled</span>
+                            <span class="badge badge-success" data-i18n="success">Enabled</span>
                         </div>
                         <button class="btn btn-danger btn-sm" id="btnDisable2faProfile" onclick="disable2fa()">
-                            <i class="fas fa-shield-alt"></i> <span data-i18n="btn_disable_2fa">Disable & Logout</span>
+                            <i class="fas fa-shield-alt"></i> <span data-i18n="btn_cancel">Disable & Logout</span>
                         </button>
                         <button class="btn btn-primary btn-sm hidden" id="btnEnable2faProfile"
                             onclick="showSetup2faModal()">
-                            <i class="fas fa-lock"></i> <span data-i18n="setup_2fa_title">Enable 2FA</span>
+                            <i class="fas fa-lock"></i> <span data-i18n="btn_submit">Enable 2FA</span>
                         </button>
                     </div>
                 </div>
             </div>
 
             <!-- Change Password -->
-            <h5 class="text-muted mb-2" data-i18n="change_password">Change Password</h5>
+            <h5 class="text-muted mb-2" data-i18n="btn_reset_password">Change Password</h5>
             <form onsubmit="changePassword(event)">
                 <div class="form-group">
-                    <label data-i18n="current_password">Current Password</label>
+                    <label data-i18n="label_password">Current Password</label>
                     <input type="password" id="currentPassword" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label data-i18n="new_password">New Password</label>
+                    <label data-i18n="label_new_password">New Password</label>
                     <input type="password" id="newPassword" class="form-control" required>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_update_pass">Update
+                <button type="submit" class="btn btn-primary btn-block" data-i18n="btn_save_changes">Update
                     Password</button>
             </form>
         </div>

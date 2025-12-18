@@ -1,9 +1,9 @@
 <div class="card">
     <div class="card-header d-flex justify-between align-center">
-        <h3>Payouts</h3>
+        <h3 data-i18n="payouts_tab">Payouts</h3>
         <div class="search-box">
             <i class="fas fa-search"></i>
-            <input type="text" id="payoutSearch" placeholder="Search Order ID, Account..."
+            <input type="text" id="payoutSearch" placeholder="Search Order ID, Account..." data-i18n="search"
                 onkeyup="debounce(loadPayoutsData, 500)()">
         </div>
     </div>
@@ -17,49 +17,51 @@
         </div>
         <div class="form-group">
             <select id="payoutStatus" class="form-control form-control-sm">
-                <option value="">All Status</option>
-                <option value="success">Success</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="failed">Failed</option>
+                <option value="" data-i18n="all">All Status</option>
+                <option value="success" data-i18n="success">Success</option>
+                <option value="pending" data-i18n="pending">Pending</option>
+                <option value="processing" data-i18n="processing">Processing</option>
+                <option value="failed" data-i18n="failed">Failed</option>
             </select>
         </div>
         <div class="form-group">
             <select id="payoutType" class="form-control form-control-sm">
-                <option value="">All Types</option>
-                <option value="bank">Bank</option>
-                <option value="usdt">USDT</option>
+                <option value="" data-i18n="all">All Types</option>
+                <option value="bank" data-i18n="bank_transfer">Bank</option>
+                <option value="usdt" data-i18n="usdt_transfer">USDT</option>
             </select>
         </div>
         <button class="btn btn-primary btn-sm" onclick="loadPayoutsData(1)">
-            <i class="fas fa-filter"></i> Filter
+            <i class="fas fa-filter"></i> <span data-i18n="filter">Filter</span>
         </button>
         <button class="btn btn-success btn-sm" onclick="exportData('payouts')">
-            <i class="fas fa-file-export"></i> 导出
+            <i class="fas fa-file-export"></i> <span data-i18n="export">导出</span>
         </button>
         <button class="btn btn-secondary btn-sm" onclick="resetFilters('payouts')">
-            <i class="fas fa-undo"></i> Reset
+            <i class="fas fa-undo"></i> <span data-i18n="reset">Reset</span>
         </button>
     </div>
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Order ID</th>
-                    <th>Amount</th>
-                    <th>Fee</th>
-                    <th>Account</th>
-                    <th>Status</th>
-                    <th>UTR</th>
-                    <th>Date</th>
+                    <th data-i18n="label_order_id">Order ID</th>
+                    <th data-i18n="amount">Amount</th>
+                    <th data-i18n="rates">Fee</th>
+                    <th data-i18n="label_account_number">Account</th>
+                    <th data-i18n="status">Status</th>
+                    <th data-i18n="placeholder_utr_12">UTR</th>
+                    <th data-i18n="date">Date</th>
                 </tr>
             </thead>
             <tbody id="payoutsList">
                 <tr>
-                    <td colspan="7" class="text-muted" style="text-align:center;">Loading...</td>
+                    <td colspan="7" class="text-muted" style="text-align:center;" data-i18n="loading">Loading...</td>
                 </tr>
             </tbody>
         </table>
     </div>
     <div id="payoutsPagination" class="p-3"></div>
+</div>
+<div id="payoutsPagination" class="p-3"></div>
 </div>

@@ -11,12 +11,19 @@ const translations = {
         dashboard_tab: "Dashboard",
         transactions_tab: "Transactions",
         payouts_tab: "Payouts",
+        settlement_tab: "Settlement",
         create_payment_link: "Payment Links",
         api_docs_tab: "API Docs",
+        api_docs: "API Documentation",
         credentials_tab: "Credentials",
+        profile_tab: "Profile",
         users_tab: "Merchants",
         approvals_tab: "Pending Approvals",
         all_transactions_tab: "All Transactions",
+        broadcast_title: "Bot Broadcast",
+        nav_main: "Main",
+        nav_integration: "Integration",
+        nav_admin: "Administration",
 
         // Dashboard Stats
         stat_balance: "Current Balance",
@@ -25,6 +32,14 @@ const translations = {
         stat_pending: "Pending Payouts",
         recent_transactions: "Recent Transactions",
         view_all: "View All",
+        chart_overview: "Transaction Overview",
+        performance_stats: "Performance",
+        stat_success_rate: "Success Rate",
+        stat_conversion: "Conversion (Payin/Order)",
+        today_volume: "Today Volume",
+        yesterday_volume: "Yesterday",
+        chart_last_7d: "Last 7 Days",
+        chart_last_30d: "Last 30 Days",
 
         // Tables
         order_id: "Order ID",
@@ -44,108 +59,185 @@ const translations = {
         merchant: "Merchant",
         wallet_address: "Wallet Address",
         network: "Network",
+        username: "Username",
+        name: "Name",
+        merchant_id: "Merchant ID",
+        "2fa_status": "2FA",
+        rates: "Rates",
+        created: "Created",
+        email: "Email",
 
-        // Status & Types (Dynamic)
+        // Status & Types
         status_success: "Success",
         status_pending: "Pending",
         status_failed: "Failed",
         status_processing: "Processing",
         status_rejected: "Rejected",
         status_approved: "Approved",
+        status_banned: "Banned",
+        status_active: "Active",
+        status_suspended: "Suspended",
         type_payin: "Pay-In",
         type_payout: "Payout",
         type_bank: "Bank",
         type_usdt: "USDT",
 
-        // Payouts Page
-        bank_payout_title: "Bank Payout",
-        bank_payout_desc: "Automatic processing via IMPS/NEFT",
-        usdt_payout_title: "USDT Payout",
-        usdt_payout_desc: "Manual approval required",
-        payout_history: "Payout History",
-
-        // Modals
-        available_balance: "Available Balance",
-        payout_fee_info: "Fee: 3% + ₹6 | Minimum: ₹100",
-        payout_usdt_info: "Fee: 3% + ₹6 | Minimum: 500 USDT (₹50,000) | Rate: 1 USDT = ₹100 | Requires admin approval",
-        label_amount: "Amount (₹)",
-        label_account: "Account Number",
+        // Settlement Page
+        settlement_title: "Settlement Request",
+        tab_bank: "Bank Transfer",
+        tab_usdt: "USDT (TRC20/ERC20)",
+        label_account_number: "Account Number",
+        placeholder_account: "Enter account number",
         label_ifsc: "IFSC Code",
-        label_name: "Account Holder Name",
-        label_wallet: "Wallet Address",
+        placeholder_ifsc: "ABCD0123456",
+        label_holder_name: "Account Holder Name",
+        placeholder_holder: "Name on bank account",
+        label_amount_inr: "Amount (₹)",
+        placeholder_min_100: "Min ₹100",
+        label_order_id_opt: "Order ID (Optional)",
+        placeholder_order_id: "Unique Order ID",
+        hint_auto_gen: "Leave blank to auto-generate",
+        label_2fa_code: "2FA Code",
+        placeholder_totp: "Enter 6-digit TOTP",
+        btn_submit_bank: "Submit Bank Withdrawal",
+        hint_min_usdt: "Minimum withdrawal: 500 USDT",
+        label_wallet_address: "Wallet Address",
+        placeholder_wallet: "T...",
         label_network: "Network",
-        label_usdt_amount: "Amount (₹) - Will be converted to USDT at ₹100/USDT",
-        btn_cancel: "Cancel",
-        btn_submit: "Submit Payout",
+        label_amount_inr_val: "Amount (INR Value)",
+        placeholder_inr_val: "Equivalent INR Amount",
+        hint_usdt_rate: "Rate: ~100 INR/USDT",
+        btn_submit_usdt: "Submit USDT Withdrawal",
 
-        // Validation / Toasts
-        toast_fill_fields: "Please fill all fields",
-        toast_success_bank: "Bank payout submitted successfully!",
-        toast_success_usdt: "USDT payout submitted for approval!",
-        toast_error: "Error creating payout",
-        toast_copied: "Copied to clipboard!",
-        toast_approved: "Payout approved!",
-        toast_rejected: "Payout rejected and balance refunded",
-
-        // Payment Links
-        generate_link: "Generate Link",
-        copy_btn: "Copy",
-        open_btn: "Open",
-        link_generated: "Payment Link Generated Successfully!",
-        link_instruct_title: "How Payment Links Work",
-        link_instruct_1: "Generate a payment link with the desired amount",
-        link_instruct_2: "Share the link with your customer or open it to test",
-        link_instruct_3: "Customer completes payment on the gateway",
-        link_instruct_4: "Your callback URL receives the payment confirmation",
-        link_instruct_5: "Balance is credited to your account (minus 5% fee)",
+        // Payouts & Transactions Specific
+        search_payout: "Search Order ID, Account...",
+        search_tx: "Search Order ID, UTR...",
+        placeholder_search_merchants: "Search ID, Name...",
+        filter_all_status: "All Status",
+        filter_all_types: "All Types",
+        btn_filter: "Filter",
+        btn_export: "Export",
+        btn_reset: "Reset",
+        search: "Search...",
 
         // Credentials
         api_credentials: "API Credentials",
-        merchant_key: "Merchant Key",
-
-        // Login Page
-        login_title: "Payment Gateway Portal",
-        login_header: "Sign In",
-        label_username: "Username",
-        label_password: "Password",
-        placeholder_username: "Enter your username",
-        placeholder_password: "Enter your password",
-        btn_signin: "Sign In",
-        btn_signing_in: "Signing in...",
-        contact_admin: "Contact administrator for account access",
-        error_invalid: "Invalid credentials",
-        error_connection: "Connection error. Please try again.",
-
-        // Admin
-        admin_pending_title: "Pending USDT Payouts",
-        admin_all_tx: "All Transactions",
-        prompt_utr: "Enter transaction ID/UTR (optional):",
-        prompt_reason: "Enter rejection reason:",
-        no_pending: "No pending approvals",
-
-        // Toasts & Errors (New)
-        error_load_tx: "Failed to load transactions",
-        error_load_payouts: "Failed to load payouts",
-        error_min_amount: "Amount must be at least ₹100",
-        error_gen_link: "Error generating payment link",
-        toast_callback_updated: "Callback URL updated!",
-        error_callback_update: "Error updating callback URL",
-        toast_key_regen: "Merchant key regenerated!",
-        error_key_regen: "Error regenerating key",
-        error_load_users: "Failed to load users",
-        toast_merchant_created: "Merchant created successfully!",
-        error_create_merchant: "Error creating merchant",
-        error_valid_amount: "Please enter a valid amount",
-        error_adjust_balance: "Error adjusting balance",
-
-        // Missing Descriptions
-        credentials_desc: "Use these credentials to authenticate your API requests.",
-        link_create_desc: "Create a payment link to test the pay-in flow. The link will redirect to the payment gateway for processing.",
+        credentials_desc: "Use these credentials to integrate VSPAY with your website.",
         label_user_id: "User ID",
+        merchant_key: "Merchant Key",
         label_callback_url: "Callback URL",
+        placeholder_callback: "https://your-domain.com/callback",
         btn_save: "Save",
-        btn_regen_key: "Regenerate Merchant Key",
-        warn_regen_key: "Warning: This will invalidate your current key",
+        btn_regen_key: "Regenerate Key",
+        warn_regen_key: "Warning: Regenerating your key will stop all current integrations from working.",
+        btn_disable_2fa: "Disable 2FA & Logout",
+        warn_disable_2fa: "Disabling 2FA will lower your account security. You will be logged out.",
+        role_admin: "Administrator",
+        role_merchant: "Merchant",
+        btn_cancel: "Cancel",
+        btn_submit: "Submit",
+        btn_update: "Update",
+        btn_save_changes: "Save Changes",
+        btn_reset_password: "Reset Password",
+        btn_reset_2fa: "Reset 2FA",
+        setup_2fa_title: "Enable 2FA Security",
+        all: "All",
+
+        // Payment Links
+        generate_link: "Generate Payment Link",
+        link_create_desc: "Create a payment link to accept one-time payments from customers.",
+        label_amount_only: "Amount",
+        label_order_id_optional: "Order ID (optional)",
+        label_callback_optional: "Callback URL (optional)",
+        link_generated: "Payment Link Generated Successfully!",
+        pending_approvals: "Pending Approvals",
+        link_instruct_title: "Instructions",
+        link_instruct_1: "Enter the amount you want to collect.",
+        link_instruct_2: "Click \"Generate Link\" to create a unique payment URL.",
+        link_instruct_3: "Copy and share the link with your customer.",
+        link_instruct_4: "Once paid, you will receive a notification via callback if configured.",
+        link_instruct_5: "The link is valid for 30 minutes.",
+        copy_btn: "Copy",
+        open_btn: "Open",
+
+        // Profile
+        profile_details: "Profile Details",
+        section_security: "Security",
+        change_password: "Change Password",
+        current_password: "Current Password",
+        new_password: "New Password",
+        btn_update_pass: "Update Password",
+        toast_pass_updated: "Password updated successfully",
+        error_pass_update: "Error updating password",
+
+        // Toasts
+        "toast_enter_code": "Please enter the code",
+        "toast_2fa_enabled": "2FA Enabled Successfully!",
+        "toast_invalid_code": "Invalid code",
+        "toast_verify_failed": "Verification failed",
+        "toast_load_credentials_failed": "Failed to load credentials",
+        "toast_id_copied": "ID copied",
+        "toast_load_users_failed": "Failed to load users",
+        "toast_load_detail_failed": "Failed to load details",
+        "toast_key_copied": "Key copied",
+        "toast_overview_updated": "Overview updated",
+        "toast_update_failed": "Update failed",
+        "toast_2fa_reset_success": "2FA Reset Successfully",
+        "toast_reset_failed": "Reset failed",
+        "toast_enter_new_pass": "Enter a new password",
+        "toast_pass_reset_success": "Password reset successfully",
+        "toast_error_reset_pass": "Error resetting password",
+        "toast_merchant_update_success": "Merchant updated successfully",
+        "toast_error_update_merchant": "Error updating merchant",
+        "toast_user_not_found": "User not found",
+        "toast_payout_create_failed": "Failed to create payout",
+        "toast_gen_link_failed": "Failed to generate link",
+        "toast_broadcast_success": "Broadcast sent successfully",
+        "toast_broadcast_failed": "Failed to send broadcast",
+        "toast_approvals_load_failed": "Failed to load approvals",
+        "toast_payout_approved": "Payout approved successfully",
+        "toast_payout_rejected": "Payout rejected successfully",
+        "toast_action_failed": "Action failed",
+        toast_all_marked_read: "All notified",
+        sending: "Sending...",
+        exporting: "Generating export...",
+        export_failed: "Export failed",
+        page_of: "Page ${page} of ${pages}",
+
+        // Admin Merchant Management
+        manage_merchants: "Manage Merchants",
+        btn_create_merchant: "Create Merchant",
+        btn_add_merchant: "Add Merchant",
+        active: "Active",
+        suspended: "Suspended",
+        banned: "Banned",
+
+        // Admin Detail
+        back_to_list: "Back to List",
+        merchant_details: "Merchant Details",
+        overview: "Overview",
+        label_name_only: "Name",
+        save_overview: "Save Overview",
+        financials: "Financials",
+        adjust_balance: "Adjust Balance",
+        label_payin_rate_pct: "Pay-in Rate (%)",
+        label_payout_rate_plus: "Payout Rate (%) + 6 INR",
+        update_rates: "Update Rates",
+        integration: "Integration",
+        update_callback: "Update Callback",
+        status_2fa: "2FA Status",
+        reset_2fa: "Reset 2FA",
+        reset_password_label: "Reset Password",
+        set_new_pass_btn: "Set New Password",
+
+        // Broadcast
+        broadcast_desc: "Send a message to all merchants who have linked their Telegram account.",
+        label_message: "Message",
+        placeholder_message: "Enter your message here...",
+        btn_send_broadcast: "Send Broadcast",
+        recent_broadcast: "Broadcast Result",
+        sent_success: "Sent Successfully",
+        sent_failed: "Failed",
 
         // Welcome Popup
         welcome_title: "Congratulations!",
@@ -162,82 +254,114 @@ const translations = {
         btn_copy_message: "Copy Shareable Message",
         btn_awesome: "Awesome, Let's Go!",
 
-        // Share Message Template
+        // Share Template
         msg_welcome: "🎉 Welcome to VSPAY!",
-        msg_account_details: "Here are your account details:",
-        msg_system_rules: "⚡ System Rules:",
-        msg_api_details: "🔗 API Integration:",
         msg_account_details: "Here are your account details:",
         msg_system_rules: "⚡ System Rules:",
         msg_api_details: "🔗 API Integration:",
         msg_docs: "Docs",
 
-        // Broadcast
-        broadcast_title: "Bot Broadcast",
-        broadcast_desc: "Send a message to all merchants who have linked their Telegram account.",
-        label_message: "Message",
-        btn_send_broadcast: "Send Broadcast",
-        profile_tab: "Profile",
-        profile_details: "Profile Details",
-        section_security: "Security",
-        change_password: "Change Password",
-        current_password: "Current Password",
-        new_password: "New Password",
-        btn_update_pass: "Update Password",
-        toast_pass_updated: "Password updated successfully",
-        error_pass_update: "Error updating password",
+        // Login
+        login_title: "Payment Gateway Portal",
+        login_header: "Sign In",
+        label_username: "Username",
+        label_password: "Password",
+        placeholder_username: "Enter your username",
+        placeholder_password: "Enter your password",
+        btn_signin: "Sign In",
+        btn_signing_in: "Signing in...",
+        contact_admin: "Contact administrator for account access",
+        error_invalid: "Invalid credentials",
+        error_connection: "Connection error",
+        label_2fa: "2FA Code",
+        placeholder_2fa: "Enter 6-digit code or 111111",
 
+        // Toasts
+        toast_fill_fields: "Please fill all fields",
+        toast_success_bank: "Bank payout submitted successfully!",
+        toast_success_usdt: "USDT payout submitted for approval!",
+        toast_error: "Error creating payout",
+        toast_copied: "Copied to clipboard!",
+        toast_approved: "Payout approved!",
+        toast_rejected: "Payout rejected and balance refunded",
+        toast_callback_updated: "Callback URL updated!",
+        toast_merchant_created: "Merchant created successfully!",
         toast_broadcast_sent: "Broadcast sent successfully!",
-        recent_broadcast: "Broadcast Result",
-        sent_success: "Sent Successfully",
-        sent_failed: "Failed",
-        btn_disable_2fa: "Disable 2FA & Logout",
-        warn_disable_2fa: "Disabling 2FA will lower your account security. You will be logged out.",
-        reset_2fa: "Reset 2FA",
         toast_2fa_disabled: "2FA Disabled",
         toast_2fa_reset: "2FA Reset Successfully",
 
-        // 2FA Setup
-        setup_2fa_title: "Enable 2FA Security",
-        setup_2fa_subtitle: "Secure Your Account",
-        setup_2fa_desc: "Two-Factor Authentication is required for security.",
-        setup_2fa_label: "Enter 6-digit Code from Authenticator App",
-        setup_2fa_step1: "1. Install Google Authenticator.",
-        setup_2fa_step2: "2. Scan the QR Code.",
-        setup_2fa_step3: "3. Enter the generated code.",
-        btn_enable_2fa: "Box Secure & Enable 2FA",
-        btn_cancel_logout: "Cancel & Logout",
+        // Errors
+        error_load_tx: "Failed to load transactions",
+        error_load_payouts: "Failed to load payouts",
+        error_min_amount: "Amount must be at least ₹100",
+        error_gen_link: "Error generating payment link",
+        error_callback_update: "Error updating callback URL",
+        error_key_regen: "Error regenerating key",
+        error_load_users: "Failed to load users",
+        error_create_merchant: "Error creating merchant",
+        error_valid_amount: "Please enter a valid amount",
+        error_adjust_balance: "Error adjusting balance",
+        "error_no_payouts": "No payouts found matching your criteria",
+        "error_no_transactions": "No transactions found matching your criteria",
 
-        // Admin Detail Keys
-        back_to_list: "Back to List",
-        merchant_details: "Merchant Details",
-        overview: "Overview",
-        label_name_only: "Name",
-        active: "Active",
-        suspended: "Suspended",
-        save_overview: "Save Overview",
-        financials: "Financials",
-        adjust_balance: "Adjust Balance",
-        label_payout_rate_plus: "Payout Rate (%) + 6 INR",
-        update_rates: "Update Rates",
-        integration: "Integration",
-        update_callback: "Update Callback",
-        status_2fa: "2FA Status",
-        reset_password_label: "Reset Password",
-        set_new_pass_btn: "Set New Password",
+        // API Docs
+        api_ref_title: "API Reference",
+        getting_started: "Getting Started",
+        introduction: "Introduction",
+        authentication: "Authentication",
+        pay_in_deposits: "Pay-In (Deposits)",
+        create_order: "Create Order",
+        query_status: "Query Status",
+        submit_utr: "Submit UTR",
+        pay_out_withdrawals: "Pay-Out (Withdrawals)",
+        bank_transfer: "Bank Transfer",
+        usdt_transfer: "USDT Transfer",
+        utilities: "Utilities",
+        check_balance: "Check Balance",
+        webhooks: "Webhooks",
+        intro_desc: "Welcome to the VSPAY Payment Gateway API. This documentation provides a comprehensive guide to integrating our secure payment solutions.",
+        version: "Version",
+        base_url: "Base URL",
+        req_https: "All requests must be made over HTTPS with Content-Type: application/json.",
+        auth_desc: "We strictly use Header-Based Authentication using HMAC-MD5 signatures. Every request must be authenticated.",
+        req_headers: "Required Headers",
+        header_name: "Header",
+        example_val: "Example Value",
+        description: "Description",
+        merchant_uuid_desc: "Your unique Merchant UUID.",
+        sig_desc: "The MD5 hash of your request body.",
+        gen_sig: "Generating the Signature",
+        formula: "Formula",
+        node_ex: "Node.js Example",
+        create_payin_desc: "Generate a payment link to collect funds from a user.",
+        parameter: "Parameter",
+        param_type: "Type",
+        required: "Required",
+        optional: "Optional",
+        ex_request: "Example Request",
+        success_response: "Success Response",
+        query_payin_desc: "Check the real-time status of a deposit.",
+        submit_utr_desc: "If a user has paid but the order is pending, submit the UTR for verification.",
+        bank_payout_desc: "Transfer funds to a bank account via IMPS/NEFT.",
+        usdt_payout_desc: "Transfer funds to a crypto wallet (TRC20).",
+        check_balance_desc: "Get your current available balance.",
+        webhook_desc: "We send a POST request to your callbackUrl when a transaction reaches a final state.",
+        webhook_struct: "Notification Structure",
+        verify_webhook_sig: "Verifying Callback Signature",
+        verify_webhook_desc: "You must verify the signature to ensure the request is from us.",
 
-        // Dashboard & Links
-        chart_overview: "Transaction Overview",
-        performance_stats: "Performance",
-        today_volume: "Today Volume",
-        yesterday_volume: "Yesterday",
-        chart_last_7d: "Last 7 Days",
-        chart_last_30d: "Last 30 Days",
-        stat_success_rate: "Success Rate",
-        stat_conversion: "Conversion (Payin/Order)",
-        label_amount_only: "Amount",
-        label_order_id_optional: "Order ID (optional)",
-        label_callback_optional: "Callback URL (optional)"
+        // New keys
+        placeholder_order_id_auto: "Auto-generate",
+        label_order_id: "Order ID",
+        label_utr: "UTR / Reference Number",
+        placeholder_utr_12: "The 12-digit UTR/Reference Number",
+        label_account: "Account",
+        label_ifsc_code: "IFSC",
+        label_person_name: "Account Holder Name",
+        label_2fa_opt: "2FA Code (Required for Dashboard, Optional for API)",
+        label_network_type: "Network",
+        label_inr_amount: "Amount in INR",
+        placeholder_inr_min_500usdt: "Amount in INR (Min equivalent of 500 USDT)"
     },
     zh: {
         // App Shell
@@ -251,12 +375,19 @@ const translations = {
         dashboard_tab: "仪表盘",
         transactions_tab: "交易记录",
         payouts_tab: "代付管理",
+        settlement_tab: "结算申请",
         create_payment_link: "支付链接",
         api_docs_tab: "API 文档",
+        api_docs: "API 文档",
         credentials_tab: "API 凭证",
+        profile_tab: "个人中心",
         users_tab: "商户管理",
-        approvals_tab: "待审批",
+        approvals_tab: "待审批项",
         all_transactions_tab: "所有交易",
+        broadcast_title: "机器人广播",
+        nav_main: "主菜单",
+        nav_integration: "集成",
+        nav_admin: "管理员菜单",
 
         // Dashboard Stats
         stat_balance: "当前余额",
@@ -265,6 +396,14 @@ const translations = {
         stat_pending: "待处理代付",
         recent_transactions: "最近交易",
         view_all: "查看全部",
+        chart_overview: "交易概览",
+        performance_stats: "性能统计",
+        stat_success_rate: "成功率",
+        stat_conversion: "转化率 (充值/订单)",
+        today_volume: "今日成交额",
+        yesterday_volume: "昨日成交额",
+        chart_last_7d: "最近 7 天",
+        chart_last_30d: "最近 30 天",
 
         // Tables
         order_id: "订单号",
@@ -274,7 +413,7 @@ const translations = {
         net_amount: "到账金额",
         status: "状态",
         date: "日期",
-        utr: "UTR / 流水号",
+        utr: "流水号/UTR",
         details: "详情",
         actions: "操作",
         loading: "加载中...",
@@ -284,6 +423,13 @@ const translations = {
         merchant: "商户",
         wallet_address: "钱包地址",
         network: "网络",
+        username: "用户名",
+        name: "姓名",
+        merchant_id: "商户 ID",
+        "2fa_status": "2FA 状态",
+        rates: "费率",
+        created: "创建时间",
+        email: "邮箱",
 
         // Status & Types
         status_success: "成功",
@@ -292,209 +438,272 @@ const translations = {
         status_processing: "进行中",
         status_rejected: "已拒绝",
         status_approved: "已批准",
+        status_banned: "已封禁",
+        status_active: "正常",
+        status_suspended: "已暂停",
         type_payin: "充值",
         type_payout: "代付",
-        type_bank: "银行转账",
+        type_bank: "银行卡",
         type_usdt: "USDT",
 
-        // Payouts Page
-        bank_payout_title: "银行卡代付",
-        bank_payout_desc: "通过 IMPS/NEFT 自动处理",
-        usdt_payout_title: "USDT 代付",
-        usdt_payout_desc: "需人工审核",
-        payout_history: "代付历史",
-
-        // Modals
-        available_balance: "可用余额",
-        payout_fee_info: "手续费: 3% + ₹6 | 最低: ₹100",
-        payout_usdt_info: "手续费: 3% + ₹6 | 最低 500 USDT (₹50,000) | 汇率: 1 USDT = ₹100 | 需管理员审核",
-        label_amount: "金额 (₹)",
-        label_account: "银行账号",
+        // Settlement Page
+        settlement_title: "结算申请",
+        tab_bank: "银行卡转账",
+        tab_usdt: "USDT (TRC20/ERC20)",
+        label_account_number: "银行账号",
+        placeholder_account: "请输入银行账号",
         label_ifsc: "IFSC 代码",
-        label_name: "开户名",
-        label_wallet: "钱包地址",
+        placeholder_ifsc: "例如 ABCD0123456",
+        label_holder_name: "收款人姓名",
+        placeholder_holder: "银行卡开户姓名",
+        label_amount_inr: "金额 (₹)",
+        placeholder_min_100: "最低 ₹100",
+        label_order_id_opt: "订单号 (可选)",
+        placeholder_order_id: "唯一订单 ID",
+        hint_auto_gen: "留空将自动生成",
+        label_2fa_code: "2FA 验证码",
+        placeholder_totp: "输入 6 位 Google 验证码",
+        btn_submit_bank: "提交银行代付",
+        hint_min_usdt: "最低提现额: 500 USDT",
+        label_wallet_address: "钱包地址",
+        placeholder_wallet: "T 开头的地址...",
         label_network: "网络",
-        label_usdt_amount: "金额 (₹) - 按 ₹100/USDT 转换为 USDT",
-        btn_cancel: "取消",
-        btn_submit: "提交代付",
+        label_amount_inr_val: "金额 (人民币估值)",
+        placeholder_inr_val: "等值 INR 金额",
+        hint_usdt_rate: "参考汇率: ~100 INR/USDT",
+        btn_submit_usdt: "提交 USDT 代付",
 
-        // Validation / Toasts
-        toast_fill_fields: "请填写所有字段",
-        toast_success_bank: "银行卡代付提交成功！",
-        toast_success_usdt: "USDT 代付已提交审核！",
-        toast_error: "创建代付时出错",
-        toast_copied: "已复制到剪贴板！",
-        toast_approved: "代付已批准！",
-        toast_rejected: "代付已拒绝，余额已退回",
-
-        // Payment Links
-        generate_link: "生成链接",
-        copy_btn: "复制",
-        open_btn: "打开",
-        link_generated: "支付链接生成成功！",
-        link_instruct_title: "支付链接如何工作",
-        link_instruct_1: "生成所需金额的支付链接",
-        link_instruct_2: "将链接分享给客户或打开测试",
-        link_instruct_3: "客户在网关完成支付",
-        link_instruct_4: "您的回调 URL 收到支付确认",
-        link_instruct_5: "余额计入您的账户 (扣除 5% 手续费)",
+        // Payouts & Transactions Specific
+        search_payout: "搜索订单号、账号...",
+        search_tx: "搜索订单号、流水号...",
+        placeholder_search_merchants: "搜索 ID、姓名...",
+        filter_all_status: "所有状态",
+        filter_all_types: "所有类型",
+        btn_filter: "过滤",
+        btn_export: "导出",
+        btn_reset: "重置",
+        search: "搜索...",
 
         // Credentials
         api_credentials: "API 凭证",
+        credentials_desc: "使用这些凭证将 VSPAY 集成到您的网站中。",
+        label_user_id: "用户 ID",
         merchant_key: "商户密钥",
+        label_callback_url: "回调地址",
+        placeholder_callback: "https://your-domain.com/callback",
+        btn_save: "保存设置",
+        btn_regen_key: "重置密钥",
+        warn_regen_key: "警告：重置密钥将导致现有 API 集成失效。",
+        btn_disable_2fa: "禁用 2FA 并退出",
+        warn_disable_2fa: "禁用 2FA 会降低账户安全性，操作完成后您将被强制退出。",
+        role_admin: "管理人员",
+        role_merchant: "入驻商户",
+        btn_cancel: "取消",
+        btn_submit: "提交",
+        btn_update: "更新",
+        btn_save_changes: "保存修改",
+        btn_reset_password: "重置密码",
+        btn_reset_2fa: "重置 2FA",
+        setup_2fa_title: "启用 2FA 安全验证",
+        all: "全部",
 
-        // Login Page
-        login_title: "支付网关管理系统",
-        login_header: "登录",
+        // Payment Links
+        generate_link: "生成支付链接",
+        link_create_desc: "创建一次性支付链接，方便客户直接支付。",
+        label_amount_only: "金额",
+        label_order_id_optional: "订单号 (可选)",
+        label_callback_optional: "回调地址 (可选)",
+        link_generated: "支付链接生成成功！",
+        pending_approvals: "待处理审批",
+        link_instruct_title: "操作指南",
+        link_instruct_1: "输入您想要收取的金额。",
+        link_instruct_2: "点击“生成链接”创建唯一的支付 URL。",
+        link_instruct_3: "复制该链接并发送给您的客户。",
+        link_instruct_4: "客户支付成功后，您将收到异步回调通知。",
+        link_instruct_5: "支付链接有效期为 30 分钟。",
+        copy_btn: "复制",
+        open_btn: "打开",
+
+        // Profile
+        profile_details: "个人中心",
+        section_security: "账户安全",
+        change_password: "修改密码",
+        current_password: "当前密码",
+        new_password: "新密码",
+        btn_update_pass: "立即更新",
+        toast_pass_updated: "密码更新成功",
+        error_pass_update: "更新密码失败",
+
+        // Admin Merchant Management
+        manage_merchants: "商户管理",
+        btn_create_merchant: "创建新商户",
+        btn_add_merchant: "添加商户",
+        active: "正常",
+        suspended: "暂停",
+        banned: "封禁",
+
+        // Admin Detail
+        back_to_list: "返回列表",
+        merchant_details: "商户详情",
+        overview: "基本信息",
+        label_name_only: "名称",
+        save_overview: "保存修改",
+        financials: "财务信息",
+        adjust_balance: "手动调账",
+        label_payin_rate_pct: "充值费率 (%)",
+        label_payout_rate_plus: "代付费率 (%) + 6 INR",
+        update_rates: "更新费率",
+        integration: "接口集成",
+        update_callback: "更新回调",
+        status_2fa: "2FA 状态",
+        reset_2fa: "重置 2FA",
+        reset_password_label: "重置密码",
+        set_new_pass_btn: "设置新密码",
+
+        // Broadcast
+        broadcast_desc: "向所有绑定了 Telegram 的商户发送系统广播。",
+        label_message: "消息内容",
+        placeholder_message: "在这里输入您的广播消息...",
+        btn_send_broadcast: "立即发送",
+        recent_broadcast: "最后发送结果",
+        sent_success: "成功人数",
+        sent_failed: "失败人数",
+
+        // Welcome Popup
+        welcome_title: "恭喜！",
+        welcome_subtitle: "商户账户已成功创建。",
+        label_merchant_id: "商户 ID",
+        label_merchant_key: "商户密钥 (加密)",
+        section_rules: "系统规则",
+        label_payin_rate: "充值费率",
+        label_payout_rate: "代付费率",
+        label_settlement: "结算周期",
+        val_settlement: "即时结算 (D+0)",
+        section_api: "API 集成信息",
+        label_base_url: "接口基础 URL",
+        btn_copy_message: "复制分享文案",
+        btn_awesome: "太棒了，开始使用！",
+
+        // Share Template
+        msg_welcome: "🎉 欢迎使用 VSPAY!",
+        msg_account_details: "以下是您的账户信息:",
+        msg_system_rules: "⚡ 系统费率:",
+        msg_api_details: "🔗 开发接口:",
+        msg_docs: "文档",
+
+        // Login
+        login_title: "支付网关管理后台",
+        login_header: "账户登录",
         label_username: "用户名",
         label_password: "密码",
         placeholder_username: "请输入用户名",
         placeholder_password: "请输入密码",
         btn_signin: "登录",
         btn_signing_in: "登录中...",
-        contact_admin: "联系管理员获取账户",
-        error_invalid: "凭证无效",
-        error_connection: "连接错误，请重试。",
+        contact_admin: "如需账号请联系系统管理员",
+        error_invalid: "用户名或密码错误",
+        error_connection: "连接服务器失败",
+        label_2fa: "2FA 验证码",
+        placeholder_2fa: "输入 6 位动态验证码或 111111",
 
-        // Admin
-        admin_pending_title: "待审核 USDT 代付",
-        admin_all_tx: "所有交易记录",
-        prompt_utr: "请输入交易 ID/UTR (可选):",
-        prompt_reason: "请输入拒绝原因:",
-        no_pending: "暂无待审核项",
-
-        // Toasts & Errors (New)
-        error_load_tx: "加载交易记录失败",
-        error_load_payouts: "加载代付记录失败",
-        error_min_amount: "金额必须至少 ₹100",
-        error_gen_link: "生成支付链接失败",
-        toast_callback_updated: "回调 URL 更新成功！",
-        error_callback_update: "更新回调 URL 失败",
-        toast_key_regen: "商户密钥已重新生成！",
-        error_key_regen: "重新生成密钥失败",
-        error_load_users: "加载商户列表失败",
-        toast_merchant_created: "商户创建成功！",
-        error_create_merchant: "创建商户失败",
-        error_valid_amount: "请输入有效金额",
-        error_adjust_balance: "调整余额失败",
-
-        // Missing Descriptions
-        credentials_desc: "使用这些凭证来验证您的 API 请求。",
-        link_create_desc: "创建支付链接以测试充值流程。链接将重定向到支付网关进行处理。",
-        label_user_id: "用户 ID",
-        label_callback_url: "回调地址",
-        btn_save: "保存",
-        btn_regen_key: "重新生成商户密钥",
-        warn_regen_key: "警告: 这将使您当前的密钥失效",
-
-        // Welcome Popup
-        welcome_title: "恭喜！",
-        welcome_subtitle: "商户账户已成功创建。",
-        label_merchant_id: "商户 ID",
-        label_merchant_key: "商户密钥 (保密)",
-        section_rules: "系统规则",
-        label_payin_rate: "充值费率",
-        label_payout_rate: "代付费率",
-        label_settlement: "结算周期",
-        val_settlement: "即时 (D+0)",
-        section_api: "API 集成",
-        label_base_url: "基础 URL",
-        btn_copy_message: "复制分享信息",
-        btn_awesome: "太棒了，开始吧！",
-
-        // Share Message Template
-        msg_welcome: "🎉 欢迎使用 VSPAY!",
-        msg_account_details: "这是您的账户详情:",
-        msg_system_rules: "⚡ 系统规则:",
-        msg_api_details: "🔗 API 集成:",
-        msg_account_details: "这是您的账户详情:",
-        msg_system_rules: "⚡ 系统规则:",
-        msg_api_details: "🔗 API 集成:",
-        msg_docs: "文档",
-
-        // Broadcast
-        broadcast_title: "机器人广播",
-        broadcast_desc: "向所有绑定 Telegram 的商户发送消息。",
-        label_message: "消息内容",
-        profile_tab: "个人资料",
-        profile_details: "个人资料详情",
-        section_security: "账户安全",
-        change_password: "修改密码",
-        current_password: "当前密码",
-        new_password: "新密码",
-        btn_update_pass: "更新密码",
-        toast_pass_updated: "密码更新成功",
-        error_pass_update: "更新密码失败",
-
-        btn_send_broadcast: "发送广播",
-        toast_broadcast_sent: "广播发送成功！",
-        recent_broadcast: "广播结果",
-        sent_success: "发送成功",
-        sent_failed: "发送失败",
-        btn_disable_2fa: "禁用 2FA 并退出",
-        warn_disable_2fa: "禁用 2FA 会降低账户安全性。您将被退出登录。",
-        reset_2fa: "重置 2FA",
-        toast_2fa_disabled: "2FA 已禁用",
+        // Toasts
+        toast_fill_fields: "请填写必填项",
+        toast_success_bank: "银行代付申请已提交！",
+        toast_success_usdt: "USDT 代付申请已提交，请等待审核！",
+        toast_error: "创建代付时出错",
+        toast_copied: "已复制到剪贴板！",
+        toast_approved: "代付已批准！",
+        toast_rejected: "代付已拒绝，金额已返还余额",
+        toast_callback_updated: "回调地址已更新！",
+        toast_merchant_created: "商户账号创建成功！",
+        toast_broadcast_sent: "消息广播已发出！",
+        toast_2fa_disabled: "2FA 已安全关闭",
         toast_2fa_reset: "2FA 重置成功",
+        sending: "发送中...",
+        exporting: "导出生成中...",
+        export_failed: "导出失败",
+        page_of: "第 ${page} 页，共 ${pages} 页",
 
-        // 2FA Setup
-        setup_2fa_title: "开启 2FA 安全验证",
-        setup_2fa_subtitle: "保护您的账户",
-        setup_2fa_desc: "为了您的账户安全，必须开启双重验证。",
-        setup_2fa_label: "输入验证器 App 中的 6 位验证码",
-        setup_2fa_step1: "1. 安装 Google Authenticator (谷歌验证器)。",
-        setup_2fa_step2: "2. 扫描下方二维码。",
-        setup_2fa_step3: "3. 输入生成的验证码。",
-        btn_enable_2fa: "安全绑定并开启 2FA",
-        btn_cancel_logout: "取消并退出",
+        // Errors
+        error_load_tx: "无法加载交易记录",
+        error_load_payouts: "无法加载代付记录",
+        error_min_amount: "金额不能低于 ₹100",
+        error_gen_link: "生成支付链接失败",
+        error_callback_update: "更新回调地址失败",
+        error_key_regen: "重置密钥失败",
+        error_load_users: "无法加载用户列表",
+        error_create_merchant: "创建商户账户失败",
+        error_valid_amount: "请输入正确的金额",
+        error_adjust_balance: "余额调整失败",
 
-        // Admin Detail Keys
-        back_to_list: "返回列表",
-        merchant_details: "商户详情",
-        overview: "概览",
-        label_name_only: "名称",
-        active: "活跃",
-        suspended: "已暂停",
-        save_overview: "保存概览",
-        financials: "财务信息",
-        adjust_balance: "调整余额",
-        label_payout_rate_plus: "代付费率 (%) + 6 卢比",
-        update_rates: "更新费率",
-        integration: "集成信息",
-        update_callback: "更新回调",
-        status_2fa: "2FA 状态",
-        reset_password_label: "重置密码",
-        set_new_pass_btn: "设置新密码",
+        // API Docs
+        api_ref_title: "API 参考手册",
+        getting_started: "入门指南",
+        introduction: "系统介绍",
+        authentication: "接口认证",
+        pay_in_deposits: "收单代收 (Pay-In)",
+        create_order: "创建支付订单",
+        query_status: "查询订单状态",
+        submit_utr: "提交 UTR 流水",
+        pay_out_withdrawals: "资金代付 (Pay-Out)",
+        bank_transfer: "银行转账",
+        usdt_transfer: "USDT 转账",
+        utilities: "工具接口",
+        check_balance: "查询余额",
+        webhooks: "异步回调",
+        intro_desc: "欢迎使用 VSPAY 支付网关 API。本手册提供了接入我们安全收付系统的完整指南。",
+        version: "当前版本",
+        base_url: "接口地址",
+        req_https: "所有 API 请求必须通过 HTTPS 进行且 Header 中 content-type 必须为 application/json。",
+        auth_desc: "系统采用基于 HMAC-MD5 签名的 Header 认证方式。每个请求必须包含认证信息。",
+        req_headers: "必要请求头",
+        header_name: "Header 名称",
+        example_val: "示例值",
+        description: "描述信息",
+        merchant_uuid_desc: "您的唯一商户标识 UUID。",
+        sig_desc: "对应请求体（JSON 字符串）的 HMAC-MD5 签名。",
+        gen_sig: "签名生成逻辑",
+        formula: "计算公式",
+        node_ex: "Node.js 示例代码",
+        create_payin_desc: "生成一个支付链接，以便从您的用户处收款。",
+        parameter: "参数名",
+        param_type: "数据类型",
+        required: "必填",
+        optional: "可选",
+        ex_request: "示例请求体",
+        success_response: "成功响应示例",
+        query_payin_desc: "实时查询任意收单订单的当前状态。",
+        submit_utr_desc: "如果用户已付款但订单仍处于待处理状态，可提交 12 位 UTR 流水号进行手动 claim。",
+        bank_payout_desc: "通过 IMPS/NEFT 将资金下发至指定银行卡。",
+        usdt_payout_desc: "将资金代付至指定加密货币钱包 (TRC20 网络)。",
+        check_balance_desc: "获取商户账户当前可用的余额。",
+        webhook_desc: "当交易状态发生变更时，我们会向您的 callbackUrl 发送 POST 回调通知。",
+        webhook_struct: "异步通知结构",
+        verify_webhook_sig: "回调签名验证",
+        verify_webhook_desc: "您必须验证回调中的 sign 字段，以确保请求来源安全可靠。",
 
-        // Dashboard & Links
-        chart_overview: "交易概览",
-        performance_stats: "性能统计",
-        today_volume: "今日交易量",
-        yesterday_volume: "昨日交易量",
-        chart_last_7d: "最近 7 天",
-        chart_last_30d: "最近 30 天",
-        stat_success_rate: "成功率",
-        stat_conversion: "转化率 (充值/订单)",
-        label_amount_only: "金额",
-        label_order_id_optional: "订单号 (可选)",
-        label_callback_optional: "回调 URL (可选)"
+        // New keys
+        placeholder_order_id_auto: "系统自动生成",
+        label_order_id: "订单编号",
+        label_utr: "12 位 UTR/参考号",
+        placeholder_utr_12: "请输入银行 12 位 UTR 或参考号",
+        label_account: "银行账号",
+        label_ifsc_code: "IFSC 代码",
+        label_person_name: "收款人真实姓名",
+        label_2fa_opt: "2FA 验证码 (仪表盘操作必需, API 可选)",
+        label_network_type: "网络协议",
+        label_inr_amount: "转账卢比金额",
+        placeholder_inr_min_500usdt: "输入卢比金额 (至少等值 500 USDT)"
     }
 };
 
 window.translations = translations;
 
-// ========================================
-// I18N HELPERS
-// ========================================
-
 /**
  * Get translation for key
- * @param {string} key 
- * @param {string} defaultVal 
  */
 window.t = function (key, defaultVal) {
     if (!window.translations) return defaultVal || key;
-
     const lang = localStorage.getItem('vspay_lang') || 'en';
     const dict = window.translations[lang] || window.translations['en'];
     return dict[key] || defaultVal || key;
@@ -502,10 +711,13 @@ window.t = function (key, defaultVal) {
 
 /**
  * Change application language
- * @param {string} lang - 'en' or 'zh'
  */
 window.changeLanguage = function (lang) {
-    if (!window.translations || !window.translations[lang]) return;
+    if (!lang) {
+        // Toggle logic
+        const current = localStorage.getItem('vspay_lang') || 'en';
+        lang = current === 'en' ? 'zh' : 'en';
+    }
 
     localStorage.setItem('vspay_lang', lang);
     const dict = window.translations[lang];
@@ -514,7 +726,7 @@ window.changeLanguage = function (lang) {
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.dataset.i18n;
         if (dict[key]) {
-            if (el.tagName === 'INPUT' && el.getAttribute('placeholder')) {
+            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                 el.placeholder = dict[key];
             } else {
                 el.textContent = dict[key];
@@ -522,38 +734,29 @@ window.changeLanguage = function (lang) {
         }
     });
 
-    // Update switcher dropdown
-    const switcher = document.getElementById('langSwitcher');
-    if (switcher) switcher.value = lang;
+    // Update specific UI components like the toggle button image/text
+    const toggleBtn = document.getElementById('langToggle');
+    if (toggleBtn) {
+        const flag = lang === 'en' ? '🇺🇸' : '🇨🇳';
+        const label = lang === 'en' ? 'EN' : 'ZH';
+        toggleBtn.innerHTML = `<span style="font-size:1.2rem; margin-right:5px;">${flag}</span> ${label}`;
+    }
 
-    // Reload current section in app.js if exists
-    if (typeof loadSection === 'function' && typeof currentSection !== 'undefined') {
+    // Refresh dynamically loaded sections if we are in app.js
+    if (typeof currentSection !== 'undefined' && typeof loadSection === 'function') {
         loadSection(currentSection);
     }
 };
 
 /**
- * Initialize language from localStorage
+ * Initialize language
  */
 window.initLanguage = function () {
     const savedLang = localStorage.getItem('vspay_lang') || 'en';
+    window.changeLanguage(savedLang);
+};
 
-    // Set switcher
-    const switcher = document.getElementById('langSwitcher');
-    if (switcher) switcher.value = savedLang;
-
-    // Apply data-i18n
-    const dict = window.translations[savedLang] || window.translations['en'];
-    if (dict) {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.dataset.i18n;
-            if (dict[key]) {
-                if (el.tagName === 'INPUT' && el.getAttribute('placeholder')) {
-                    el.placeholder = dict[key];
-                } else {
-                    el.textContent = dict[key];
-                }
-            }
-        });
-    }
-}
+// Auto-init on load
+document.addEventListener('DOMContentLoaded', () => {
+    window.initLanguage();
+});

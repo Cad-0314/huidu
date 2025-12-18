@@ -1,10 +1,10 @@
 <div class="d-flex align-center justify-between mb-4">
     <div>
         <button class="btn btn-secondary btn-sm mb-2" onclick="loadSection('users')">
-            <i class="fas fa-arrow-left"></i> <span data-i18n="back_to_list">Back to List</span>
+            <i class="fas fa-arrow-left"></i> <span data-i18n="reset">Back to List</span>
         </button>
-        <h2 class="mb-0"><span data-i18n="merchant_details">Merchant Details</span>: <span
-                id="detailUsername">...</span></h2>
+        <h2 class="mb-0"><span data-i18n="merchants_list">Merchant Details</span>: <span id="detailUsername">...</span>
+        </h2>
         <small class="text-muted" id="detailId">ID: ...</small>
     </div>
     <div class="d-flex gap-2">
@@ -16,20 +16,20 @@
     <!-- Left Column: Primary Info -->
     <div class="col-md-4 mb-4">
         <div class="card h-100">
-            <h4 class="mb-3" data-i18n="overview">Overview</h4>
+            <h4 class="mb-3" data-i18n="dashboard_tab">Overview</h4>
             <div class="form-group">
-                <label data-i18n="label_name_only">Name</label>
+                <label data-i18n="label_name">Name</label>
                 <input type="text" id="detailName" class="form-control">
             </div>
             <div class="form-group">
                 <label data-i18n="status">Status</label>
                 <select id="detailStatus" class="form-control">
-                    <option value="active" data-i18n="active">Active</option>
-                    <option value="suspended" data-i18n="suspended">Suspended</option>
+                    <option value="active" data-i18n="success">Active</option>
+                    <option value="suspended" data-i18n="failed">Suspended</option>
                 </select>
             </div>
             <div class="form-group">
-                <label data-i18n="merchant_key">Merchant Key</label>
+                <label data-i18n="label_merchant_key">Merchant Key</label>
                 <div class="d-flex gap-1">
                     <input type="text" id="detailKey" readonly class="form-control"
                         style="font-family:monospace; font-size:0.85rem;">
@@ -38,7 +38,8 @@
                     </button>
                 </div>
             </div>
-            <button class="btn btn-primary btn-block mt-3" onclick="saveDetailOverview()" data-i18n="save_overview">Save
+            <button class="btn btn-primary btn-block mt-3" onclick="saveDetailOverview()"
+                data-i18n="btn_save_changes">Save
                 Overview</button>
         </div>
     </div>
@@ -46,12 +47,12 @@
     <!-- Middle Column: Financials -->
     <div class="col-md-4 mb-4">
         <div class="card h-100">
-            <h4 class="mb-3" data-i18n="financials">Financials</h4>
+            <h4 class="mb-3" data-i18n="balance">Financials</h4>
             <div class="mb-4 text-center p-3" style="background:rgba(255,255,255,0.05); border-radius:8px;">
-                <label class="d-block text-muted mb-1" data-i18n="stat_balance">Current Balance</label>
+                <label class="d-block text-muted mb-1" data-i18n="balance">Current Balance</label>
                 <h3 class="mb-3" id="detailBalance">₹0.00</h3>
                 <button class="btn btn-primary btn-sm" onclick="openAdjustBalanceDetail()"
-                    data-i18n="adjust_balance">Adjust Balance</button>
+                    data-i18n="settlement_request">Adjust Balance</button>
             </div>
 
             <div class="form-group">
@@ -59,10 +60,10 @@
                 <input type="number" id="detailPayinRate" step="0.1" class="form-control">
             </div>
             <div class="form-group">
-                <label data-i18n="label_payout_rate_plus">Payout Rate (%) + 6 INR </label>
+                <label data-i18n="label_payout_rate">Payout Rate (%) + 6 INR </label>
                 <input type="number" id="detailPayoutRate" step="0.1" class="form-control">
             </div>
-            <button class="btn btn-primary btn-block mt-3" onclick="saveDetailRates()" data-i18n="update_rates">Update
+            <button class="btn btn-primary btn-block mt-3" onclick="saveDetailRates()" data-i18n="btn_update">Update
                 Rates</button>
         </div>
     </div>
@@ -70,32 +71,34 @@
     <!-- Right Column: Tech & Security -->
     <div class="col-md-4 mb-4">
         <div class="card mb-4">
-            <h4 class="mb-3" data-i18n="integration">Integration</h4>
+            <h4 class="mb-3" data-i18n="nav_integration">Integration</h4>
             <div class="form-group">
                 <label data-i18n="label_callback_url">Callback URL</label>
-                <input type="url" id="detailCallback" class="form-control" placeholder="https://...">
+                <input type="url" id="detailCallback" class="form-control" placeholder="https://..."
+                    data-i18n="placeholder_callback_url">
             </div>
-            <button class="btn btn-primary btn-block mt-3" onclick="saveDetailCallback()"
-                data-i18n="update_callback">Update Callback</button>
+            <button class="btn btn-primary btn-block mt-3" onclick="saveDetailCallback()" data-i18n="btn_update">Update
+                Callback</button>
         </div>
 
         <div class="card">
-            <h4 class="mb-3" data-i18n="section_security">Security</h4>
+            <h4 class="mb-3" data-i18n="authentication">Security</h4>
             <div class="d-flex justify-between align-center mb-3">
-                <span data-i18n="status_2fa">2FA Status</span>
+                <span data-i18n="2fa_status">2FA Status</span>
                 <span id="detail2faStatus" class="badge" data-i18n="loading">Checking...</span>
             </div>
             <button class="btn btn-danger btn-block btn-sm hidden" id="btnReset2faDetail" onclick="resetDetail2fa()"
-                data-i18n="reset_2fa">
+                data-i18n="btn_reset_2fa">
                 Reset 2FA
             </button>
             <hr class="my-3" style="border-color:rgba(147,51,234,0.2);">
             <div class="form-group">
-                <label data-i18n="reset_password_label">Reset Password</label>
-                <input type="password" id="detailNewPass" class="form-control" placeholder="New Password">
+                <label data-i18n="btn_reset_password">Reset Password</label>
+                <input type="password" id="detailNewPass" class="form-control" placeholder="New Password"
+                    data-i18n="label_new_password">
             </div>
             <button class="btn btn-warning btn-block btn-sm" onclick="adminResetPassword()"
-                data-i18n="set_new_pass_btn">Set New Password</button>
+                data-i18n="btn_save_changes">Set New Password</button>
         </div>
     </div>
 </div>

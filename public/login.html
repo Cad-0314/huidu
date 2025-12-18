@@ -15,10 +15,9 @@
 <body>
     <div class="login-container">
         <div style="position: absolute; top: 20px; right: 20px;">
-            <select id="langSwitcher" class="btn btn-secondary btn-sm" onchange="window.changeLanguage(this.value)">
-                <option value="en">English</option>
-                <option value="zh">中文</option>
-            </select>
+            <button id="langToggle" class="btn btn-secondary btn-sm" onclick="window.changeLanguage()">
+                <span style="font-size:1.2rem; margin-right:5px;">🇺🇸</span> EN
+            </button>
         </div>
         <div class="login-card">
             <div class="login-logo">
@@ -27,6 +26,7 @@
             </div>
 
             <form id="loginForm">
+                <h2 class="mb-4" style="text-align: center;" data-i18n="login_header">Sign In</h2>
                 <div id="loginError" class="alert alert-error hidden">
                     <i class="fas fa-exclamation-circle"></i>
                     <span id="errorMessage"></span>
