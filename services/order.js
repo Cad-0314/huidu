@@ -116,20 +116,9 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
     `).run(txUuid, merchant.id, finalOrderId, platformOrderId, numericAmount, numericAmount, fee, netAmount, paymentUrl, storedParam);
 
-    // --- INSTANT CALLBACK FOR DEMO USER ---
-    if (merchant.username === 'demo') {
-        setTimeout(async () => {
-            try {
-                const axios = require('axios');
-                const callbackBody = silkpayService.generatePayinCallbackBody(platformOrderId, numericAmount, silkpayConfig);
-                console.log('Triggering Self-Callback for Demo payin:', finalOrderId);
-                await axios.post(ourCallbackUrl, callbackBody);
-            } catch (err) {
-                console.error('Failed to trigger demo callback:', err.message);
-            }
-        }, 2000); // 2 seconds delay
-    }
-    // --------------------------------------
+    // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
+    // if (merchant.username === 'demo') { ... }
+    // ------------------------------------------------------
 
     const localPaymentUrl = `${appUrl}/pay/${platformOrderId}`;
 

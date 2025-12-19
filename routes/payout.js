@@ -109,20 +109,9 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?)`)
             .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName);
 
-        // --- INSTANT CALLBACK FOR DEMO USER (PAYOUT) ---
-        if (merchant.username === 'demo') {
-            setTimeout(async () => {
-                try {
-                    const axios = require('axios');
-                    const callbackBody = silkpayService.generatePayoutCallbackBody(internalOrderId, payoutAmount, silkpayConfig);
-                    console.log('Triggering Self-Callback for Demo payout:', internalOrderId);
-                    await axios.post(ourCallbackUrl, callbackBody);
-                } catch (err) {
-                    console.error('Failed to trigger demo payout callback:', err.message);
-                }
-            }, 2000);
-        }
-        // ----------------------------------------------
+        // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
+        // if (merchant.username === 'demo') { ... }
+        // ------------------------------------------------------
 
         try {
             const silkpayResponse = await silkpayService.createPayout({
