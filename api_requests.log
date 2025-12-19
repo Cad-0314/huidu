@@ -577,3 +577,95 @@ Response: {
   "message": "[[157.49.183.159]] payin IP Limited",
   "data": null
 }
+
+=====================================
+[2025-12-19T11:18:13.641Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1532ms
+Request: {
+  "amount": 100,
+  "mId": "TEST",
+  "mOrderId": "HDP_MJCRZVK9_4842DFEA",
+  "timestamp": "1766143092105",
+  "notifyUrl": "http://localhost:3000/api/payin/callback",
+  "returnUrl": "http://localhost:3000/api/payin/redirect?url=http%3A%2F%2Flocalhost%3A3000%2Fsuccess",
+  "sign": "860ad8f7e4c898e31301e6366459c507"
+}
+Response: {
+  "status": "200",
+  "message": "success",
+  "data": {
+    "timestampExpires": "2025-12-19T17:16:50.248+05:30",
+    "payOrderId": "DS-1219164003950005747471365",
+    "deepLink": {
+      "upi_phonepe": "phonepe://native?data=eyJjb250YWN0Ijp7ImNic05hbWUiOiIiLCJuaWNrTmFtZSI6IiIsInZwYSI6InRlc3QxMjM0NTZAdXBpIiwidHlwZSI6IlZQQSJ9LCJwMnBQYXltZW50Q2hlY2tvdXRQYXJhbXMiOnsibm90ZSI6IjUiLCJpc0J5RGVmYXVsdEtub3duQ29udGFjdCI6dHJ1ZSwiZW5hYmxlU3BlZWNoVG9UZXh0IjpmYWxzZSwiYWxsb3dBbW91bnRFZGl0IjpmYWxzZSwic2hvd1FyQ29kZU9wdGlvbiI6ZmFsc2UsImRpc2FibGVWaWV3SGlzdG9yeSI6dHJ1ZSwic2hvdWxkU2hvd1Vuc2F2ZWRDb250YWN0QmFubmVyIjpmYWxzZSwiaXNSZWN1cnJpbmciOmZhbHNlLCJjaGVja291dFR5cGUiOiJERUZBVUxUIiwidHJhbnNhY3Rpb25Db250ZXh0IjoicDJwIiwiaW5pdGlhbEFtb3VudCI6MTAwMDAsImRpc2FibGVOb3Rlc0VkaXQiOnRydWUsInNob3dLZXlib2FyZCI6ZmFsc2UsImN1cnJlbmN5IjoiSU5SIiwic2hvdWxkU2hvd01hc2tlZE51bWJlciI6dHJ1ZX19&id=p2ppayment",
+      "upi_paytm": "paytmmp://cash_wallet?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM&featuretype=money_transfer",
+      "upi_scan": "upi://pay?pa=test123456@upi&tn=5&am=100.00&cu=INR&pn=CM"
+    },
+    "paymentUrl": "https://dev.silkpay.help/#/?orderNo=DS-1219164003950005747471365"
+  }
+}
+
+=====================================
+[2025-12-19T11:19:30.139Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1713ms
+Request: {
+  "amount": 100,
+  "mId": "F7070",
+  "mOrderId": "HDP_MJCS1IG8_80628E98",
+  "timestamp": "1766143168425",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/api/payin/redirect?url=http%3A%2F%2Flocalhost%3A3000%2Fsuccess",
+  "sign": "6d852405734e00ba9c2c381f8998dfa7"
+}
+Response: {
+  "status": "403",
+  "message": "[[103.80.34.73]] payin IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-19T11:20:20.506Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayout
+Duration: 503ms
+Request: {
+  "amount": 100,
+  "mId": "F7070",
+  "mOrderId": "DEBUG_PAYOUT_1766143220002",
+  "timestamp": "1766143220002",
+  "notifyUrl": "http://localhost:3000/callback",
+  "bankNo": "1234567890",
+  "ifsc": "SBIN0001234",
+  "name": "Test User",
+  "sign": "f8ae1f2d9482f6e9d514a4cd8c136baf",
+  "upi": ""
+}
+Response: {
+  "status": "403",
+  "message": "[[103.80.34.73]] payout IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-19T11:20:20.789Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 269ms
+Request: {
+  "amount": 100,
+  "mId": "F7070",
+  "mOrderId": "HDP_MJCS2MNB_DAB87A15",
+  "timestamp": "1766143220519",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/api/payin/redirect?url=http%3A%2F%2Flocalhost%3A3000%2Fsuccess",
+  "sign": "b692c24699b0ee03a291fed11eafc61e"
+}
+Response: {
+  "status": "403",
+  "message": "[[103.80.34.73]] payin IP Limited",
+  "data": null
+}
