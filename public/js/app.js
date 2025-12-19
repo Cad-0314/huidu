@@ -245,10 +245,15 @@ async function loadSection(section) {
         'approvals': t('approvals_tab'),
         'all-transactions': t('all_transactions_tab')
     };
-    document.getElementById('pageTitle').textContent = titles[section] || t('dashboard_tab');
+    const titleEl = document.getElementById('sectionTitle') || document.getElementById('pageTitle');
+    if (titleEl) titleEl.textContent = titles[section] || t('dashboard_tab');
 
     // Load content
-    const contentArea = document.getElementById('contentArea');
+    const contentArea = document.getElementById('mainContent');
+    if (!contentArea) {
+        console.error('Critical Error: Main content area (id="mainContent") not found in DOM');
+        return;
+    }
 
     // Mapping for new/renamed sections
     const fileMap = {

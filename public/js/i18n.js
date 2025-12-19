@@ -1,4 +1,4 @@
-const translations = {
+window.translations = {
     en: {
         // App Shell
         app_title: "Merchant Dashboard",

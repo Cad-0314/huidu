@@ -99,10 +99,12 @@ async function initDatabase() {
             db = new AsyncDatabaseWrapper('turso', client);
             console.log('Connected to Turso');
         } catch (e) {
-            console.error('Failed to connect to Turso:', e);
-            throw e;
+            console.error('Failed to connect to Turso, falling back to local SQLite:', e.message);
+            // Fallthrough to local init
         }
-    } else {
+    }
+
+    if (!db) {
         console.log('Initializing Local SQLite (sql.js)...');
         // Ensure local DB loading
         const dbDir = path.join(__dirname, '..', 'database');

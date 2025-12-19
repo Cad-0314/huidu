@@ -497,3 +497,83 @@ Response: {
   "message": "[[157.49.54.9]] payout IP Limited",
   "data": null
 }
+
+=====================================
+[2025-12-18T14:13:44.123Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1109ms
+Request: {
+  "amount": 300,
+  "mId": "F7070",
+  "mOrderId": "HDP_MJBITQKX_0EB692DD",
+  "timestamp": "1766067222994",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/api/payin/redirect?url=https%3A%2F%2Fvspay.rioclub.site%2Fpayment%2Fcomplete",
+  "sign": "cf3be78babb7cfbc3337498f980158c8"
+}
+Response: {
+  "status": "403",
+  "message": "[[157.49.182.195]] payin IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-18T14:17:01.852Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 1435ms
+Request: {
+  "amount": 20000,
+  "mId": "F7070",
+  "mOrderId": "HDP_MJBIXYWX_9E1850F1",
+  "timestamp": "1766067420417",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/api/payin/redirect?url=https%3A%2F%2Fvspay.rioclub.site%2Fpayment%2Fcomplete",
+  "sign": "5c971d4532696aae01cd913f753ba29c"
+}
+Response: {
+  "status": "403",
+  "message": "[[157.49.183.33]] payin IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-18T14:17:50.900Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 615ms
+Request: {
+  "amount": 5000,
+  "mId": "F7070",
+  "mOrderId": "HDP_MJBIZ1E4_83105EE0",
+  "timestamp": "1766067470285",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/api/payin/redirect?url=https%3A%2F%2Fvspay.rioclub.site%2Fpayment%2Fcomplete",
+  "sign": "afdfdc3eb167420d1e06853824734b18"
+}
+Response: {
+  "status": "403",
+  "message": "[[157.49.182.89]] payin IP Limited",
+  "data": null
+}
+
+=====================================
+[2025-12-18T14:18:12.404Z] SILKPAY API REQUEST
+=====================================
+Endpoint: createPayin
+Duration: 2029ms
+Request: {
+  "amount": 100,
+  "mId": "F7070",
+  "mOrderId": "HDP_MJBIZGW7_83136E7A",
+  "timestamp": "1766067490375",
+  "notifyUrl": "https://vspay.rioclub.site/api/payin/callback",
+  "returnUrl": "https://vspay.rioclub.site/api/payin/redirect?url=https%3A%2F%2Fvspay.rioclub.site%2Fpayment%2Fcomplete",
+  "sign": "34131cb0d156e3e6d3f6dea47579fc6b"
+}
+Response: {
+  "status": "403",
+  "message": "[[157.49.183.159]] payin IP Limited",
+  "data": null
+}
