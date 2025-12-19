@@ -272,6 +272,19 @@ async function initializeSchema() {
         console.log('Admin initialized');
     }
 
+    // Demo User
+    const demoExists = await db.prepare('SELECT id FROM users WHERE username = ?').get('demo');
+    if (!demoExists) {
+        const hashedPassword = bcrypt.hashSync('admin123', 10);
+        const demoUuid = uuidv4();
+        const merchantKey = 'MK_DEMO_' + uuidv4().replace(/-/g, '').substring(0, 16).toUpperCase();
+        await db.prepare(`
+            INSERT INTO users (uuid, username, email, password, name, role, merchant_key, two_factor_enabled, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'active')
+        `).run(demoUuid, 'demo', 'demo@vspay.com', hashedPassword, 'Demo Merchant', 'merchant', merchantKey);
+        console.log('Demo user initialized');
+    }
+
     // Settings
     try {
         await db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('payin_rate', '0.05');

@@ -74,16 +74,20 @@ function createSign(str) {
  * Endpoint: /transaction/payin/v2
  * Sign: md5(mId+mOrderId+amount+timestamp+secret)
  */
-async function createPayin(data) {
+async function createPayin(data, config = {}) {
     const { orderAmount, orderId, notifyUrl, returnUrl } = data;
     const timestamp = Date.now().toString();
 
-    const signStr = `${MID}${orderId}${orderAmount}${timestamp}${SECRET}`;
+    const mid = config.mid || MID;
+    const secret = config.secret || SECRET;
+    const baseUrl = config.baseUrl || BASE_URL;
+
+    const signStr = `${mid}${orderId}${orderAmount}${timestamp}${secret}`;
     const sign = createSign(signStr);
 
     const params = {
         amount: orderAmount,
-        mId: MID,
+        mId: mid,
         mOrderId: orderId,
         timestamp,
         notifyUrl,
@@ -93,7 +97,7 @@ async function createPayin(data) {
 
     const startTime = Date.now();
     try {
-        const response = await api.post('/transaction/payin/v2', params);
+        const response = await axios.post(`${baseUrl}/transaction/payin/v2`, params, { timeout: 30000 });
         logApiRequest('createPayin', params, response.data, Date.now() - startTime);
         return response.data;
     } catch (error) {
@@ -135,16 +139,20 @@ async function queryPayin(orderId) {
  * Endpoint: /transaction/payout
  * Sign: md5(mId+mOrderId+amount+timestamp+secret)
  */
-async function createPayout(data) {
+async function createPayout(data, config = {}) {
     const { amount, orderId, notifyUrl, bankNo, ifsc, name } = data;
     const timestamp = Date.now().toString();
 
-    const signStr = `${MID}${orderId}${amount}${timestamp}${SECRET}`;
+    const mid = config.mid || MID;
+    const secret = config.secret || SECRET;
+    const baseUrl = config.baseUrl || BASE_URL;
+
+    const signStr = `${mid}${orderId}${amount}${timestamp}${secret}`;
     const sign = createSign(signStr);
 
     const params = {
         amount,
-        mId: MID,
+        mId: mid,
         mOrderId: orderId,
         timestamp,
         notifyUrl,
@@ -157,7 +165,7 @@ async function createPayout(data) {
 
     const startTime = Date.now();
     try {
-        const response = await api.post('/transaction/payout', params);
+        const response = await axios.post(`${baseUrl}/transaction/payout`, params, { timeout: 30000 });
         logApiRequest('createPayout', params, response.data, Date.now() - startTime);
         return response.data;
     } catch (error) {
@@ -300,6 +308,49 @@ function verifyPayoutCallback(data) {
     return calculated === sign;
 }
 
+// Helper for self-callbacks (Demo Mode)
+function generatePayinCallbackBody(orderId, amount, config = {}) {
+    const mid = config.mid || MID;
+    const secret = config.secret || SECRET;
+    const timestamp = Date.now().toString();
+    const payOrderId = 'DEMO_' + Date.now();
+
+    // Sign: md5(amount+mId+mOrderId+timestamp+secret)
+    const signStr = `${amount}${mid}${orderId}${timestamp}${secret}`;
+    const sign = createSign(signStr);
+
+    return {
+        status: '1',
+        amount: amount.toString(),
+        payOrderId,
+        mId: mid,
+        mOrderId: orderId,
+        timestamp,
+        sign,
+        utr: 'TEST_UTR_' + Date.now()
+    };
+}
+
+function generatePayoutCallbackBody(orderId, amount, config = {}) {
+    const mid = config.mid || MID;
+    const secret = config.secret || SECRET;
+    const timestamp = Date.now().toString();
+
+    // Sign: md5(mId+mOrderId+amount+timestamp+secret)
+    const signStr = `${mid}${orderId}${amount}${timestamp}${secret}`;
+    const sign = createSign(signStr);
+
+    return {
+        status: '1',
+        amount: amount.toString(),
+        mId: mid,
+        mOrderId: orderId,
+        timestamp,
+        sign,
+        utr: 'TEST_UTR_' + Date.now()
+    };
+}
+
 module.exports = {
     createPayin,
     queryPayin,
@@ -309,5 +360,7 @@ module.exports = {
     queryUtr,
     getBalance,
     verifyPayinCallback,
-    verifyPayoutCallback
+    verifyPayoutCallback,
+    generatePayinCallbackBody,
+    generatePayoutCallbackBody
 };

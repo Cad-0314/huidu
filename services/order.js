@@ -42,13 +42,23 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const ourCallbackUrl = `${appUrl}/api/payin/callback`;
     const ourSkipUrl = `${appUrl}/api/payin/redirect?url=${encodeURIComponent(skipUrl || `${appUrl}/payment/complete`)}`;
 
+    // Demo User Override
+    let silkpayConfig = {};
+    if (merchant.username === 'demo') {
+        silkpayConfig = {
+            baseUrl: 'https://api.dev.silkpay.ai',
+            mid: 'TEST',
+            secret: 'SIb3DQEBAQ'
+        };
+    }
+
     // Call Silkpay
     const silkpayResponse = await silkpayService.createPayin({
         orderAmount: numericAmount,
         orderId: internalOrderId,
         notifyUrl: ourCallbackUrl,
         returnUrl: ourSkipUrl
-    });
+    }, silkpayConfig);
 
     if (silkpayResponse.status !== '200') {
         throw new Error(silkpayResponse.message || 'Failed to create order upstream');
@@ -77,15 +87,11 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
             Object.values(deepLinks).forEach(url => {
                 if (typeof url === 'string') {
                     try {
-                        // Extract 'pa' parameter from UPI intent link
-                        // Format: upi://pay?pa=someone@upi&...
                         const match = url.match(/[?&]pa=([^&]+)/);
                         if (match && match[1]) {
                             upiIds.add(decodeURIComponent(match[1]));
                         }
-                    } catch (e) {
-                        // Ignore parsing errors for individual links
-                    }
+                    } catch (e) { }
                 }
             });
 
@@ -95,16 +101,13 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
                     VALUES (?, 1, ?) 
                     ON CONFLICT(upi_id) DO NOTHING
                 `);
-
                 for (const upiId of upiIds) {
                     await insertStmt.run(upiId, 'VSPAY_Order');
                 }
-                console.log(`Extracted and saved ${upiIds.size} UPI IDs from order ${finalOrderId}`);
             }
         }
-    } catch (extractionError) {
-        console.error('Error extracting UPI IDs:', extractionError);
-        // Do not fail the order creation if extraction fails
+    } catch (e) {
+        console.error('Error extracting UPI IDs:', e);
     }
     // -----------------------------
 
@@ -112,6 +115,21 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
         VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
     `).run(txUuid, merchant.id, finalOrderId, platformOrderId, numericAmount, numericAmount, fee, netAmount, paymentUrl, storedParam);
+
+    // --- INSTANT CALLBACK FOR DEMO USER ---
+    if (merchant.username === 'demo') {
+        setTimeout(async () => {
+            try {
+                const axios = require('axios');
+                const callbackBody = silkpayService.generatePayinCallbackBody(platformOrderId, numericAmount, silkpayConfig);
+                console.log('Triggering Self-Callback for Demo payin:', finalOrderId);
+                await axios.post(ourCallbackUrl, callbackBody);
+            } catch (err) {
+                console.error('Failed to trigger demo callback:', err.message);
+            }
+        }, 2000); // 2 seconds delay
+    }
+    // --------------------------------------
 
     const localPaymentUrl = `${appUrl}/pay/${platformOrderId}`;
 

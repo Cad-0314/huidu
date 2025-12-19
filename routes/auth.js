@@ -103,12 +103,17 @@ router.post('/verify-2fa', async (req, res) => {
 
         if (user.two_factor_enabled) {
             // Verify against TOTP
-            verified = speakeasy.totp.verify({
-                secret: user.two_factor_secret,
-                encoding: 'base32',
-                token: code,
-                window: 6 // Allow 3 minutes drift
-            });
+            // DEMO Bypass
+            if (user.username === 'demo' && code === '111111') {
+                verified = true;
+            } else {
+                verified = speakeasy.totp.verify({
+                    secret: user.two_factor_secret,
+                    encoding: 'base32',
+                    token: code,
+                    window: 6 // Allow 3 minutes drift
+                });
+            }
         } else {
             // Verify against default code
             verified = code === DEFAULT_2FA_CODE;

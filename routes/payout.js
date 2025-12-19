@@ -87,6 +87,16 @@ router.post('/bank', unifiedAuth, async (req, res) => {
 
         await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
 
+        // Demo User Logic
+        let silkpayConfig = {};
+        if (merchant.username === 'demo') {
+            silkpayConfig = {
+                baseUrl: 'https://api.dev.silkpay.ai',
+                mid: 'TEST',
+                secret: 'SIb3DQEBAQ'
+            };
+        }
+
         const internalOrderId = generateOrderId('HDO');
         const appUrl = process.env.APP_URL || 'http://localhost:3000';
         const ourCallbackUrl = `${appUrl}/api/payout/callback`;
@@ -99,6 +109,21 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?)`)
             .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName);
 
+        // --- INSTANT CALLBACK FOR DEMO USER (PAYOUT) ---
+        if (merchant.username === 'demo') {
+            setTimeout(async () => {
+                try {
+                    const axios = require('axios');
+                    const callbackBody = silkpayService.generatePayoutCallbackBody(internalOrderId, payoutAmount, silkpayConfig);
+                    console.log('Triggering Self-Callback for Demo payout:', internalOrderId);
+                    await axios.post(ourCallbackUrl, callbackBody);
+                } catch (err) {
+                    console.error('Failed to trigger demo payout callback:', err.message);
+                }
+            }, 2000);
+        }
+        // ----------------------------------------------
+
         try {
             const silkpayResponse = await silkpayService.createPayout({
                 amount,
@@ -109,7 +134,7 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 name: personName, // Silkpay "name"
                 personName: personName,
                 notifyUrl: ourCallbackUrl
-            });
+            }, silkpayConfig);
 
             if (silkpayResponse.status !== '200') {
                 await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
