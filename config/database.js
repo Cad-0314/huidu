@@ -322,6 +322,11 @@ async function initializeSchema() {
         await db.exec('ALTER TABLE users ADD COLUMN two_factor_temp_secret TEXT');
         console.log('Applied migration: Added two_factor_temp_secret to users');
     } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN usdt_rate REAL DEFAULT 100.0');
+        console.log('Applied migration: Added usdt_rate to users');
+    } catch (e) { }
 }
 
 module.exports = { initDatabase, getDb };

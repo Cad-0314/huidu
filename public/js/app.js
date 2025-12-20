@@ -243,7 +243,8 @@ async function loadSection(section) {
         'credentials': t('credentials_tab'),
         'users': t('users_tab'),
         'approvals': t('approvals_tab'),
-        'all-transactions': t('all_transactions_tab')
+        'all-transactions': t('all_transactions_tab'),
+        'channel-management': 'Channel Management'
     };
     const titleEl = document.getElementById('sectionTitle') || document.getElementById('pageTitle');
     if (titleEl) titleEl.textContent = titles[section] || t('dashboard_tab');
@@ -258,7 +259,8 @@ async function loadSection(section) {
     // Mapping for new/renamed sections
     const fileMap = {
         'users': 'manage_merchants',
-        'profile': 'profile'
+        'profile': 'profile',
+        'channel-management': 'channel_management'
     };
     const filename = fileMap[section] || section;
 
@@ -326,8 +328,55 @@ function initSection(section) {
         case 'broadcast':
             // No init needed
             break;
+        case 'profile':
+            loadProfileData();
+            break;
         default:
             break;
+    }
+}
+
+async function loadProfileData() {
+    try {
+        // We can reuse the currentUser object if it's up to date, 
+        // or fetch fresh data. Let's start with currentUser but maybe standardized refresh is better.
+        // For now, let's assume currentUser is available globally (it usually is in this app structure).
+
+        let user = currentUser;
+
+        // If we want fresh data (e.g. balance/rates might change), we could fetch /me or similar.
+        // Assuming we rely on what we have or generic refresh:
+
+        if (!user) return; // Should not happen if logged in
+
+        document.getElementById('profileName').value = user.name || '';
+        document.getElementById('profileUsername').value = user.username || '';
+        document.getElementById('profilePayinRate').textContent = (user.payinRate || 5.0) + '%';
+
+        // Payout Rate adjustment
+        document.getElementById('profilePayoutRate').textContent = (user.payoutRate || 3.0) + '% + 6 INR';
+
+        // 2FA
+        const s2fa = document.getElementById('profile2faStatus');
+        if (s2fa) {
+            s2fa.innerHTML = user.twoFactorEnabled
+                ? `<span class="badge badge-success">${t('success')}</span>`
+                : `<span class="badge badge-warning">${t('failed')}</span>`;
+        }
+
+        const btnEnable = document.getElementById('btnEnable2faProfile');
+        const btnDisable = document.getElementById('btnDisable2faProfile');
+
+        if (user.twoFactorEnabled) {
+            if (btnEnable) btnEnable.classList.add('hidden');
+            if (btnDisable) btnDisable.classList.remove('hidden');
+        } else {
+            if (btnEnable) btnEnable.classList.remove('hidden');
+            if (btnDisable) btnDisable.classList.add('hidden');
+        }
+
+    } catch (e) {
+        console.error('Profile load error:', e);
     }
 }
 
@@ -923,7 +972,7 @@ async function loadUsersData(page = 1) {
                     </td>
                     <td>
                         <small>In: ${u.payinRate || 5}%</small><br>
-                        <small>Out: ${u.payoutRate || 3}%</small>
+                        <small>Out: ${u.payoutRate || 3}% + 6 INR</small>
                     </td>
                     <td>₹${parseFloat(u.balance).toFixed(2)}</td>
                     <td>
@@ -976,7 +1025,7 @@ async function openMerchantDetail(userId) {
     // For simplicity, I'll load the HTML manually into contentArea.
 
     currentDetailUserId = userId;
-    const contentArea = document.getElementById('contentArea');
+    const contentArea = document.getElementById('mainContent');
     contentArea.innerHTML = '<div class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
 
     try {
@@ -1013,6 +1062,7 @@ async function loadAdminUserDetail(userId) {
         document.getElementById('detailBalance').textContent = `₹${parseFloat(u.balance).toFixed(2)}`;
         document.getElementById('detailPayinRate').value = u.payinRate;
         document.getElementById('detailPayoutRate').value = u.payoutRate;
+        document.getElementById('detailUsdtRate').value = u.usdtRate || 100.0;
 
         // Integration
         document.getElementById('detailCallback').value = u.callbackUrl || '';
@@ -1053,11 +1103,13 @@ async function saveDetailOverview() {
         const callbackUrl = document.getElementById('detailCallback').value;
         const payinRate = document.getElementById('detailPayinRate').value;
         const payoutRate = document.getElementById('detailPayoutRate').value;
+        const usdtRate = document.getElementById('detailUsdtRate').value;
 
         const data = await API.put(`/admin/users/${currentDetailUserId}`, {
             name, status, callbackUrl,
             payinRate: parseFloat(payinRate),
-            payoutRate: parseFloat(payoutRate)
+            payoutRate: parseFloat(payoutRate),
+            usdtRate: parseFloat(usdtRate)
         });
 
         if (data.code === 1) {
@@ -1175,19 +1227,30 @@ function showCreateUserModal() {
                 <input type="password" id="newUserPassword" class="form-control" placeholder="${t('label_password')}" required>
             </div>
             <div class="form-group">
+                <label data-i18n="label_channel">Channel</label>
+                <select id="newUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
+                    <option value="payable" selected>Payable (5.0% / 3.0% + 6 INR)</option>
+                    <option value="channel_a" disabled>Channel A (Coming Soon - Unavailable)</option>
+                    <option value="channel_b" disabled>Channel B (Coming Soon - Unavailable)</option>
+                </select>
+                <small class="text-muted">Currently only Payable channel is available.</small>
+            </div>
+            <div class="form-group">
                 <label data-i18n="label_callback_url">${t('label_callback_url')} (optional)</label>
                 <input type="url" id="newUserCallback" class="form-control" placeholder="${t('placeholder_callback_url')}">
             </div>
             <div class="row">
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
                     <label data-i18n="label_payin_rate">${t('label_payin_rate')}</label>
-                    <input type="number" id="newUserPayinRate" class="form-control" value="5.0" step="0.1" min="5.0">
-                    <small class="text-muted" data-i18n="btn_save">${t('btn_save')}</small>
+                    <input type="number" id="newUserPayinRate" class="form-control" value="5.0" step="0.1" min="0.0">
                 </div>
-                <div class="col-md-6 form-group">
+                <div class="col-md-4 form-group">
                     <label data-i18n="label_payout_rate">${t('label_payout_rate')}</label>
-                    <input type="number" id="newUserPayoutRate" class="form-control" value="3.0" step="0.1" min="3.0">
-                    <small class="text-muted" data-i18n="btn_save">${t('btn_save')}</small>
+                    <input type="number" id="newUserPayoutRate" class="form-control" value="3.0" step="0.1" min="0.0">
+                </div>
+                <div class="col-md-4 form-group">
+                    <label data-i18n="label_usdt_rate">USDT Rate</label>
+                    <input type="number" id="newUserUsdtRate" class="form-control" value="100.0" step="0.1" min="0.0">
                 </div>
             </div>
         </form>
@@ -1206,6 +1269,7 @@ async function createUser() {
     const callbackUrl = document.getElementById('newUserCallback').value;
     const payinRate = document.getElementById('newUserPayinRate').value;
     const payoutRate = document.getElementById('newUserPayoutRate').value;
+    const usdtRate = document.getElementById('newUserUsdtRate').value;
 
     if (!name || !username || !password) {
         showToast(t('toast_fill_fields'), 'error');
@@ -1219,7 +1283,8 @@ async function createUser() {
         const data = await API.post('/admin/users', {
             name, username, password, callbackUrl,
             payinRate: parseFloat(payinRate),
-            payoutRate: parseFloat(payoutRate)
+            payoutRate: parseFloat(payoutRate),
+            usdtRate: parseFloat(usdtRate)
         });
 
         hideLoader(); // Hide loader
@@ -1235,6 +1300,14 @@ async function createUser() {
     } catch (error) {
         hideLoader();
         showToast(t('error_create_merchant'), 'error');
+    }
+}
+
+function updateRatesByChannel(channel) {
+    if (channel === 'payable') {
+        document.getElementById('newUserPayinRate').value = 5.0;
+        document.getElementById('newUserPayoutRate').value = 3.0;
+        document.getElementById('newUserUsdtRate').value = 100.0;
     }
 }
 
@@ -1540,13 +1613,44 @@ async function loadApprovalsData() {
         if (!container) return;
 
         if (data.code === 1 && data.data.length > 0) {
-            container.innerHTML = data.data.map(p => `
+            container.innerHTML = data.data.map(p => {
+                let details = '';
+                let typeBadge = '';
+
+                // Account for mismatching backend fields (snake_case vs camelCase if raw vs mapped)
+                // properties are mapped in admin.js: `walletAddress: p.wallet_address`
+                // But for bank payouts we need account_number etc. which might be missing in mapping.
+                // Let's check admin.js mapping again. It only maps `walletAddress` and `network`.
+                // Bank fields: `account_number`, `ifsc`, `person_name` likely needed.
+                // Since I didn't update mapping in admin.js, I should do that first or access raw props if mapped poorly.
+                // Wait, admin.js mapping: `walletAddress: p.wallet_address`
+                // Bank stuff is NOT mapped currently.
+                // I should assume the `p` object might lack bank details if backend doesn't send them.
+                // I need to update backend admin.js one more time to include bank fields.
+                // But let's write the JS assuming they exist:
+
+                if (p.payoutType === 'bank' || p.accountNumber) { // Check p.payoutType if avail or infer
+                    typeBadge = '<span class="badge badge-primary">Bank</span>';
+                    details = `
+                        <div><strong style="font-size:0.8rem;">${p.personName || 'N/A'}</strong></div>
+                        <div class="text-muted" style="font-size:0.75rem;">Acct: ${p.accountNumber || 'N/A'}</div>
+                        <div class="text-muted" style="font-size:0.75rem;">IFSC: ${p.ifsc || 'N/A'}</div>
+                    `;
+                } else {
+                    typeBadge = '<span class="badge badge-warning">USDT</span>';
+                    details = `
+                        <div><code style="font-size: 0.75rem;">${p.walletAddress || 'N/A'}</code></div>
+                        <div class="text-muted" style="font-size:0.75rem;">${p.network || 'TRC20'}</div>
+                    `;
+                }
+
+                return `
                 <tr>
                     <td><code>${p.orderId}</code></td>
                     <td>${p.merchantName}<br><small class="text-muted">@${p.merchantUsername}</small></td>
+                    <td>${typeBadge}</td>
                     <td>₹${parseFloat(p.amount).toFixed(2)}<br><small class="text-muted">${t('fee')}: ₹${parseFloat(p.fee).toFixed(2)}</small></td>
-                    <td><code style="font-size: 0.75rem;">${p.walletAddress}</code></td>
-                    <td><span class="badge badge-processing">${p.network}</span></td>
+                    <td>${details}</td>
                     <td>${formatDate(p.createdAt)}</td>
                     <td>
                         <button class="btn btn-success btn-sm" onclick="approvePayout('${p.id}')">
@@ -1557,7 +1661,8 @@ async function loadApprovalsData() {
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         } else {
             container.innerHTML = `
             <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_pending')}</td></tr>
@@ -1569,13 +1674,15 @@ async function loadApprovalsData() {
 }
 
 async function approvePayout(id) {
-    const utr = prompt(t('prompt_utr'));
+    const utr = prompt(t('prompt_utr') || 'Enter UTR / Transaction Hash:');
+
+    if (utr === null) return; // Cancelled
 
     try {
         const data = await API.post(`/admin/payouts/${id}/approve`, { utr });
         if (data.code === 1) {
             showToast(t('toast_approved'), 'success');
-            loadApprovals();
+            loadApprovalsData();
             loadPendingCount();
         } else {
             showToast(data.msg || 'Failed to approve', 'error');
@@ -1881,7 +1988,7 @@ function showWelcomeModal(data) {
     document.getElementById('welcomeMerchantId').textContent = data.id || 'N/A';
     document.getElementById('welcomeMerchantKey').textContent = data.merchantKey || 'N/A';
     document.getElementById('welcomePayinRate').textContent = (data.payinRate || 5.0) + '%';
-    document.getElementById('welcomePayoutRate').textContent = (data.payoutRate || 3.0) + '%';
+    document.getElementById('welcomePayoutRate').textContent = (data.payoutRate || 3.0) + '% + 6 INR';
     document.getElementById('welcomeBaseUrl').textContent = window.location.origin;
 
     // Store data for sharing

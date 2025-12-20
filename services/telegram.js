@@ -305,9 +305,20 @@ async function initBot() {
                 `).get(user.id, minutes);
             };
 
+            const getAllTimeStats = async () => {
+                return await db.prepare(`
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                    FROM transactions 
+                    WHERE user_id = ? AND type = 'payin'
+                `).get(user.id);
+            };
+
             const stats5 = await getStats(5);
             const stats10 = await getStats(10);
             const stats30 = await getStats(30);
+            const statsTotal = await getAllTimeStats();
 
             const formatRate = (s) => {
                 if (!s || s.total === 0) return '`0.00%`';
@@ -317,7 +328,8 @@ async function initBot() {
             let msg = `📊 **支付成功率监控**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n`;
             msg += `🕒 05分钟: ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
             msg += `🕒 10分钟: ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
-            msg += `🕒 30分钟: ${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})`;
+            msg += `🕒 30分钟: ${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})\n`;
+            msg += `🕒 总共: ${formatRate(statsTotal)} (${statsTotal.success || 0}/${statsTotal.total || 0})`;
 
             reply(ctx, msg);
         } catch (error) {

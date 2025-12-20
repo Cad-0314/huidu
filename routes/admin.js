@@ -11,6 +11,10 @@ const telegramService = require('../services/telegram');
  * GET /api/admin/users
  * Get all merchants
  */
+/**
+ * GET /api/admin/users
+ * Get all merchants
+ */
 router.get('/users', authenticate, requireAdmin, async (req, res) => {
     try {
         const { page = 1, limit = 20, search } = req.query;
@@ -20,7 +24,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
 
         // Base Query
         let query = `
-            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, two_factor_enabled, created_at
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, created_at
             FROM users
             WHERE 1=1
         `;
@@ -76,6 +80,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
                     merchantKey: u.merchant_key,
                     payinRate: u.payin_rate,
                     payoutRate: u.payout_rate,
+                    usdtRate: u.usdt_rate,
                     twoFactorEnabled: !!u.two_factor_enabled,
                     createdAt: u.created_at
                 })),
@@ -97,7 +102,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
  */
 router.post('/users', authenticate, requireAdmin, async (req, res) => {
     try {
-        const { username, password, name, callbackUrl, payinRate, payoutRate } = req.body;
+        const { username, password, name, callbackUrl, payinRate, payoutRate, usdtRate } = req.body;
         const db = getDb();
 
         if (!username || !password || !name) {
@@ -107,13 +112,10 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         // Validate Rates
         const pRate = parseFloat(payinRate || 5.0);
         const poRate = parseFloat(payoutRate || 3.0);
+        const uRate = parseFloat(usdtRate || 100.0); // Default USDT Rate
 
-        if (pRate < 5) {
-            return res.status(400).json({ code: 0, msg: 'Pay-in rate must be 5% or more' });
-        }
-        if (poRate < 3) {
-            return res.status(400).json({ code: 0, msg: 'Payout rate must be 3% or more' });
-        }
+        if (pRate < 0) return res.status(400).json({ code: 0, msg: 'Invalid Pay-in rate' });
+        if (poRate < 0) return res.status(400).json({ code: 0, msg: 'Invalid Payout rate' });
 
         const existing = await db.prepare('SELECT id FROM users WHERE username = ?').get(username);
         if (existing) {
@@ -125,14 +127,14 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         const merchantKey = generateMerchantKey();
 
         const result = await db.prepare(`
-            INSERT INTO users(uuid, username, password, name, role, merchant_key, callback_url, payin_rate, payout_rate)
-            VALUES(?, ?, ?, ?, 'merchant', ?, ?, ?, ?)
-                `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null, pRate, poRate);
+            INSERT INTO users(uuid, username, password, name, role, merchant_key, callback_url, payin_rate, payout_rate, usdt_rate)
+            VALUES(?, ?, ?, ?, 'merchant', ?, ?, ?, ?, ?)
+                `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null, pRate, poRate, uRate);
 
         res.json({
             code: 1,
             msg: 'Merchant created successfully',
-            data: { id: result.lastInsertRowid.toString(), username, name, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate }
+            data: { id: result.lastInsertRowid.toString(), username, name, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate, usdtRate: uRate }
         });
     } catch (error) {
         console.error('Create user error:', error);
@@ -148,10 +150,8 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const db = getDb();
-        // Try finding by UUID (new system) or ID (legacy check, though users table uses integer ID but we expose UUID usually or we expose ID?
-        // In the list we return `uuid` as `id`. So we should query by `uuid`.
         const user = await db.prepare(`
-            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, two_factor_enabled, created_at
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, created_at
             FROM users
             WHERE uuid = ? OR id = ?
         `).get(id, id);
@@ -163,8 +163,8 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
         res.json({
             code: 1,
             data: {
-                id: user.uuid, // Expose UUID as the main ID
-                dbId: user.id, // Internal ID if needed for resets
+                id: user.uuid,
+                dbId: user.id,
                 username: user.username,
                 name: user.name,
                 role: user.role,
@@ -174,6 +174,7 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
                 merchantKey: user.merchant_key,
                 payinRate: user.payin_rate,
                 payoutRate: user.payout_rate,
+                usdtRate: user.usdt_rate,
                 twoFactorEnabled: !!user.two_factor_enabled,
                 createdAt: user.created_at
             }
@@ -190,14 +191,14 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
 router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, status, callbackUrl, payinRate, payoutRate } = req.body;
+        const { name, status, callbackUrl, payinRate, payoutRate, usdtRate } = req.body;
         const db = getDb();
 
         await db.prepare(`
             UPDATE users 
-            SET name = ?, status = ?, callback_url = ?, payin_rate = ?, payout_rate = ?, updated_at = datetime('now')
+            SET name = ?, status = ?, callback_url = ?, payin_rate = ?, payout_rate = ?, usdt_rate = ?, updated_at = datetime('now')
             WHERE uuid = ?
-        `).run(name, status, callbackUrl, parseFloat(payinRate), parseFloat(payoutRate), id);
+        `).run(name, status, callbackUrl, parseFloat(payinRate), parseFloat(payoutRate), parseFloat(usdtRate || 0), id);
 
         res.json({ code: 1, msg: 'User updated' });
     } catch (error) {
@@ -233,7 +234,7 @@ router.get('/payouts/pending', authenticate, requireAdmin, async (req, res) => {
             SELECT p.*, u.username, u.name as merchant_name
             FROM payouts p
             JOIN users u ON p.user_id = u.id
-            WHERE p.payout_type = 'usdt' AND p.status = 'pending'
+            WHERE p.status = 'pending'
             ORDER BY p.created_at ASC
             `).all();
 
@@ -247,8 +248,12 @@ router.get('/payouts/pending', authenticate, requireAdmin, async (req, res) => {
                 amount: p.amount,
                 fee: p.fee,
                 netAmount: p.net_amount,
+                payoutType: p.payout_type,
                 walletAddress: p.wallet_address,
                 network: p.network,
+                accountNumber: p.account_number,
+                ifsc: p.ifsc,
+                personName: p.person_name,
                 status: p.status,
                 createdAt: p.created_at
             }))
