@@ -240,6 +240,9 @@ router.get('/profile', authenticate, (req, res) => {
                 name: user.name,
                 role: user.role,
                 balance: user.balance,
+                payinRate: user.payin_rate,
+                payoutRate: user.payout_rate,
+                twoFactorEnabled: !!user.two_factor_enabled,
                 merchantKey: user.merchant_key,
                 callbackUrl: user.callback_url,
                 createdAt: user.created_at

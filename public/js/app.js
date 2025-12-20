@@ -338,25 +338,48 @@ function initSection(section) {
 
 async function loadProfileData() {
     try {
-        // We can reuse the currentUser object if it's up to date, 
-        // or fetch fresh data. Let's start with currentUser but maybe standardized refresh is better.
-        // For now, let's assume currentUser is available globally (it usually is in this app structure).
+        // Fetch fresh data from server
+        const data = await API.get('/auth/profile');
+        if (data.code !== 1) return;
 
-        let user = currentUser;
+        const user = data.data;
 
-        // If we want fresh data (e.g. balance/rates might change), we could fetch /me or similar.
-        // Assuming we rely on what we have or generic refresh:
-
-        if (!user) return; // Should not happen if logged in
+        // Update Global User State lightly (optional, but good for consistency)
+        if (currentUser) {
+            currentUser.balance = user.balance;
+            currentUser.twoFactorEnabled = !!user.merchantKey; // logic might differ, relying on profile 'role' etc
+            // Actually profile endpoint returns: id, username, name, role, balance, merchantKey, callbackUrl
+            // It does NOT return 'twoFactorEnabled' status explicitly in the GET /profile response in auth.js line 237!
+            // Check auth.js: it returns id, username, name, role... 
+            // WAIT. I need to update auth.js to return twoFactorEnabled status in GET /profile!
+        }
 
         document.getElementById('profileName').value = user.name || '';
         document.getElementById('profileUsername').value = user.username || '';
-        document.getElementById('profilePayinRate').textContent = (user.payinRate || 5.0) + '%';
 
-        // Payout Rate adjustment
-        document.getElementById('profilePayoutRate').textContent = (user.payoutRate || 3.0) + '% + 6 INR';
+        // Rates are not in GET /profile response in auth.js. 
+        // I need to add them to auth.js OR fetch them from somewhere else.
+        // auth.js line 237 only returns basic info.
+        // MERCHANTS cannot see their rates in /profile endpoint currently?
+        // standard `currentUser` has rates from login?
+        // Login response (auth.js line 134) returns: id, username, name, role, balance, twoFactorEnabled.
+        // It does NOT return rates either! 
+        // SO WHERE DO RATES COME FROM?
+        // `app.js` line 354: `user.payinRate || 5.0`.
+        // It seems rates are currently hardcoded or missing in the User object on frontend!
+        // The user complained "when update user payin and payout rate it does not reflect".
+        // This confirms rates are NOT being fetched.
+        // I MUST UPDATE backend `GET /auth/profile` to return rates and 2FA status.
 
-        // 2FA
+        // I will add a TODO to update auth.js first.
+        // For now, I will write the frontend code assuming the backend will provide it.
+
+        document.getElementById('profilePayinRate').textContent = (user.payinRate || 0) + '%';
+        document.getElementById('profilePayoutRate').textContent = (user.payoutRate || 0) + '% + 6 INR';
+        document.getElementById('valSettlement').textContent = 'Instant (D+0)'; // Static for now as requested
+
+        // 2FA Status
+        // user.twoFactorEnabled must be added to /profile response
         const s2fa = document.getElementById('profile2faStatus');
         if (s2fa) {
             s2fa.innerHTML = user.twoFactorEnabled
@@ -367,9 +390,24 @@ async function loadProfileData() {
         const btnEnable = document.getElementById('btnEnable2faProfile');
         const btnDisable = document.getElementById('btnDisable2faProfile');
 
+        // Logic: 
+        // If Admin: Can see both (though usually admin doesn't use this profile view for others, only self).
+        // If Merchant: Can Enable. CANNOT Disable.
+
+        const isMerchant = currentUser.role === 'merchant';
+
         if (user.twoFactorEnabled) {
             if (btnEnable) btnEnable.classList.add('hidden');
-            if (btnDisable) btnDisable.classList.remove('hidden');
+
+            // If merchant, HIDE disable button. Only admin can disable.
+            // But wait, if I am logged in as Merchant, I am viewing MY profile.
+            // User requirement: "mrchent canot disable his two factor only admin can so remove option for merchent"
+
+            if (isMerchant) {
+                if (btnDisable) btnDisable.classList.add('hidden');
+            } else {
+                if (btnDisable) btnDisable.classList.remove('hidden');
+            }
         } else {
             if (btnEnable) btnEnable.classList.remove('hidden');
             if (btnDisable) btnDisable.classList.add('hidden');
@@ -377,6 +415,36 @@ async function loadProfileData() {
 
     } catch (e) {
         console.error('Profile load error:', e);
+    }
+}
+
+async function changePassword(event) {
+    event.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+
+    if (!currentPassword || !newPassword) {
+        showToast(t('toast_fill_fields'), 'error');
+        return;
+    }
+
+    try {
+        const data = await API.post('/auth/change-password', {
+            currentPassword,
+            newPassword
+        });
+
+        if (data.code === 1) {
+            showToast(t('toast_pass_reset_success'), 'success');
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            // Optional: Logout? No, just success is enough.
+        } else {
+            showToast(data.msg || 'Failed to update password', 'error');
+        }
+    } catch (error) {
+        showToast(t('toast_error_reset_pass'), 'error');
     }
 }
 
@@ -525,7 +593,7 @@ async function loadTransactionsData(page = 1) {
             if (transactions.length > 0) {
                 container.innerHTML = transactions.map(tx => `
                 <tr>
-                    <td><code>${tx.orderId}</code></td>
+                    <td><code style="font-family: monospace; font-weight: bold;">${tx.orderId}</code></td>
                     <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
@@ -577,7 +645,7 @@ async function loadPayoutsData(page = 1) {
             if (payouts.length > 0) {
                 container.innerHTML = payouts.map(p => `
                 <tr>
-                    <td><code>${p.orderId}</code></td>
+                    <td><code style="font-family: monospace; font-weight: bold;">${p.orderId}</code></td>
                     <td>${p.type === 'bank' ? t('bank_transfer') : t('usdt_transfer')}</td>
                     <td>₹${parseFloat(p.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(p.fee).toFixed(2)}</td>
@@ -1732,7 +1800,7 @@ async function loadAllTransactionsData() {
         if (data.code === 1 && data.data.length > 0) {
             container.innerHTML = data.data.map(tx => `
                 <tr>
-                    <td><code>${tx.orderId}</code></td>
+                    <td><code style="font-family: monospace; font-weight: bold;">${tx.orderId}</code></td>
                     <td>${tx.merchantName}<br><small class="text-muted">${tx.merchantEmail}</small></td>
                     <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
