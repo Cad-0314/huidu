@@ -10,7 +10,22 @@ const { generateOrderId } = require('../utils/signature');
  */
 async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUrl, param }) {
     const db = getDb();
-    // ... (lines 20-36)
+    const numericAmount = parseFloat(amount);
+
+    if (numericAmount < 100) {
+        throw new Error('Minimum deposit amount is ₹100');
+    }
+
+    // Use provided orderId or generate one
+    const finalOrderId = orderId || generateOrderId('HDP');
+
+    // Check uniqueness if orderId was provided externally
+    if (orderId) {
+        const existing = await db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
+        if (existing) {
+            throw new Error('Order ID already exists');
+        }
+    }
 
     const rates = await getUserRates(db, merchant.id); // Use User Specific Rates
     const { fee, netAmount } = calculatePayinFee(numericAmount, rates.payinRate);

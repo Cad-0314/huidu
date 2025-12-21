@@ -1,0 +1,466 @@
+{
+    "info": {
+        "name": "VSPay API - Complete Testing",
+        "description": "Complete API testing suite for VSPay Payment Gateway (vspay.vip)",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "1. Payin Flow",
+            "item": [
+                {
+                    "name": "Create Payin Order",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const CryptoJS = require('crypto-js');",
+                                    "",
+                                    "// Generate unique order ID",
+                                    "const amount = \"1000\";",
+                                    "const orderId = \"TEST_\" + Date.now();",
+                                    "const callbackUrl = pm.environment.get(\"CALLBACK_URL\") || \"https://webhook.site/YOUR-UNIQUE-ID\";",
+                                    "const skipUrl = \"https://yoursite.com/success\";",
+                                    "const param = \"test_param_123\";",
+                                    "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                                    "const secret = pm.environment.get(\"MERCHANT_SECRET\");",
+                                    "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                                    "",
+                                    "// Calculate signature: MD5(amount + merchantKey + orderId + timestamp + secret)",
+                                    "const signString = amount + merchantKey + orderId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "console.log(\"Signature String:\", signString);",
+                                    "console.log(\"Calculated Sign:\", sign);",
+                                    "",
+                                    "// Set environment variables",
+                                    "pm.environment.set(\"payin_amount\", amount);",
+                                    "pm.environment.set(\"payin_orderId\", orderId);",
+                                    "pm.environment.set(\"payin_callbackUrl\", callbackUrl);",
+                                    "pm.environment.set(\"payin_skipUrl\", skipUrl);",
+                                    "pm.environment.set(\"payin_param\", param);",
+                                    "pm.environment.set(\"payin_timestamp\", timestamp);",
+                                    "pm.environment.set(\"payin_sign\", sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", () => {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const response = pm.response.json();",
+                                    "",
+                                    "pm.test(\"Response code is 1 (success)\", () => {",
+                                    "    pm.expect(response.code).to.equal(1);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Payment URL exists\", () => {",
+                                    "    pm.expect(response.data.paymentUrl).to.exist;",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Order ID matches\", () => {",
+                                    "    pm.expect(response.data.orderId).to.equal(pm.environment.get(\"payin_orderId\"));",
+                                    "});",
+                                    "",
+                                    "// Save for later queries",
+                                    "if (response.code === 1) {",
+                                    "    pm.environment.set(\"last_payin_orderId\", response.data.orderId);",
+                                    "    pm.environment.set(\"last_paymentUrl\", response.data.paymentUrl);",
+                                    "    console.log(\"✅ Payin created successfully!\");",
+                                    "    console.log(\"Payment URL:\", response.data.paymentUrl);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": \"{{payin_amount}}\",\n  \"orderId\": \"{{payin_orderId}}\",\n  \"merchantKey\": \"{{MERCHANT_KEY}}\",\n  \"callbackUrl\": \"{{payin_callbackUrl}}\",\n  \"skipUrl\": \"{{payin_skipUrl}}\",\n  \"param\": \"{{payin_param}}\",\n  \"timestamp\": \"{{payin_timestamp}}\",\n  \"sign\": \"{{payin_sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/api/payin/create",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "create"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Query Payin Status",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const CryptoJS = require('crypto-js');",
+                                    "",
+                                    "const orderId = pm.environment.get(\"last_payin_orderId\");",
+                                    "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                                    "const secret = pm.environment.get(\"MERCHANT_SECRET\");",
+                                    "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                                    "",
+                                    "// Signature: MD5(merchantKey + orderId + timestamp + secret)",
+                                    "const signString = merchantKey + orderId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.environment.set(\"query_timestamp\", timestamp);",
+                                    "pm.environment.set(\"query_sign\", sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", () => {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const response = pm.response.json();",
+                                    "",
+                                    "pm.test(\"Response code is 1\", () => {",
+                                    "    pm.expect(response.code).to.equal(1);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Transaction data exists\", () => {",
+                                    "    pm.expect(response.data).to.exist;",
+                                    "});",
+                                    "",
+                                    "console.log(\"Transaction Status:\", response.data.status);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchantKey\": \"{{MERCHANT_KEY}}\",\n  \"orderId\": \"{{last_payin_orderId}}\",\n  \"timestamp\": \"{{query_timestamp}}\",\n  \"sign\": \"{{query_sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/api/payin/query",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "query"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Submit UTR (Optional)",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const CryptoJS = require('crypto-js');",
+                                    "",
+                                    "const orderId = pm.environment.get(\"last_payin_orderId\");",
+                                    "const utr = \"TEST_UTR_\" + Date.now();",
+                                    "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                                    "const secret = pm.environment.get(\"MERCHANT_SECRET\");",
+                                    "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                                    "",
+                                    "// Signature: MD5(merchantKey + orderId + timestamp + utr + secret)",
+                                    "const signString = merchantKey + orderId + timestamp + utr + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.environment.set(\"utr\", utr);",
+                                    "pm.environment.set(\"utr_timestamp\", timestamp);",
+                                    "pm.environment.set(\"utr_sign\", sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchantKey\": \"{{MERCHANT_KEY}}\",\n  \"orderId\": \"{{last_payin_orderId}}\",\n  \"utr\": \"{{utr}}\",\n  \"timestamp\": \"{{utr_timestamp}}\",\n  \"sign\": \"{{utr_sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/api/payin/submit-utr",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "submit-utr"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Payout Flow",
+            "item": [
+                {
+                    "name": "Create Bank Payout",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const CryptoJS = require('crypto-js');",
+                                    "",
+                                    "const amount = \"500\";",
+                                    "const orderId = \"PAYOUT_\" + Date.now();",
+                                    "const account = \"1234567890123456\";",
+                                    "const ifsc = \"SBIN0001234\";",
+                                    "const personName = \"Test User\";",
+                                    "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                                    "const secret = pm.environment.get(\"MERCHANT_SECRET\");",
+                                    "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                                    "",
+                                    "// Signature: MD5(account + amount + ifsc + merchantKey + orderId + personName + timestamp + secret)",
+                                    "const signString = account + amount + ifsc + merchantKey + orderId + personName + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "console.log(\"Payout Signature String:\", signString);",
+                                    "",
+                                    "pm.environment.set(\"payout_amount\", amount);",
+                                    "pm.environment.set(\"payout_orderId\", orderId);",
+                                    "pm.environment.set(\"payout_account\", account);",
+                                    "pm.environment.set(\"payout_ifsc\", ifsc);",
+                                    "pm.environment.set(\"payout_personName\", personName);",
+                                    "pm.environment.set(\"payout_timestamp\", timestamp);",
+                                    "pm.environment.set(\"payout_sign\", sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", () => {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "const response = pm.response.json();",
+                                    "",
+                                    "pm.test(\"Response code is 1\", () => {",
+                                    "    pm.expect(response.code).to.equal(1);",
+                                    "});",
+                                    "",
+                                    "if (response.code === 1) {",
+                                    "    pm.environment.set(\"last_payout_orderId\", response.data.orderId);",
+                                    "    console.log(\"✅ Payout created:\", response.data);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": \"{{payout_amount}}\",\n  \"orderId\": \"{{payout_orderId}}\",\n  \"account\": \"{{payout_account}}\",\n  \"ifsc\": \"{{payout_ifsc}}\",\n  \"personName\": \"{{payout_personName}}\",\n  \"merchantKey\": \"{{MERCHANT_KEY}}\",\n  \"timestamp\": \"{{payout_timestamp}}\",\n  \"sign\": \"{{payout_sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/api/payout/bank",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "bank"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Query Payout Status",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const CryptoJS = require('crypto-js');",
+                                    "",
+                                    "const orderId = pm.environment.get(\"last_payout_orderId\");",
+                                    "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                                    "const secret = pm.environment.get(\"MERCHANT_SECRET\");",
+                                    "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                                    "",
+                                    "// Signature: MD5(merchantKey + orderId + timestamp + secret)",
+                                    "const signString = merchantKey + orderId + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.environment.set(\"payout_query_timestamp\", timestamp);",
+                                    "pm.environment.set(\"payout_query_sign\", sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchantKey\": \"{{MERCHANT_KEY}}\",\n  \"orderId\": \"{{last_payout_orderId}}\",\n  \"timestamp\": \"{{payout_query_timestamp}}\",\n  \"sign\": \"{{payout_query_sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/api/payout/query",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "query"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Balance & Account",
+            "item": [
+                {
+                    "name": "Get Balance",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const CryptoJS = require('crypto-js');",
+                                    "",
+                                    "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                                    "const secret = pm.environment.get(\"MERCHANT_SECRET\");",
+                                    "const timestamp = Math.floor(Date.now() / 1000).toString();",
+                                    "",
+                                    "// Signature: MD5(merchantKey + timestamp + secret)",
+                                    "const signString = merchantKey + timestamp + secret;",
+                                    "const sign = CryptoJS.MD5(signString).toString();",
+                                    "",
+                                    "pm.environment.set(\"balance_timestamp\", timestamp);",
+                                    "pm.environment.set(\"balance_sign\", sign);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        },
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const response = pm.response.json();",
+                                    "",
+                                    "pm.test(\"Balance retrieved\", () => {",
+                                    "    pm.expect(response.code).to.equal(1);",
+                                    "});",
+                                    "",
+                                    "if (response.code === 1) {",
+                                    "    console.log(\"💰 Current Balance: ₹\" + response.data.balance);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"merchantKey\": \"{{MERCHANT_KEY}}\",\n  \"timestamp\": \"{{balance_timestamp}}\",\n  \"sign\": \"{{balance_sign}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/api/balance",
+                            "host": [
+                                "{{BASE_URL}}"
+                            ],
+                            "path": [
+                                "api",
+                                "balance"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "https://vspay.vip",
+            "type": "string"
+        },
+        {
+            "key": "MERCHANT_KEY",
+            "value": "YOUR_MERCHANT_KEY_HERE",
+            "type": "string"
+        },
+        {
+            "key": "MERCHANT_SECRET",
+            "value": "YOUR_SECRET_HERE",
+            "type": "string"
+        },
+        {
+            "key": "CALLBACK_URL",
+            "value": "https://webhook.site/YOUR-UNIQUE-ID",
+            "type": "string"
+        }
+    ]
+}
