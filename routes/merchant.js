@@ -614,70 +614,39 @@ router.post('/payin/create', authenticate, async (req, res) => {
     try {
         const { orderAmount, orderId, callbackUrl, skipUrl, param } = req.body;
         const merchant = req.user; // From JWT auth
-        const db = getDb();
 
         console.log('[MERCHANT PAYIN] Request:', { orderAmount, orderId, userId: merchant.uuid });
 
-        if (!orderAmount || !orderId) {
-            return res.status(400).json({ code: 0, msg: 'orderAmount and orderId are required' });
+        if (!orderAmount) {
+            return res.status(400).json({ code: 0, msg: 'orderAmount is required' });
         }
 
-        const amount = parseFloat(orderAmount);
-
-        // Minimum deposit: ₹100
-        if (amount < 100) {
-            return res.status(400).json({ code: 0, msg: 'Minimum deposit amount is ₹100' });
-        }
-
-        const existing = await db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
-        if (existing) {
-            return res.status(400).json({ code: 0, msg: 'Order ID already exists' });
-        }
-
-        const rates = await getRatesFromDb(db);
-        const { fee, netAmount } = calculatePayinFee(amount, rates.payinRate);
-
-        const internalOrderId = generateOrderId('HDP');
-        const appUrl = process.env.APP_URL || 'http://localhost:3000';
-        const ourCallbackUrl = `${appUrl}/api/payin/callback`;
-        const ourSkipUrl = `${appUrl}/api/payin/redirect?url=${encodeURIComponent(skipUrl || `${appUrl}/payment/complete`)}`;
-
-        console.log('[MERCHANT PAYIN] Calling Silkpay API...');
-
-        const silkpayResponse = await silkpayService.createPayin({
-            orderAmount: orderAmount,
-            orderId: internalOrderId,
-            notifyUrl: ourCallbackUrl,
-            returnUrl: ourSkipUrl
+        const result = await createPayinOrder({
+            amount: orderAmount,
+            orderId: orderId, // Optional, service auto-generates if null
+            merchant: merchant,
+            callbackUrl: callbackUrl,
+            skipUrl: skipUrl,
+            param: param
         });
-
-        if (silkpayResponse.status !== '200') {
-            return res.status(400).json({ code: 0, msg: silkpayResponse.message || 'Failed to create order' });
-        }
-
-        const txUuid = uuidv4();
-
-        // Wrap callbackUrl and original param into stored param to preserve dynamic callback capability
-        const storedParam = JSON.stringify({
-            c: callbackUrl,
-            p: param
-        });
-
-        await db.prepare(`
-            INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
-            VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
-        `).run(txUuid, merchant.id, orderId, silkpayResponse.data.payOrderId || internalOrderId, amount, amount, fee, netAmount, silkpayResponse.data.paymentUrl, storedParam);
-
-        const localPaymentUrl = `${appUrl}/pay/${silkpayResponse.data.payOrderId || internalOrderId}`;
 
         res.json({
             code: 1,
             msg: 'Order created',
-            data: { orderId, id: txUuid, orderAmount: amount, fee, rechargeUrl: localPaymentUrl, paymentUrl: localPaymentUrl }
+            data: {
+                orderId: result.orderId,
+                id: result.id,
+                orderAmount: result.amount,
+                fee: result.fee,
+                rechargeUrl: result.paymentUrl,
+                paymentUrl: result.paymentUrl
+            }
         });
+
     } catch (error) {
         console.error('[MERCHANT PAYIN] Error:', error);
-        res.status(500).json({ code: 0, msg: 'Server error: ' + error.message });
+        const code = error.message.includes('Minimum') || error.message.includes('exists') ? 400 : 500;
+        res.status(code).json({ code: 0, msg: error.message });
     }
 });
 
