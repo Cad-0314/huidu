@@ -48,7 +48,7 @@ Add the following keys (copy values from your local `.env`):
 | `NODE_ENV` | `production` |
 | `PORT` | `3000` (or leave empty, cPanel assigns one automatically) |
 | `JWT_SECRET` | Your secure secret key |
-| `APP_URL` | Your full domain URL (e.g., `https://api.yourdomain.com`) |
+| `APP_URL` | Your full domain URL (e.g., `https://vspay.vip`) |
 | `SILKPAY_BASE_URL` | `https://api.silkpay.ai` |
 | `SILKPAY_MID` | Your Production Merchant ID |
 | `SILKPAY_SECRET` | Your Production Secret |

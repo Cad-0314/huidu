@@ -25,7 +25,7 @@ cp .env.example .env
 npm start
 ```
 
-Visit `http://localhost:3000` and login with `admin` / `admin123`
+Visit `https://vspay.vip` and login with `admin` / `admin123`
 
 ## Deploy to Render (Free Tier Friendly)
 
@@ -43,7 +43,7 @@ This project uses **Turso** (distributed SQLite) for the database, allowing you 
 3. Connect your repo (render.yaml will auto-configure)
 4. Set environment variables:
    - `PAYABLE_SECRET` & `PAYABLE_USER_ID`: Your Payable credentials
-   - `APP_URL`: Your Render URL (e.g., https://your-app.onrender.com)
+   - `APP_URL`: Your domain URL (e.g., https://vspay.vip)
    - `TURSO_DATABASE_URL`: `libsql://...`
    - `TURSO_AUTH_TOKEN`: `eyJ...`
 
