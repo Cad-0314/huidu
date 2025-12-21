@@ -1628,21 +1628,7 @@ async function adjustBalance(userId) {
     }
 }
 
-async function disable2fa() {
-    if (!confirm(t('warn_disable_2fa'))) return;
 
-    try {
-        const data = await API.post('/auth/2fa/disable');
-        if (data.code === 1) {
-            showToast(t('toast_2fa_disabled'), 'success');
-            setTimeout(() => logout(), 1000);
-        } else {
-            showToast(data.msg || 'Failed', 'error');
-        }
-    } catch (e) {
-        showToast(t('toast_verify_failed'), 'error');
-    }
-}
 
 async function resetUser2fa(userId) {
     if (!confirm(t('warn_disable_2fa'))) return;

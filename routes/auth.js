@@ -357,22 +357,6 @@ router.post('/change-password', authenticate, async (req, res) => {
     }
 });
 
-/**
- * POST /api/auth/2fa/disable - Disable 2FA
- */
-router.post('/2fa/disable', authenticate, async (req, res) => {
-    try {
-        const user = req.user;
-        const db = getDb();
 
-        // Reset 2FA fields
-        await db.prepare('UPDATE users SET two_factor_enabled = 0, two_factor_secret = NULL WHERE id = ?').run(user.id);
-
-        res.json({ code: 1, msg: '2FA Disabled' });
-    } catch (error) {
-        console.error('Disable 2FA error:', error);
-        res.status(500).json({ code: 0, msg: 'Server error' });
-    }
-});
 
 module.exports = router;
