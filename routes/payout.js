@@ -358,7 +358,15 @@ router.post('/callback', async (req, res) => {
 
         // 3. Verify Signature
         if (!silkpayService.verifyPayoutCallback(req.body, secretToUse)) {
-            console.error(`Payout callback signature verification failed for user: ${payout.username}`);
+            const { mId, mOrderId, amount, timestamp, sign } = req.body;
+            const str = `${mId}${mOrderId}${amount}${timestamp}${secretToUse}`;
+            const calculated = crypto.createHash('md5').update(str).digest('hex').toLowerCase();
+
+            console.error(`[PAYOUT FAILURE] Signature verification failed for user: ${payout.username}`);
+            console.error(`[PAYOUT FAILURE] Expected: ${calculated}`);
+            console.error(`[PAYOUT FAILURE] Received: ${sign}`);
+            console.error(`[PAYOUT FAILURE] String: ${str}`);
+
             return res.send('OK');
         }
 

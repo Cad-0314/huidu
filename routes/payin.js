@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const axios = require('axios');
 const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
@@ -305,7 +306,15 @@ router.post('/callback', async (req, res) => {
 
         // 3. Verify Signature with correct secret
         if (!silkpayService.verifyPayinCallback(req.body, secretToUse)) {
-            console.error(`Payin callback signature verification failed for user: ${tx.username}`);
+            const { amount, mId, mOrderId, timestamp, sign } = req.body;
+            const str = `${amount}${mId}${mOrderId}${timestamp}${secretToUse}`;
+            const calculated = crypto.createHash('md5').update(str).digest('hex').toLowerCase();
+
+            console.error(`[PAYIN FAILURE] Signature verification failed for user: ${tx.username}`);
+            console.error(`[PAYIN FAILURE] Expected: ${calculated}`);
+            console.error(`[PAYIN FAILURE] Received: ${sign}`);
+            console.error(`[PAYIN FAILURE] String: ${str}`);
+
             return res.send('OK');
         }
 
