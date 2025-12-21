@@ -193,6 +193,7 @@ async function initializeSchema() {
         )`,
         `CREATE TABLE IF NOT EXISTS callback_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id TEXT, -- Added to store incoming external/merchant ID
             transaction_id INTEGER,
             payout_id INTEGER,
             type TEXT NOT NULL,
@@ -239,6 +240,13 @@ async function initializeSchema() {
         try {
             await db.exec(sql);
         } catch (e) { }
+    }
+
+    // Migrations
+    try {
+        await db.exec('ALTER TABLE callback_logs ADD COLUMN order_id TEXT');
+    } catch (e) {
+        // Ignore if exists
     }
 
     // Default Admin & Settings

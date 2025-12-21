@@ -333,7 +333,7 @@ router.post('/callback', async (req, res) => {
         const { status, amount, payOrderId, message, mOrderId: orderId, utr, sign } = req.body; // Map mOrderId -> orderId variable
         const db = getDb();
 
-        await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payout', ?, ?)`).run(JSON.stringify(req.body), status);
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status) VALUES ('payout', ?, ?, ?)`).run(orderId || payOrderId, JSON.stringify(req.body), status);
 
         // 1. Lookup Payout FIRST to determine correct Secret (Demo vs Prod)
         let payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')

@@ -279,7 +279,7 @@ router.post('/callback', async (req, res) => {
         const { status, amount, payOrderId, mId, mOrderId, sign, utr } = req.body;
         const db = getDb();
 
-        await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payin', ?, ?)`).run(JSON.stringify(req.body), status);
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status) VALUES ('payin', ?, ?, ?)`).run(mOrderId || payOrderId, JSON.stringify(req.body), status);
 
         // 1. Lookup Transaction FIRST to determine correct Secret (Demo vs Prod)
         // Lookup transaction by payOrderId (platform_order_id) or mOrderId
