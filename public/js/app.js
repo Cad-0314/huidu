@@ -296,6 +296,21 @@ function initSection(section) {
         window.updateTranslations();
     }
 
+    // Populate Dynamic Rates if elements exist (Channel Mgmt & Profile)
+    if (currentUser) {
+        // Payin Rate
+        document.querySelectorAll('#cmPayinRate, #profilePayinRate').forEach(el => {
+            el.textContent = `${currentUser.payinRate || 5.0}%`;
+        });
+        // Payout Rate
+        document.querySelectorAll('#cmPayoutRate, #profilePayoutRate').forEach(el => {
+            el.textContent = `${currentUser.payoutRate || 3.0}% + ₹6`;
+        });
+
+        // Populate specific text inputs if they exist (e.g. edit forms)
+        // ...
+    }
+
     // Initialize section logic
     switch (section) {
         case 'dashboard':

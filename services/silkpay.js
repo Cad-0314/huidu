@@ -296,16 +296,18 @@ async function getBalance() {
  * Payin Docs: sign = md5(amount+mId+mOrderId+timestamp+secret)
  * Payout Docs: sign = md5(mId+mOrderId+amount+timestamp+secret)
  */
-function verifyPayinCallback(data) {
+function verifyPayinCallback(data, secretOverride = null) {
     const { amount, mId, mOrderId, timestamp, sign } = data;
-    const str = `${amount}${mId}${mOrderId}${timestamp}${SECRET}`;
+    const secret = secretOverride || SECRET;
+    const str = `${amount}${mId}${mOrderId}${timestamp}${secret}`;
     const calculated = createSign(str);
     return calculated === sign;
 }
 
-function verifyPayoutCallback(data) {
+function verifyPayoutCallback(data, secretOverride = null) {
     const { mId, mOrderId, amount, timestamp, sign } = data;
-    const str = `${mId}${mOrderId}${amount}${timestamp}${SECRET}`;
+    const secret = secretOverride || SECRET;
+    const str = `${mId}${mOrderId}${amount}${timestamp}${secret}`;
     const calculated = createSign(str);
     return calculated === sign;
 }

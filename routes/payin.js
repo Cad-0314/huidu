@@ -281,26 +281,31 @@ router.post('/callback', async (req, res) => {
 
         await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payin', ?, ?)`).run(JSON.stringify(req.body), status);
 
-        // Verify Signature
-        if (!silkpayService.verifyPayinCallback(req.body)) {
-            console.error('Payin callback signature verification failed');
-            return res.send('OK'); // Return OK to stop retries even if bad sign? Usually yes to avoid spam.
-        }
-
-        // Lookup transaction by payOrderId (platform_order_id)
-        // Also fallback to mOrderId matching order_id (if we sent Merchant ID) OR platform_order_id (if we sent Internal ID and stored it).
-        // Since we now send Merchant ID (finalOrderId), mOrderId should match order_id.
-        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+        // 1. Lookup Transaction FIRST to determine correct Secret (Demo vs Prod)
+        // Lookup transaction by payOrderId (platform_order_id) or mOrderId
+        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
             .get(payOrderId);
 
         if (!tx) {
             // Fallback: Lookup by mOrderId matching order_id
-            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
+            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
                 .get(mOrderId);
         }
 
         if (!tx) {
             console.log('Transaction not found for payOrderId:', payOrderId, 'or mOrderId:', mOrderId);
+            return res.send('OK');
+        }
+
+        // 2. Determine Secret
+        let secretToUse = process.env.SILKPAY_SECRET;
+        if (tx.username === 'demo') {
+            secretToUse = 'SIb3DQEBAQ'; // Dev/Sandbox Secret
+        }
+
+        // 3. Verify Signature with correct secret
+        if (!silkpayService.verifyPayinCallback(req.body, secretToUse)) {
+            console.error(`Payin callback signature verification failed for user: ${tx.username}`);
             return res.send('OK');
         }
 

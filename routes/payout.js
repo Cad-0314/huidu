@@ -335,31 +335,30 @@ router.post('/callback', async (req, res) => {
 
         await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payout', ?, ?)`).run(JSON.stringify(req.body), status);
 
-        // Verify Signature
-        if (!silkpayService.verifyPayoutCallback(req.body)) {
-            console.error('Payout callback signature verification failed');
-            return res.send('OK');
-        }
-
-        // Lookup transaction by payOrderId (platform_order_id) or mOrderId (order_id)
-        // Silkpay Callback: mOrderId is what we sent (Merchant Order ID now), payOrderId is Silkpay ID.
-        // We might have stored Silkpay ID in platform_order_id.
-        let payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+        // 1. Lookup Payout FIRST to determine correct Secret (Demo vs Prod)
+        let payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
             .get(payOrderId);
 
         if (!payout) {
             // Fallback: Lookup by mOrderId (which matches our order_id)
-            payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
-                .get(orderId); // req.body.orderId matches mOrderId? Wait. req.body keys?
-            // Silkpay Callback Body usually keys: mOrderId, payOrderId, etc.
-            // My code extracted `orderId` from req.body on Line 328.
-            // Assuming Line 328: const { ..., orderId (THIS IS mOrderId from Silkpay?), ... } = req.body;
-            // Wait. Silkpay docs say `mOrderId`.
-            // Let's verify line 328 content.
+            payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
+                .get(orderId);
         }
 
         if (!payout) {
             console.log('Payout not found for payOrderId:', payOrderId, 'or mOrderId:', orderId);
+            return res.send('OK');
+        }
+
+        // 2. Determine Secret
+        let secretToUse = process.env.SILKPAY_SECRET;
+        if (payout.username === 'demo') {
+            secretToUse = 'SIb3DQEBAQ'; // Dev/Sandbox Secret
+        }
+
+        // 3. Verify Signature
+        if (!silkpayService.verifyPayoutCallback(req.body, secretToUse)) {
+            console.error(`Payout callback signature verification failed for user: ${payout.username}`);
             return res.send('OK');
         }
 
