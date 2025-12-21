@@ -37,7 +37,9 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const rates = await getRatesFromDb(db);
     const { fee, netAmount } = calculatePayinFee(numericAmount, rates.payinRate);
 
-    const internalOrderId = generateOrderId('HDP'); // Internal ID for Silkpay interaction
+    // Use finalOrderId (Merchant's ID) for Silkpay interaction to ensure match
+    // Note: order_id is globally unique in our DB, so this is safe for Silkpay mid.
+    const silkpayOrderId = finalOrderId;
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
     const ourCallbackUrl = `${appUrl}/api/payin/callback`;
     const ourSkipUrl = `${appUrl}/api/payin/redirect?url=${encodeURIComponent(skipUrl || `${appUrl}/payment/complete`)}`;
@@ -50,13 +52,13 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
             mid: 'TEST',
             secret: 'SIb3DQEBAQ'
         };
-        console.log(`[Demo] Using Sandbox for Order ${finalOrderId}`);
+        console.log(`[Demo] Using Sandbox for Order ${silkpayOrderId}`);
     }
 
     // Call Silkpay
     const silkpayResponse = await silkpayService.createPayin({
         orderAmount: numericAmount,
-        orderId: internalOrderId,
+        orderId: silkpayOrderId,
         notifyUrl: ourCallbackUrl,
         returnUrl: ourSkipUrl
     }, silkpayConfig);
@@ -77,8 +79,8 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
 
     // Insert into DB
     // We map: order_id (Merchant's) -> finalOrderId
-    // platform_order_id (Silkpay's) -> silkpayResponse.data.payOrderId || internalOrderId
-    const platformOrderId = silkpayResponse.data.payOrderId || internalOrderId;
+    // platform_order_id -> silkpayResponse.data.payOrderId || silkpayOrderId (fallback)
+    const platformOrderId = silkpayResponse.data.payOrderId || silkpayOrderId;
     const paymentUrl = silkpayResponse.data.paymentUrl;
 
     // --- UPI ID Extraction Logic ---

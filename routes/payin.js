@@ -288,12 +288,19 @@ router.post('/callback', async (req, res) => {
         }
 
         // Lookup transaction by payOrderId (platform_order_id)
-        // Fetch merchant_key AND payin_rate
-        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+        // Also fallback to mOrderId matching order_id (if we sent Merchant ID) OR platform_order_id (if we sent Internal ID and stored it).
+        // Since we now send Merchant ID (finalOrderId), mOrderId should match order_id.
+        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
             .get(payOrderId);
 
         if (!tx) {
-            console.log('Transaction not found for payOrderId:', payOrderId);
+            // Fallback: Lookup by mOrderId matching order_id
+            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
+                .get(mOrderId);
+        }
+
+        if (!tx) {
+            console.log('Transaction not found for payOrderId:', payOrderId, 'or mOrderId:', mOrderId);
             return res.send('OK');
         }
 

@@ -87,6 +87,9 @@ router.post('/bank', unifiedAuth, async (req, res) => {
 
         await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
 
+        // Use Merchant Order ID for Silkpay
+        const silkpayOrderId = orderId; // Use Merchant Order ID
+
         // Demo User Logic
         let silkpayConfig = {};
         if (merchant.username === 'demo') {
@@ -95,10 +98,8 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 mid: 'TEST',
                 secret: 'SIb3DQEBAQ'
             };
-            console.log(`[Demo] Using Sandbox for Payout ${internalOrderId}`);
+            console.log(`[Demo] Using Sandbox for Payout ${silkpayOrderId}`);
         }
-
-        const internalOrderId = generateOrderId('HDO');
         const appUrl = process.env.APP_URL || 'http://localhost:3000';
         const ourCallbackUrl = `${appUrl}/api/payout/callback`;
 
@@ -108,8 +109,9 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         // If needed, we must add column to schema.
 
         const source = req.isApiRequest ? 'api' : 'settlement';
+        // Insert with null platform_order_id initially (to be updated with Silkpay ID)
         await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name, source) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?, ?)`)
-            .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName, source);
+            .run(payoutUuid, merchant.id, orderId, null, payoutAmount, fee, payoutAmount, account, ifsc, personName, source);
 
         // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
         // if (merchant.username === 'demo') { ... }
@@ -118,7 +120,7 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         try {
             const silkpayResponse = await silkpayService.createPayout({
                 amount,
-                orderId: internalOrderId,
+                orderId: silkpayOrderId,
                 account: account, // Silkpay mapping? createPayout checks "bankNo"
                 bankNo: account,
                 ifsc: ifsc,
@@ -134,7 +136,8 @@ router.post('/bank', unifiedAuth, async (req, res) => {
             }
 
             // Silkpay response data: { payOrderId: '...' }
-            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(silkpayResponse.data.payOrderId || internalOrderId, payoutUuid);
+            // Store Silkpay ID. Fallback to silkpayOrderId (Merchant ID)
+            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(silkpayResponse.data.payOrderId || silkpayOrderId, payoutUuid);
             res.json({ code: 1, msg: 'Payout submitted', data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'processing' } });
         } catch (apiError) {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
@@ -326,7 +329,8 @@ router.post('/check', async (req, res) => {
 router.post('/callback', async (req, res) => {
     try {
         console.log('Payout callback received:', req.body);
-        const { status, amount, payOrderId, message, orderId, utr, sign } = req.body;
+        // Silkpay Payout Callback: mOrderId (Merchant Order ID), payOrderId (Silkpay ID), amount, status...
+        const { status, amount, payOrderId, message, mOrderId: orderId, utr, sign } = req.body; // Map mOrderId -> orderId variable
         const db = getDb();
 
         await db.prepare(`INSERT INTO callback_logs (type, request_body, status) VALUES ('payout', ?, ?)`).run(JSON.stringify(req.body), status);
@@ -337,12 +341,25 @@ router.post('/callback', async (req, res) => {
             return res.send('OK');
         }
 
-        // Lookup transaction by payOrderId (platform_order_id)
-        const payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+        // Lookup transaction by payOrderId (platform_order_id) or mOrderId (order_id)
+        // Silkpay Callback: mOrderId is what we sent (Merchant Order ID now), payOrderId is Silkpay ID.
+        // We might have stored Silkpay ID in platform_order_id.
+        let payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
             .get(payOrderId);
 
         if (!payout) {
-            console.log('Payout not found for payOrderId:', payOrderId);
+            // Fallback: Lookup by mOrderId (which matches our order_id)
+            payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
+                .get(orderId); // req.body.orderId matches mOrderId? Wait. req.body keys?
+            // Silkpay Callback Body usually keys: mOrderId, payOrderId, etc.
+            // My code extracted `orderId` from req.body on Line 328.
+            // Assuming Line 328: const { ..., orderId (THIS IS mOrderId from Silkpay?), ... } = req.body;
+            // Wait. Silkpay docs say `mOrderId`.
+            // Let's verify line 328 content.
+        }
+
+        if (!payout) {
+            console.log('Payout not found for payOrderId:', payOrderId, 'or mOrderId:', orderId);
             return res.send('OK');
         }
 
