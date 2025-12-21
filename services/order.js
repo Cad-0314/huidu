@@ -50,6 +50,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
             mid: 'TEST',
             secret: 'SIb3DQEBAQ'
         };
+        console.log(`[Demo] Using Sandbox for Order ${finalOrderId}`);
     }
 
     // Call Silkpay

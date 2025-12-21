@@ -578,25 +578,28 @@ async function loadAdminDashboard() {
         const profitCard = document.getElementById('adminProfitCard');
         if (profitCard) profitCard.style.display = 'block';
 
-        document.getElementById('statBalance').textContent = `₹${parseFloat(stats.totalFees).toFixed(2)}`; // Admins see Total Fees as Balance concept? Or Total Users? 
-        // Admin Dashboard usually shows System Stats. 
-        // Existing HTML IDs: statBalance, statPayin, statPayout, statPending.
-        // Let's map Admin Stats to these:
-        // statBalance -> Total Fees? Or we can change label? 
-        // HTML labels are hardcoded: "Balance", "Total Pay-in", "Total Payout", "Pending Payouts".
-
-        // Let's map:
-        // Balance -> Total Fees Collected
-        document.getElementById('statBalance').textContent = `₹${parseFloat(stats.totalFees).toFixed(2)}`;
-        // We really should change label to "Total Fees" for Admin, but simple textContent update works.
-        // Or keep "Balance" as "Fees Balance".
+        // Map Admin Stats to Cards
+        // Balance Card -> Total Merchant Balance (System Liability)
+        document.getElementById('statBalance').textContent = `₹${parseFloat(stats.totalMerchantBalance || 0).toFixed(2)}`;
 
         document.getElementById('statPayin').textContent = `₹${parseFloat(stats.totalPayinAmount).toFixed(2)}`;
         document.getElementById('statPayout').textContent = `₹${parseFloat(stats.totalPayoutAmount).toFixed(2)}`;
-        document.getElementById('statPending').textContent = stats.pendingPayouts;
 
-        // Profit
-        document.getElementById('statProfit').textContent = `₹${parseFloat(stats.totalProfit).toFixed(2)}`;
+        // Pending Payouts Card -> Show Count & Amount? Or just Amount.
+        // Existing UI expects a value.
+        // statPending usually shows 'Pending Payouts' (Amount).
+        document.getElementById('statPending').textContent = `₹${parseFloat(stats.pendingPayouts.total || 0).toFixed(2)}`;
+
+        // Additional: Update Profit Card Value
+        document.getElementById('statProfit').textContent = `₹${parseFloat(stats.totalProfit || 0).toFixed(2)}`;
+
+        // Update Labels if possible to be more clear
+        // We can't easily change text labels via JS unless we target specific span with data-i18n.
+        // Ideally user changes HTML or we insert a small script.
+        // Check dashboard.html: <p class="text-muted mb-0" data-i18n="balance">Balance</p>
+        // We can update the label for Admins
+        const balanceLabel = document.querySelector('[data-i18n="balance"]');
+        if (balanceLabel) balanceLabel.textContent = "Merchant Balances"; // Direct override for Admin view context
 
         // Performance / Chart for Admin?
         // Admin might want global chart. 

@@ -82,6 +82,7 @@ async function createPayin(data, config = {}) {
     const secret = config.secret || SECRET;
     const baseUrl = config.baseUrl || BASE_URL;
 
+    // Sign uses the overridden secret and mid
     const signStr = `${mid}${orderId}${orderAmount}${timestamp}${secret}`;
     const sign = createSign(signStr);
 
@@ -147,6 +148,7 @@ async function createPayout(data, config = {}) {
     const secret = config.secret || SECRET;
     const baseUrl = config.baseUrl || BASE_URL;
 
+    // Sign uses overridden credentials
     const signStr = `${mid}${orderId}${amount}${timestamp}${secret}`;
     const sign = createSign(signStr);
 

@@ -309,6 +309,21 @@ router.post('/callback', async (req, res) => {
 
         if (newStatus === 'success' && tx.status !== 'success') {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
+
+            // Credit Admin Profit
+            // Profit = Fee - (Amount * CostRate)
+            try {
+                const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
+                const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
+                const cost = actualAmount * adminCostRate;
+                const profit = fee - cost;
+
+                if (profit !== 0) { // Credit even if negative? Usually yes (loss).
+                    await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
+                }
+            } catch (errProfile) {
+                console.error('Failed to credit admin profit:', errProfile);
+            }
         }
 
         // Unwrap stored param

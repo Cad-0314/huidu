@@ -353,6 +353,10 @@ router.get('/stats', authenticate, requireAdmin, async (req, res) => {
         // For now, assuming "User Request: suppose some merchent payin is 9.3 but admin rate is 5%..." implies Payin focus.
         const totalProfit = totalAllFees - (totalPayinAmt * adminCostRate);
 
+        // Calculate Total Merchant Balance (Liability)
+        const merchantBal = await db.prepare('SELECT COALESCE(SUM(balance), 0) as total FROM users WHERE role != ?').get('admin');
+        const totalMerchantBalance = merchantBal.total;
+
         res.json({
             code: 1,
             data: {
@@ -363,7 +367,8 @@ router.get('/stats', authenticate, requireAdmin, async (req, res) => {
                 totalPayoutAmount: totalPayouts.total || 0,
                 pendingPayouts,
                 totalFees: totalAllFees,
-                totalProfit: totalProfit
+                totalProfit: totalProfit,
+                totalMerchantBalance: totalMerchantBalance
             }
         });
     } catch (error) {

@@ -95,6 +95,7 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 mid: 'TEST',
                 secret: 'SIb3DQEBAQ'
             };
+            console.log(`[Demo] Using Sandbox for Payout ${internalOrderId}`);
         }
 
         const internalOrderId = generateOrderId('HDO');
@@ -354,6 +355,20 @@ router.post('/callback', async (req, res) => {
         // Refund if failed
         if (newStatus === 'failed' && payout.status !== 'failed') {
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount + payout.fee, payout.user_id);
+        }
+
+        // Credit Admin if Success (Payout Fee is Profit)
+        if (newStatus === 'success' && payout.status !== 'success') {
+            try {
+                // Assuming no specialized Payout Cost from Silkpay in settings yet.
+                // Profit = Fee.
+                const profit = payout.fee;
+                if (profit > 0) {
+                    await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
+                }
+            } catch (errAdmin) {
+                console.error('Failed to credit admin payout profit:', errAdmin);
+            }
         }
 
         const merchantCallback = payout.callback_url; // From DB join
