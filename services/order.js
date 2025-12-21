@@ -108,9 +108,9 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     // -----------------------------
 
     await db.prepare(`
-        INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param)
-        VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?)
-    `).run(txUuid, merchant.id, finalOrderId, platformOrderId, numericAmount, numericAmount, fee, netAmount, paymentUrl, storedParam);
+        INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param, payin_rate)
+        VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?, ?)
+    `).run(txUuid, merchant.id, finalOrderId, platformOrderId, numericAmount, numericAmount, fee, netAmount, paymentUrl, storedParam, rates.payinRate);
 
     // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
     // if (merchant.username === 'demo') { ... }

@@ -164,7 +164,8 @@ async function initializeSchema() {
             utr TEXT,
             param TEXT,
             created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now'))
+            updated_at TEXT DEFAULT (datetime('now')),
+            payin_rate REAL
         )`,
         `CREATE TABLE IF NOT EXISTS payouts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

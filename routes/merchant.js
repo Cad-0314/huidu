@@ -6,6 +6,7 @@ const { authenticate } = require('../middleware/auth');
 const silkpayService = require('../services/silkpay');
 const { calculatePayinFee, getRatesFromDb } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
+const { createPayinOrder } = require('../services/order');
 
 /**
  * GET /api/merchant/balance
