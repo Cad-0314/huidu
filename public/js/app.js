@@ -2020,61 +2020,66 @@ async function rejectPayout(id) {
 // ADMIN: ALL TRANSACTIONS
 // ========================================
 
-async function loadAllTransactionsData() {
+// Debounce Wrapper
+const debouncedLoadAllTransactions = debounce(() => loadAllTransactionsData(1), 500);
+
+async function loadAllTransactionsData(page = 1) {
     if (currentUser.role !== 'admin') {
         loadDashboard();
-        return;
+        return; // Redirects non-admins
     }
 
+    const container = document.getElementById('allTransactionsList');
+    if (!container) return;
+
     try {
+        container.innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center;">${t('loading')}</td></tr>`;
+
         const search = document.getElementById('atSearch')?.value || '';
         const startDate = document.getElementById('atStartDate')?.value || '';
         const endDate = document.getElementById('atEndDate')?.value || '';
         const status = document.getElementById('atStatus')?.value || '';
         const type = document.getElementById('atType')?.value || '';
 
-        let url = `/admin/transactions?page=${page}&limit=20&search=${search}`;
+        let url = `/admin/transactions?page=${page}&limit=20&search=${encodeURIComponent(search)}`;
         if (startDate) url += `&startDate=${startDate}`;
         if (endDate) url += `&endDate=${endDate}`;
         if (status) url += `&status=${status}`;
         if (type) url += `&type=${type}`;
 
+        console.log('[GlobalTx] Fetching:', url);
         const data = await API.get(url);
-        const container = document.getElementById('allTransactionsList');
-        if (!container) return;
+        console.log('[GlobalTx] Response:', data);
 
-        if (data.code === 1 && data.data.length > 0) {
-            container.innerHTML = data.data.map(tx => `
+        if (data.code === 1) {
+            if (data.data && data.data.length > 0) {
+                container.innerHTML = data.data.map(tx => `
                 <tr>
                     <td><code style="font-family: monospace; font-weight: bold;">${tx.orderId}</code></td>
-                    <td>${tx.merchantName}<br><small class="text-muted">${tx.merchantEmail}</small></td>
+                    <td>${tx.merchantName || 'Unknown'}<br><small class="text-muted">${tx.merchantUsername || ''}</small></td>
                     <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
-                    <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
-                    <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
+                    <td>₹${parseFloat(tx.amount || 0).toFixed(2)}</td>
+                    <td>₹${parseFloat(tx.fee || 0).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.netAmount || 0).toFixed(2)}</td>
                     <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${formatDate(tx.createdAt)}</td>
                 </tr>
             `).join('');
-            updatePaginationControls('atPagination', { page: 1, pages: 1 }, 'loadAllTransactionsData'); // Placeholder, adjust if API returns pages
+                // If API doesn't return total/pages, we can't do real pagination. 
+                // Admin API currently returns simple data array. Need to confirm implementation.
+                updatePaginationControls('atPagination', { page: page, pages: 100 }, 'loadAllTransactionsData'); // Placeholder
+            } else {
+                container.innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>`;
+                updatePaginationControls('atPagination', { page: 1, pages: 1 }, 'loadAllTransactionsData');
+            }
         } else {
-            container.innerHTML = `
-                <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
-            `;
-            updatePaginationControls('atPagination', { page: 1, pages: 1 }, 'loadAllTransactionsData');
+            throw new Error(data.msg || 'API returned error');
         }
     } catch (error) {
+        console.error('[GlobalTx] Error:', error);
+        container.innerHTML = `<tr><td colspan="8" class="text-danger" style="text-align:center;">Error: ${error.message}</td></tr>`;
         showToast(t('error_load_tx'), 'error');
     }
-}
-
-function resetAllTransactionsFilters() {
-    if (document.getElementById('atSearch')) document.getElementById('atSearch').value = '';
-    if (document.getElementById('atStartDate')) document.getElementById('atStartDate').value = '';
-    if (document.getElementById('atEndDate')) document.getElementById('atEndDate').value = '';
-    if (document.getElementById('atStatus')) document.getElementById('atStatus').value = '';
-    if (document.getElementById('atType')) document.getElementById('atType').value = '';
-    loadAllTransactionsData(1);
 }
 
 // ========================================

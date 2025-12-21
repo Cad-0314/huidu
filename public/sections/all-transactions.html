@@ -33,7 +33,7 @@
         <div class="search-box">
             <i class="fas fa-search"></i>
             <input type="text" id="atSearch" placeholder="Search Order ID..." data-i18n="search"
-                onkeyup="debounce(loadAllTransactionsData, 500)()">
+                onkeyup="debouncedLoadAllTransactions()">
         </div>
         <button class="btn btn-primary btn-sm" onclick="loadAllTransactionsData(1)">
             <i class="fas fa-filter"></i> <span data-i18n="filter">Filter</span>
