@@ -7,6 +7,8 @@ const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
 const silkpayService = require('../services/silkpay');
 const { createPayinOrder } = require('../services/order');
+const { calculatePayinFee } = require('../utils/rates');
+const { generateSign } = require('../utils/signature');
 
 /**
  * POST /api/payin/create
