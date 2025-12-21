@@ -1,0 +1,223 @@
+{
+    "info": {
+        "name": "VSPay API - Fixed Authentication",
+        "description": "Complete API testing suite for VSPay (vspay.vip) with corrected authentication",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Create Payin Order",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "const CryptoJS = require('crypto-js');",
+                            "",
+                            "// Build body",
+                            "const body = {",
+                            "    amount: \"1000\",",
+                            "    orderId: \"TEST_\" + Date.now(),",
+                            "    callbackUrl: pm.environment.get(\"CALLBACK_URL\") || \"https://webhook.site/unique-id\",",
+                            "    skipUrl: \"https://yoursite.com/success\",",
+                            "    param: \"test123\"",
+                            "};",
+                            "",
+                            "// Serialize body",
+                            "const bodyJSON = JSON.stringify(body);",
+                            "",
+                            "// Get merchant key",
+                            "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                            "",
+                            "// Calculate signature: MD5(bodyJSON + merchantKey)",
+                            "const signature = CryptoJS.MD5(bodyJSON + merchantKey).toString();",
+                            "",
+                            "console.log(\"Body:\", bodyJSON);",
+                            "console.log(\"Signature:\", signature);",
+                            "",
+                            "// Store for request",
+                            "pm.environment.set(\"request_body\", bodyJSON);",
+                            "pm.environment.set(\"signature\", signature);",
+                            "pm.environment.set(\"last_orderId\", body.orderId);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                },
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test(\"Status is 200\", () => pm.response.to.have.status(200));",
+                            "const res = pm.response.json();",
+                            "pm.test(\"Code is 1\", () => pm.expect(res.code).to.equal(1));",
+                            "pm.test(\"Has paymentUrl\", () => pm.expect(res.data.paymentUrl).to.exist);",
+                            "if (res.code === 1) {",
+                            "    console.log(\"✅ Order created:\", res.data.orderId);",
+                            "    console.log(\"Payment URL:\", res.data.paymentUrl);",
+                            "}"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "x-merchant-id",
+                        "value": "{{MERCHANT_KEY}}"
+                    },
+                    {
+                        "key": "x-signature",
+                        "value": "{{signature}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{{request_body}}"
+                },
+                "url": {
+                    "raw": "{{BASE_URL}}/api/payin/create",
+                    "host": [
+                        "{{BASE_URL}}"
+                    ],
+                    "path": [
+                        "api",
+                        "payin",
+                        "create"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Query Payin",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "const CryptoJS = require('crypto-js');",
+                            "",
+                            "const body = {",
+                            "    orderId: pm.environment.get(\"last_orderId\")",
+                            "};",
+                            "",
+                            "const bodyJSON = JSON.stringify(body);",
+                            "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                            "const signature = CryptoJS.MD5(bodyJSON + merchantKey).toString();",
+                            "",
+                            "pm.environment.set(\"request_body\", bodyJSON);",
+                            "pm.environment.set(\"signature\", signature);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "x-merchant-id",
+                        "value": "{{MERCHANT_KEY}}"
+                    },
+                    {
+                        "key": "x-signature",
+                        "value": "{{signature}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{{request_body}}"
+                },
+                "url": {
+                    "raw": "{{BASE_URL}}/api/payin/query",
+                    "host": [
+                        "{{BASE_URL}}"
+                    ],
+                    "path": [
+                        "api",
+                        "payin",
+                        "query"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Get Balance",
+            "event": [
+                {
+                    "listen": "prerequest",
+                    "script": {
+                        "exec": [
+                            "const CryptoJS = require('crypto-js');",
+                            "",
+                            "// Empty body for GET-like query",
+                            "const bodyJSON = \"{}\";",
+                            "const merchantKey = pm.environment.get(\"MERCHANT_KEY\");",
+                            "const signature = CryptoJS.MD5(bodyJSON + merchantKey).toString();",
+                            "",
+                            "pm.environment.set(\"signature\", signature);"
+                        ],
+                        "type": "text/javascript"
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "x-merchant-id",
+                        "value": "{{MERCHANT_KEY}}"
+                    },
+                    {
+                        "key": "x-signature",
+                        "value": "{{signature}}"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{}"
+                },
+                "url": {
+                    "raw": "{{BASE_URL}}/api/balance",
+                    "host": [
+                        "{{BASE_URL}}"
+                    ],
+                    "path": [
+                        "api",
+                        "balance"
+                    ]
+                }
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "https://vspay.vip",
+            "type": "string"
+        },
+        {
+            "key": "MERCHANT_KEY",
+            "value": "MK_YOUR_KEY_HERE",
+            "type": "string"
+        },
+        {
+            "key": "CALLBACK_URL",
+            "value": "https://webhook.site/your-unique-id",
+            "type": "string"
+        }
+    ]
+}
