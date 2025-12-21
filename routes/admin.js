@@ -26,7 +26,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
         let query = `
             SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, created_at
             FROM users
-            WHERE 1=1
+            WHERE role != 'admin'
         `;
         const params = [];
 
@@ -52,7 +52,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
         const users = await db.prepare(query).all(...params);
 
         // Count Query
-        let countQuery = 'SELECT COUNT(*) as total FROM users WHERE 1=1';
+        let countQuery = "SELECT COUNT(*) as total FROM users WHERE role != 'admin'";
         const countParams = [];
         if (search) {
             countQuery += ' AND (username LIKE ? OR name LIKE ? OR uuid LIKE ?)';
