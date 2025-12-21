@@ -2,6 +2,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const { getDb } = require('../config/database');
 
 // Configuration
 const BASE_URL = process.env.SILKPAY_BASE_URL || 'https://api.dev.silkpay.ai';
@@ -14,45 +15,39 @@ const REQUEST_LOG_FILE = path.join(__dirname, '..', 'api_requests.log');
 // Helper to log errors
 function logApiError(endpoint, error, requestData) {
     const timestamp = new Date().toISOString();
-    const errorMessage = `[${timestamp}] SILKPAY API ERROR
-Endpoint: ${endpoint}
-Request: ${JSON.stringify(requestData, null, 2)}
-Error: ${error.message || error}
-${error.response ? `Response: ${JSON.stringify(error.response.data)}` : ''}
----\n`;
+    const errorMessage = error.message || String(error);
+    const responseData = error.response ? JSON.stringify(error.response.data) : errorMessage;
+
+    console.error(`[${timestamp}] SILKPAY API ERROR [${endpoint}]:`, errorMessage);
 
     try {
-        fs.appendFileSync(ERROR_LOG_FILE, errorMessage);
+        const db = getDb();
+        db.prepare(`
+            INSERT INTO api_logs (endpoint, request, response, duration, status)
+            VALUES (?, ?, ?, 0, 'error')
+        `).run(endpoint, JSON.stringify(requestData), responseData);
     } catch (e) {
-        console.error('Failed to write to error log:', e);
+        console.error('Failed to log API error to DB:', e);
     }
 }
 
 // Helper to log requests
 function logApiRequest(endpoint, requestData, response, duration) {
     const timestamp = new Date().toISOString();
-
-    // Redact sign/secret if necessary (though sign is public hash)
-    const safeRequest = { ...requestData };
-
-    const logEntry = `
-=====================================
-[${timestamp}] SILKPAY API REQUEST
-=====================================
-Endpoint: ${endpoint}
-Duration: ${duration}ms
-Request: ${JSON.stringify(safeRequest, null, 2)}
-Response: ${JSON.stringify(response, null, 2)}
-`;
+    const safeRequest = { ...requestData }; // Redact if needed
 
     console.log(`[${timestamp}] SILKPAY API: ${endpoint} (${duration}ms)`);
-    console.log('Request:', JSON.stringify(safeRequest));
-    console.log('Response:', JSON.stringify(response));
+    // console.log('Request:', JSON.stringify(safeRequest));
+    // console.log('Response:', JSON.stringify(response));
 
     try {
-        fs.appendFileSync(REQUEST_LOG_FILE, logEntry);
+        const db = getDb();
+        db.prepare(`
+            INSERT INTO api_logs (endpoint, request, response, duration, status)
+            VALUES (?, ?, ?, ?, 'success')
+        `).run(endpoint, JSON.stringify(safeRequest), JSON.stringify(response), duration);
     } catch (e) {
-        console.error('Failed to write to request log:', e);
+        console.error('Failed to log API request to DB:', e);
     }
 }
 

@@ -215,6 +215,15 @@ async function initializeSchema() {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL,
             updated_at TEXT DEFAULT (datetime('now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS api_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            endpoint TEXT,
+            request TEXT,
+            response TEXT,
+            duration INTEGER,
+            status TEXT DEFAULT 'success',
+            created_at TEXT DEFAULT (datetime('now'))
         )`
     ];
 
