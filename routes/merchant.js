@@ -46,6 +46,7 @@ router.get('/transactions', authenticate, async (req, res) => {
         const params = [req.user.id];
 
         if (type) { query += ' AND type = ?'; params.push(type); }
+        if (status) { query += ' AND status = ?'; params.push(status); }
         if (search) {
             query += ' AND (order_id LIKE ? OR platform_order_id LIKE ? OR utr LIKE ?)';
             const searchTerm = `%${search}%`;

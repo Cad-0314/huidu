@@ -560,8 +560,56 @@ async function changePassword(event) {
 let dashboardChartInstance = null;
 
 async function loadDashboardData() {
-    // Load Stats & Chart
-    updateDashboardChart();
+    if (currentUser.role === 'admin') {
+        loadAdminDashboard();
+    } else {
+        updateDashboardChart();
+    }
+}
+
+async function loadAdminDashboard() {
+    try {
+        const res = await API.get('/admin/stats');
+        if (res.code !== 1) return;
+
+        const stats = res.data;
+
+        // Show Profit Card
+        const profitCard = document.getElementById('adminProfitCard');
+        if (profitCard) profitCard.style.display = 'block';
+
+        document.getElementById('statBalance').textContent = `₹${parseFloat(stats.totalFees).toFixed(2)}`; // Admins see Total Fees as Balance concept? Or Total Users? 
+        // Admin Dashboard usually shows System Stats. 
+        // Existing HTML IDs: statBalance, statPayin, statPayout, statPending.
+        // Let's map Admin Stats to these:
+        // statBalance -> Total Fees? Or we can change label? 
+        // HTML labels are hardcoded: "Balance", "Total Pay-in", "Total Payout", "Pending Payouts".
+
+        // Let's map:
+        // Balance -> Total Fees Collected
+        document.getElementById('statBalance').textContent = `₹${parseFloat(stats.totalFees).toFixed(2)}`;
+        // We really should change label to "Total Fees" for Admin, but simple textContent update works.
+        // Or keep "Balance" as "Fees Balance".
+
+        document.getElementById('statPayin').textContent = `₹${parseFloat(stats.totalPayinAmount).toFixed(2)}`;
+        document.getElementById('statPayout').textContent = `₹${parseFloat(stats.totalPayoutAmount).toFixed(2)}`;
+        document.getElementById('statPending').textContent = stats.pendingPayouts;
+
+        // Profit
+        document.getElementById('statProfit').textContent = `₹${parseFloat(stats.totalProfit).toFixed(2)}`;
+
+        // Performance / Chart for Admin?
+        // Admin might want global chart. 
+        // `/merchant/stats/chart` is user-bound.
+        // `/admin/stats` doesn't return chart data yet.
+        // For now, clear chart or leave empty?
+        // Or fetch chart for admin if backend supports it.
+        // User request "add a profit card on admin". Didn't ask for chart.
+        // We will skip chart for now or show empty.
+
+    } catch (e) {
+        console.error('Admin Dashboard load error:', e);
+    }
 }
 
 async function updateDashboardChart() {
@@ -581,7 +629,7 @@ async function updateDashboardChart() {
             document.getElementById('statPayout').textContent = `₹${parseFloat(stats.totalPayout).toFixed(2)}`;
             document.getElementById('statPending').textContent = stats.pendingPayouts;
 
-            // Performance
+            // Performance  - only available in merchant stats object currently
             const successRate = stats.successRate || 0;
             const convRate = stats.conversionRate || 0;
 
@@ -754,6 +802,7 @@ async function loadPayoutsData(page = 1) {
                         </small>
                     </td>
                     <td><span class="badge badge-${getStatusClass(p.status)}">${t('status_' + p.status)}</span></td>
+                    <td>${p.utr || '-'}</td>
                     <td>${formatDate(p.createdAt)}</td>
                 </tr>
             `).join('');
@@ -1122,26 +1171,27 @@ async function loadUsersData(page = 1) {
             if (users && users.length > 0) {
                 container.innerHTML = users.map(u => `
                 <tr>
-                    <td>${formatDate(u.createdAt)}</td>
-                    <td>${u.username}</td>
-                    <td>${u.name}</td>
                     <td>
                         <div style="display:flex; align-items:center; gap:5px;">
                             <code style="font-size: 0.75rem;">${u.id}</code>
                             <i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.id}').then(() => showToast(t('toast_id_copied'), 'success'))" title="Copy ID"></i>
                         </div>
                     </td>
-                    <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
                     <td>
-                        <span class="badge badge-${u.twoFactorEnabled ? 'success' : 'warning'}">
-                            ${u.twoFactorEnabled ? 'Enabled' : 'Disabled'}
-                        </span>
+                         <div style="display:flex; align-items:center; gap:5px;">
+                            <code style="font-size: 0.75rem;">${u.merchantKey ? u.merchantKey.substring(0, 8) + '...' : '-'}</code>
+                             ${u.merchantKey ? `<i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.merchantKey}').then(() => showToast(t('toast_key_copied'), 'success'))" title="Copy Key"></i>` : ''}
+                        </div>
                     </td>
+                    <td>${u.name}</td>
+                    <td>${u.username}</td>
                     <td>
                         <small>In: ${u.payinRate || 5}%</small><br>
                         <small>Out: ${u.payoutRate || 3}% + 6 INR</small>
                     </td>
                     <td>₹${parseFloat(u.balance).toFixed(2)}</td>
+                    <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
+                    <td>${formatDate(u.createdAt)}</td>
                     <td>
                         <button class="btn btn-primary btn-sm" onclick="showAdjustBalanceModal('${u.id}', '${u.name}', ${u.balance})" title="Adjust Balance">
                             <i class="fas fa-wallet"></i>
@@ -1977,7 +2027,19 @@ async function loadAllTransactionsData() {
     }
 
     try {
-        const data = await API.get('/admin/transactions?limit=100');
+        const search = document.getElementById('atSearch')?.value || '';
+        const startDate = document.getElementById('atStartDate')?.value || '';
+        const endDate = document.getElementById('atEndDate')?.value || '';
+        const status = document.getElementById('atStatus')?.value || '';
+        const type = document.getElementById('atType')?.value || '';
+
+        let url = `/admin/transactions?page=${page}&limit=20&search=${search}`;
+        if (startDate) url += `&startDate=${startDate}`;
+        if (endDate) url += `&endDate=${endDate}`;
+        if (status) url += `&status=${status}`;
+        if (type) url += `&type=${type}`;
+
+        const data = await API.get(url);
         const container = document.getElementById('allTransactionsList');
         if (!container) return;
 
@@ -1989,18 +2051,30 @@ async function loadAllTransactionsData() {
                     <td><span class="badge ${tx.type === 'payin' ? 'badge-success' : 'badge-pending'}">${t('type_' + tx.type) || tx.type}</span></td>
                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
                     <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
+                    <td>₹${parseFloat(tx.netAmount || 0).toFixed(2)}</td>
                     <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${formatDate(tx.createdAt)}</td>
                 </tr>
             `).join('');
+            updatePaginationControls('atPagination', { page: 1, pages: 1 }, 'loadAllTransactionsData'); // Placeholder, adjust if API returns pages
         } else {
             container.innerHTML = `
-                <tr><td colspan="7" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
+                <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>
             `;
+            updatePaginationControls('atPagination', { page: 1, pages: 1 }, 'loadAllTransactionsData');
         }
     } catch (error) {
         showToast(t('error_load_tx'), 'error');
     }
+}
+
+function resetAllTransactionsFilters() {
+    if (document.getElementById('atSearch')) document.getElementById('atSearch').value = '';
+    if (document.getElementById('atStartDate')) document.getElementById('atStartDate').value = '';
+    if (document.getElementById('atEndDate')) document.getElementById('atEndDate').value = '';
+    if (document.getElementById('atStatus')) document.getElementById('atStatus').value = '';
+    if (document.getElementById('atType')) document.getElementById('atType').value = '';
+    loadAllTransactionsData(1);
 }
 
 // ========================================

@@ -6,8 +6,8 @@ const { createClient } = require('@libsql/client');
 const initSqlJs = require('sql.js');
 
 // Database configuration
-const TURSO_URL = process.env.TURSO_DATABASE_URL;
-const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
+// const TURSO_URL = process.env.TURSO_DATABASE_URL; // Moved inside initDatabase to ensure loaded
+// const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
 
 let db = null;
 
@@ -89,40 +89,28 @@ class AsyncDatabaseWrapper {
 async function initDatabase() {
     if (db) return db;
 
-    if (TURSO_URL && TURSO_URL.includes('turso.io')) {
-        console.log('Initializing Turso Database...');
-        try {
-            const client = createClient({
-                url: TURSO_URL,
-                authToken: TURSO_TOKEN
-            });
-            db = new AsyncDatabaseWrapper('turso', client);
-            console.log('Connected to Turso');
-        } catch (e) {
-            console.error('Failed to connect to Turso, falling back to local SQLite:', e.message);
-            // Fallthrough to local init
-        }
+    const TURSO_URL = process.env.TURSO_DATABASE_URL;
+    const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
+
+    if (!TURSO_URL || !TURSO_TOKEN) {
+        throw new Error('TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are required for strict Turso mode.');
     }
 
-    if (!db) {
-        console.log('Initializing Local SQLite (sql.js)...');
-        // Ensure local DB loading
-        const dbDir = path.join(__dirname, '..', 'database');
-        const dbPath = path.join(dbDir, 'vspay.db');
-        if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-
-        const SQL = await initSqlJs();
-        let database;
-        if (fs.existsSync(dbPath)) {
-            database = new SQL.Database(fs.readFileSync(dbPath));
-            console.log('Loaded local DB');
-        } else {
-            database = new SQL.Database();
-            console.log('Created new local DB');
-        }
-        db = new AsyncDatabaseWrapper('local', database);
+    console.log('Initializing Turso Database...');
+    try {
+        const client = createClient({
+            url: TURSO_URL,
+            authToken: TURSO_TOKEN
+        });
+        db = new AsyncDatabaseWrapper('turso', client);
+        console.log('Connected to Turso');
+    } catch (e) {
+        console.error('CRITICAL: Failed to connect to Turso:', e);
+        throw e; // Strict mode: Fail if Turso fails
     }
 
+    // Initialize Schema (if needed, though usually Turso is persistent)
+    // We can keep it to ensure tables exist
     await initializeSchema();
     return db;
 }
@@ -134,14 +122,8 @@ function getDb() {
 
 // Initialize Schema (Table Creations)
 async function initializeSchema() {
-    // Enable WAL Mode for performance (Local DB only)
-    if (db.type === 'local') {
-        try {
-            await db.exec('PRAGMA journal_mode = WAL;');
-            await db.exec('PRAGMA synchronous = NORMAL;');
-            console.log('WAL Mode enabled');
-        } catch (e) { console.error('Failed to enable WAL mode:', e); }
-    }
+    // No WAL for Turso (managed remotely)
+
 
     const tableQueries = [
         `CREATE TABLE IF NOT EXISTS users (

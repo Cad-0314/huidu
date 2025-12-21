@@ -288,8 +288,8 @@ router.post('/callback', async (req, res) => {
         }
 
         // Lookup transaction by payOrderId (platform_order_id)
-        // Silkpay returns payOrderId. We stored it in platform_order_id.
-        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+        // Fetch merchant_key AND payin_rate
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
             .get(payOrderId);
 
         if (!tx) {
@@ -299,8 +299,10 @@ router.post('/callback', async (req, res) => {
 
         const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
         const actualAmount = parseFloat(amount);
-        const rates = await getRatesFromDb(db);
-        const { fee, netAmount } = calculatePayinFee(actualAmount, rates.payinRate);
+
+        // Use merchant's specific rate, fallback to 5.0 if missing
+        const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 5.0;
+        const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
 
         await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
             .run(newStatus, actualAmount, fee, netAmount, utr || null, JSON.stringify(req.body), tx.id);

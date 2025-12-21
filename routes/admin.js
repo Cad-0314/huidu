@@ -339,16 +339,31 @@ router.get('/stats', authenticate, requireAdmin, async (req, res) => {
         const totalFees = (await db.prepare('SELECT COALESCE(SUM(fee), 0) as total FROM transactions WHERE status = ?').get('success'));
         const payoutFees = (await db.prepare('SELECT COALESCE(SUM(fee), 0) as total FROM payouts WHERE status = ?').get('success'));
 
+        // Calculate Profit (Total Fees - Cost)
+        // Cost = Payin Amount * admin_payin_cost (default 0.05)
+        const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
+        const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
+
+        const totalPayinAmt = totalPayins.total || 0;
+        const totalAllFees = (totalFees.total || 0) + (payoutFees.total || 0);
+
+        // Profit = Total Fees Collected - (Payin Amount * Cost Rate)
+        // Note: Payout cost is usually fixed or negligible/internal, user focused on payin margin. 
+        // If user wants payout profit too, it's (Payout Fees - Payout Cost). 
+        // For now, assuming "User Request: suppose some merchent payin is 9.3 but admin rate is 5%..." implies Payin focus.
+        const totalProfit = totalAllFees - (totalPayinAmt * adminCostRate);
+
         res.json({
             code: 1,
             data: {
                 totalUsers,
                 totalPayins: totalPayins.count || 0,
-                totalPayinAmount: totalPayins.total || 0,
+                totalPayinAmount: totalPayinAmt,
                 totalPayouts: totalPayouts.count || 0,
                 totalPayoutAmount: totalPayouts.total || 0,
                 pendingPayouts,
-                totalFees: (totalFees.total || 0) + (payoutFees.total || 0)
+                totalFees: totalAllFees,
+                totalProfit: totalProfit
             }
         });
     } catch (error) {
@@ -362,7 +377,7 @@ router.get('/stats', authenticate, requireAdmin, async (req, res) => {
  */
 router.get('/transactions', authenticate, requireAdmin, async (req, res) => {
     try {
-        const { page = 1, limit = 20, type, status } = req.query;
+        const { page = 1, limit = 20, type, status, search, startDate, endDate } = req.query;
         const offset = (page - 1) * limit;
         const db = getDb();
 
@@ -374,8 +389,24 @@ router.get('/transactions', authenticate, requireAdmin, async (req, res) => {
             `;
         const params = [];
 
+        if (startDate) {
+            query += ' AND t.created_at >= ?';
+            params.push(startDate + ' 00:00:00');
+        }
+
+        if (endDate) {
+            query += ' AND t.created_at <= ?';
+            params.push(endDate + ' 23:59:59');
+        }
+
         if (type) { query += ' AND t.type = ?'; params.push(type); }
         if (status) { query += ' AND t.status = ?'; params.push(status); }
+
+        if (search) {
+            query += ' AND (t.order_id LIKE ? OR u.username LIKE ? OR t.utr LIKE ?)';
+            const term = `%${search}%`;
+            params.push(term, term, term);
+        }
 
         query += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), offset);
@@ -435,9 +466,15 @@ router.post('/users/:id/balance', authenticate, requireAdmin, async (req, res) =
             return res.status(400).json({ code: 0, msg: `Insufficient balance.Current: ${user.balance}, Adjustment: ${adjustAmount}` });
         }
 
-        // Update balance
+        // Update merchant balance
         await db.prepare('UPDATE users SET balance = ?, updated_at = datetime(\'now\') WHERE id = ?')
             .run(newBalance, user.id);
+
+        // Update admin balance (Zero-sum: Deduct adjustment from admin)
+        // If we add to merchant (positive amount), we deduct from admin.
+        // If we deduct from merchant (negative amount), we add to admin.
+        await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?')
+            .run(adjustAmount, req.user.id);
 
         // Log the adjustment
         const logEntry = {
