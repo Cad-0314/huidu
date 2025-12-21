@@ -1,40 +1,18 @@
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../config/database');
 const silkpayService = require('./silkpay');
-const { calculatePayinFee, getRatesFromDb } = require('../utils/rates');
+const { calculatePayinFee, getUserRates } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
 
 /**
  * Create a new Payin Order
- * @param {Object} params
- * @param {number|string} params.amount
- * @param {string} params.orderId - Merchant's Order ID (or auto-generated if null)
- * @param {Object} params.merchant - Merchant user object
- * @param {string} params.callbackUrl - Merchant's callback URL
- * @param {string} params.skipUrl - Return URL
- * @param {string} params.param - Extra params
- * @returns {Promise<Object>} Result
+ * ...
  */
 async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUrl, param }) {
     const db = getDb();
-    const numericAmount = parseFloat(amount);
+    // ... (lines 20-36)
 
-    if (numericAmount < 100) {
-        throw new Error('Minimum deposit amount is ₹100');
-    }
-
-    // Use provided orderId or generate one
-    const finalOrderId = orderId || generateOrderId('HDP');
-
-    // Check uniqueness if orderId was provided externally
-    if (orderId) {
-        const existing = await db.prepare('SELECT id FROM transactions WHERE order_id = ?').get(orderId);
-        if (existing) {
-            throw new Error('Order ID already exists');
-        }
-    }
-
-    const rates = await getRatesFromDb(db);
+    const rates = await getUserRates(db, merchant.id); // Use User Specific Rates
     const { fee, netAmount } = calculatePayinFee(numericAmount, rates.payinRate);
 
     // Use finalOrderId (Merchant's ID) for Silkpay interaction to ensure match
