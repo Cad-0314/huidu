@@ -310,6 +310,9 @@ function initSection(section) {
         case 'payment-links':
             // No data load needed initially
             break;
+        case 'settlement':
+            loadSettlementHistory();
+            break;
         case 'api-docs':
             // loadApiDocs(); // If exists
             break;
@@ -325,6 +328,9 @@ function initSection(section) {
         case 'all-transactions':
             loadAllTransactionsData();
             break;
+        case 'merchant-all-transactions':
+            loadMerchantAllTransactions();
+            break;
         case 'broadcast':
             // No init needed
             break;
@@ -334,6 +340,98 @@ function initSection(section) {
         default:
             break;
     }
+}
+
+async function loadMerchantAllTransactions(page = 1) {
+    const startDate = document.getElementById('matStartDate')?.value || '';
+    const endDate = document.getElementById('matEndDate')?.value || '';
+    const status = document.getElementById('matStatus')?.value || '';
+    const type = document.getElementById('matType')?.value || '';
+    const search = document.getElementById('matSearch')?.value || '';
+
+    let url = `/merchant/all-transactions?page=${page}&limit=20`;
+    if (startDate) url += `&startDate=${startDate}`;
+    if (endDate) url += `&endDate=${endDate}`;
+    if (status) url += `&status=${status}`;
+    if (type) url += `&type=${type}`;
+    if (search) url += `&search=${search}`;
+
+    try {
+        const data = await API.get(url);
+        const container = document.getElementById('merchantAllTransactionsList');
+        if (!container) return;
+
+        if (data.code === 1 && data.data.transactions.length > 0) {
+            container.innerHTML = data.data.transactions.map(tx => {
+                let typeBadge = '';
+                let typeName = tx.type;
+                if (tx.type === 'payin') {
+                    typeBadge = 'badge-success';
+                    typeName = t('type_payin');
+                } else {
+                    typeBadge = 'badge-warning';
+                    typeName = t('type_payout');
+                }
+
+                return `
+                <tr>
+                    <td><code style="font-family: monospace; font-weight: bold;">${tx.order_id}</code></td>
+                    <td><span class="badge ${typeBadge}">${typeName}</span></td>
+                     <td>₹${parseFloat(tx.amount).toFixed(2)}</td>
+                    <td>₹${parseFloat(tx.fee).toFixed(2)}</td>
+                    <td>₹${parseFloat(tx.net_amount).toFixed(2)}</td>
+                    <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
+                    <td>${tx.utr || '-'}</td>
+                    <td>${formatDate(tx.created_at)}</td>
+                </tr>
+            `}).join('');
+            renderPagination(data.data, 'matPagination', loadMerchantAllTransactions);
+        } else {
+            container.innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_transactions')}</td></tr>`;
+            document.getElementById('matPagination').innerHTML = '';
+        }
+    } catch (error) {
+        showToast(t('error_load_tx'), 'error');
+    }
+}
+
+function resetMerchantAllTransactionsFilters() {
+    if (document.getElementById('matStartDate')) document.getElementById('matStartDate').value = '';
+    if (document.getElementById('matEndDate')) document.getElementById('matEndDate').value = '';
+    if (document.getElementById('matStatus')) document.getElementById('matStatus').value = '';
+    if (document.getElementById('matType')) document.getElementById('matType').value = '';
+    if (document.getElementById('matSearch')) document.getElementById('matSearch').value = '';
+    loadMerchantAllTransactions();
+}
+
+function exportMerchantAllTransactions() {
+    const startDate = document.getElementById('matStartDate')?.value || '';
+    const endDate = document.getElementById('matEndDate')?.value || '';
+    const status = document.getElementById('matStatus')?.value || '';
+    const type = document.getElementById('matType')?.value || '';
+    const search = document.getElementById('matSearch')?.value || '';
+
+    let url = `/merchant/all-transactions/export?`;
+    const params = [];
+    if (startDate) params.push(`startDate=${startDate}`);
+    if (endDate) params.push(`endDate=${endDate}`);
+    if (status) params.push(`status=${status}`);
+    if (type) params.push(`type=${type}`);
+    if (search) params.push(`search=${search}`);
+
+    url += params.join('&');
+
+    const btn = document.querySelector('button[onclick="exportMerchantAllTransactions()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('exporting')}`;
+    btn.disabled = true;
+
+    window.location.href = API_BASE_URL + url;
+
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }, 2000);
 }
 
 async function loadProfileData() {
@@ -633,6 +731,7 @@ async function loadPayoutsData(page = 1) {
         if (endDate) url += `&endDate=${endDate}`;
         if (status) url += `&status=${status}`;
         if (type) url += `&type=${type}`;
+        url += `&source=api`;
 
         const data = await API.get(url);
         console.log('[App] Payouts Data:', data);
@@ -1568,6 +1667,103 @@ async function resetUser2fa(userId) {
 // SETTLEMENT
 // ========================================
 
+
+function showSettlementModal() {
+    document.getElementById('modalTitle').textContent = t('settlement_title');
+    document.getElementById('modalFooter').innerHTML = ''; // Buttons are inside the form
+    document.getElementById('modalBody').innerHTML = `
+        <div class="tabs mb-4">
+            <button class="tab-btn active" onclick="switchSettlementTab('bank')">
+                <i class="fas fa-university"></i> <span>${t('tab_bank')}</span>
+            </button>
+            <button class="tab-btn" onclick="switchSettlementTab('usdt')">
+                <i class="fas fa-coins"></i> <span>${t('tab_usdt')}</span>
+            </button>
+        </div>
+
+        <!-- Bank Form -->
+        <div id="bankSettlementForm">
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>${t('label_account_number')}</label>
+                    <input type="text" id="settleBankAccount" class="form-control" placeholder="${t('placeholder_account')}">
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>${t('label_ifsc')}</label>
+                    <input type="text" id="settleBankIfsc" class="form-control" placeholder="${t('placeholder_ifsc')}" style="text-transform: uppercase;">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>${t('label_holder_name')}</label>
+                    <input type="text" id="settleBankName" class="form-control" placeholder="${t('placeholder_holder')}">
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>${t('label_amount_inr')}</label>
+                    <input type="number" id="settleBankAmount" class="form-control" placeholder="${t('placeholder_min_100')}">
+                    <small class="text-muted">${t('balance')}: <span class="avail-balance">${t('loading')}</span></small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>${t('label_order_id')}</label>
+                    <input type="text" id="settleBankOrderId" class="form-control" placeholder="${t('placeholder_order_id')}">
+                    <small class="text-muted">${t('hint_auto_gen')}</small>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>${t('label_2fa')}</label>
+                    <input type="text" id="settleBankCode" class="form-control" placeholder="${t('placeholder_totp')}">
+                </div>
+            </div>
+            <button class="btn btn-primary full-width mt-2" onclick="submitSettlement('bank')">
+                ${t('btn_submit_bank')}
+            </button>
+        </div>
+
+        <!-- USDT Form -->
+        <div id="usdtSettlementForm" style="display: none;">
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle"></i> <span>${t('hint_min_usdt')}</span>
+            </div>
+            <div class="form-group">
+                <label>${t('label_wallet_address')}</label>
+                <input type="text" id="settleUsdtAddress" class="form-control" placeholder="${t('placeholder_wallet')}">
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>${t('label_network')}</label>
+                    <select id="settleUsdtNetwork" class="form-control">
+                        <option value="TRC20">TRC20</option>
+                        <option value="ERC20">ERC20</option>
+                        <option value="BEP20">BEP20</option>
+                    </select>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>${t('label_amount_inr_val')}</label>
+                    <input type="number" id="settleUsdtAmount" class="form-control" placeholder="${t('placeholder_inr_val')}">
+                     <small class="text-muted">${t('balance')}: <span class="avail-balance">${t('loading')}</span></small>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 form-group">
+                    <label>${t('label_order_id')}</label>
+                    <input type="text" id="settleUsdtOrderId" class="form-control" placeholder="${t('placeholder_order_id')}">
+                    <small class="text-muted">${t('hint_auto_gen')}</small>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>${t('label_2fa')}</label>
+                    <input type="text" id="settleUsdtCode" class="form-control" placeholder="${t('placeholder_totp')}">
+                </div>
+            </div>
+            <button class="btn btn-primary full-width mt-2" onclick="submitSettlement('usdt')">
+                ${t('btn_submit_usdt')}
+            </button>
+        </div>
+    `;
+
+    document.getElementById('modalOverlay').classList.add('active');
+    updateSettlementBalance();
+}
 function switchSettlementTab(type) {
     const bankForm = document.getElementById('bankSettlementForm');
     const usdtForm = document.getElementById('usdtSettlementForm');
@@ -1627,6 +1823,7 @@ async function submitSettlement(type) {
                 document.getElementById('settleBankAccount').value = '';
                 document.getElementById('settleBankAmount').value = '';
                 document.getElementById('settleBankCode').value = '';
+                closeModal();
             } else {
                 showToast(res.msg, 'error');
             }
@@ -1656,6 +1853,7 @@ async function submitSettlement(type) {
                 document.getElementById('settleUsdtAddress').value = '';
                 document.getElementById('settleUsdtAmount').value = '';
                 document.getElementById('settleUsdtCode').value = '';
+                closeModal();
             } else {
                 showToast(res.msg, 'error');
             }
@@ -2140,4 +2338,62 @@ function updatePaginationControls(elementId, { page, pages, total }, onPageChang
             </button>
         </div>
     `;
+}
+
+async function loadSettlementHistory(page = 1) {
+    try {
+        const search = document.getElementById('stSearch')?.value || '';
+        const startDate = document.getElementById('stStartDate')?.value || '';
+        const endDate = document.getElementById('stEndDate')?.value || '';
+        const status = document.getElementById('stStatus')?.value || '';
+
+        let url = `/merchant/payouts?page=${page}&limit=20&search=${search}&source=settlement`;
+        if (startDate) url += `&startDate=${startDate}`;
+        if (endDate) url += `&endDate=${endDate}`;
+        if (status) url += `&status=${status}`;
+
+        const data = await API.get(url);
+        console.log('[App] Settlement Data:', data);
+        const container = document.getElementById('settlementList');
+        if (!container) return;
+
+        if (data.code === 1) {
+            const { payouts, total, pages } = data.data;
+
+            if (payouts.length > 0) {
+                container.innerHTML = payouts.map(p => `
+                <tr>
+                    <td><code style="font-family: monospace; font-weight: bold;">${p.orderId}</code></td>
+                    <td>${p.type === 'bank' ? t('bank_transfer') : t('usdt_transfer')}</td>
+                    <td>₹${parseFloat(p.amount).toFixed(2)}</td>
+                    <td>₹${parseFloat(p.fee).toFixed(2)}</td>
+                    <td>₹${parseFloat(p.netAmount).toFixed(2)}</td>
+                    <td>
+                        <small>
+                            ${p.account ? `${t('label_account')}: ${p.account}<br>${t('label_ifsc')}: ${p.ifsc}` : `${t('label_wallet')}: ${p.wallet}<br>${t('label_network')}: ${p.network}`}
+                        </small>
+                    </td>
+                    <td><span class="badge badge-${getStatusClass(p.status)}">${t('status_' + p.status)}</span></td>
+                    <td>${formatDate(p.createdAt)}</td>
+                </tr>
+            `).join('');
+                updatePaginationControls('stPagination', { page, pages, total }, 'loadSettlementHistory');
+            } else {
+                container.innerHTML = `
+                <tr><td colspan="8" class="text-muted" style="text-align:center;">${t('no_payouts')}</td></tr>
+            `;
+                updatePaginationControls('stPagination', { page: 1, pages: 1 }, 'loadSettlementHistory');
+            }
+        }
+    } catch (error) {
+        showToast(t('error_transactions'), 'error');
+    }
+}
+
+function resetSettlementFilters() {
+    document.getElementById('stSearch').value = '';
+    document.getElementById('stStartDate').value = '';
+    document.getElementById('stEndDate').value = '';
+    document.getElementById('stStatus').value = '';
+    loadSettlementHistory(1);
 }

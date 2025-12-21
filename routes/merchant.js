@@ -115,7 +115,7 @@ router.get('/transactions', authenticate, async (req, res) => {
  */
 router.get('/payouts', authenticate, async (req, res) => {
     try {
-        const { page = 1, limit = 20, type, status, search } = req.query;
+        const { page = 1, limit = 20, type, status, search, source } = req.query;
         const offset = (page - 1) * limit;
         const db = getDb();
         console.log(`[PAYOUT] Fetching payouts. User: ${req.user.id}, Page: ${page}, Limit: ${limit}, Search: ${search}`);
@@ -124,6 +124,7 @@ router.get('/payouts', authenticate, async (req, res) => {
         const params = [req.user.id];
 
         if (type) { query += ' AND payout_type = ?'; params.push(type); }
+        if (source) { query += ' AND source = ?'; params.push(source); }
         if (status) { query += ' AND status = ?'; params.push(status); }
         if (search) {
             query += ' AND (order_id LIKE ? OR account_number LIKE ?)';
@@ -143,6 +144,7 @@ router.get('/payouts', authenticate, async (req, res) => {
         let countQuery = 'SELECT COUNT(*) as total FROM payouts WHERE user_id = ?';
         const countParams = [req.user.id];
         if (type) { countQuery += ' AND payout_type = ?'; countParams.push(type); }
+        if (source) { countQuery += ' AND source = ?'; countParams.push(source); }
         if (status) { countQuery += ' AND status = ?'; countParams.push(status); }
         if (search) {
             countQuery += ' AND (order_id LIKE ? OR account_number LIKE ?)';
@@ -191,7 +193,7 @@ router.get('/payouts', authenticate, async (req, res) => {
  */
 router.get('/payouts/export', authenticate, async (req, res) => {
     try {
-        const { type, status, search, startDate, endDate } = req.query;
+        const { type, status, search, startDate, endDate, source } = req.query;
         const db = getDb();
         console.log(`[PAYOUT EXPORT] User: ${req.user.id}`);
 
@@ -199,6 +201,7 @@ router.get('/payouts/export', authenticate, async (req, res) => {
         const params = [req.user.id];
 
         if (type) { query += ' AND payout_type = ?'; params.push(type); }
+        if (source) { query += ' AND source = ?'; params.push(source); }
         if (status) { query += ' AND status = ?'; params.push(status); }
         if (search) {
             query += ' AND (order_id LIKE ? OR account_number LIKE ?)';
@@ -282,6 +285,157 @@ router.get('/transactions/export', authenticate, async (req, res) => {
 
     } catch (error) {
         console.error('Export transactions error:', error);
+        res.status(500).send('Server Error');
+    }
+});
+
+/**
+ * GET /api/merchant/all-transactions
+ * Combined history of Payins and Payouts
+ */
+router.get('/all-transactions', authenticate, async (req, res) => {
+    try {
+        const { page = 1, limit = 20, type, status, search, startDate, endDate } = req.query;
+        const offset = (page - 1) * limit;
+        const db = getDb();
+        const userId = req.user.id;
+
+        // Base subqueries
+        let txQuery = `SELECT uuid as id, order_id, type, amount, fee, net_amount, status, utr, created_at FROM transactions WHERE user_id = ?`;
+        let poQuery = `SELECT uuid as id, order_id, payout_type as type, amount, fee, net_amount, status, utr, created_at FROM payouts WHERE user_id = ?`;
+
+        const params = [userId, userId];
+
+        // We wrap the UNION in a CTE or subquery to apply filters
+        // Using common table expression logic via subquery
+        let combinedQuery = `
+            SELECT * FROM (
+                ${txQuery}
+                UNION ALL
+                ${poQuery}
+            ) AS combined
+            WHERE 1=1
+        `;
+
+        const queryParams = [...params];
+
+        if (type) {
+            if (type === 'payin') {
+                combinedQuery += " AND type = 'payin'";
+            } else if (type === 'payout') {
+                combinedQuery += " AND type IN ('bank', 'usdt')";
+            } else {
+                combinedQuery += " AND type = ?";
+                queryParams.push(type);
+            }
+        }
+
+        if (status) {
+            combinedQuery += " AND status = ?";
+            queryParams.push(status);
+        }
+
+        if (search) {
+            combinedQuery += " AND (order_id LIKE ? OR utr LIKE ?)";
+            const term = `%${search}%`;
+            queryParams.push(term, term);
+        }
+
+        if (startDate && endDate) {
+            combinedQuery += " AND date(created_at) BETWEEN ? AND ?";
+            queryParams.push(startDate, endDate);
+        }
+
+        // Pagination
+        const finalQuery = combinedQuery + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        const finalParams = [...queryParams, parseInt(limit), offset];
+
+        const results = await db.prepare(finalQuery).all(...finalParams);
+
+        // Count
+        const countQuery = `SELECT COUNT(*) as total FROM (${combinedQuery.split('WHERE 1=1')[0]} WHERE 1=1 ${combinedQuery.split('WHERE 1=1')[1]})`;
+        const total = (await db.prepare(countQuery).get(...queryParams)).total;
+
+        res.json({
+            code: 1,
+            data: {
+                transactions: results,
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
+        });
+
+    } catch (error) {
+        console.error('Get all transactions error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
+ * GET /api/merchant/all-transactions/export
+ */
+router.get('/all-transactions/export', authenticate, async (req, res) => {
+    try {
+        const { type, status, search, startDate, endDate } = req.query;
+        const db = getDb();
+        const userId = req.user.id;
+
+        let txQuery = `SELECT order_id, type, amount, fee, net_amount, status, utr, created_at FROM transactions WHERE user_id = ?`;
+        let poQuery = `SELECT order_id, payout_type as type, amount, fee, net_amount, status, utr, created_at FROM payouts WHERE user_id = ?`;
+
+        const params = [userId, userId];
+
+        let combinedQuery = `
+            SELECT * FROM (
+                ${txQuery}
+                UNION ALL
+                ${poQuery}
+            ) AS combined
+            WHERE 1=1
+        `;
+
+        const queryParams = [...params];
+
+        if (type) {
+            if (type === 'payin') combinedQuery += " AND type = 'payin'";
+            else if (type === 'payout') combinedQuery += " AND type IN ('bank', 'usdt')";
+            else { combinedQuery += " AND type = ?"; queryParams.push(type); }
+        }
+        if (status) { combinedQuery += " AND status = ?"; queryParams.push(status); }
+        if (search) {
+            combinedQuery += " AND (order_id LIKE ? OR utr LIKE ?)";
+            const term = `%${search}%`;
+            queryParams.push(term, term);
+        }
+        if (startDate && endDate) {
+            combinedQuery += " AND date(created_at) BETWEEN ? AND ?";
+            queryParams.push(startDate, endDate);
+        }
+
+        const results = await db.prepare(combinedQuery + " ORDER BY created_at DESC").all(...queryParams);
+
+        let csv = '订单号 (Order ID),类型 (Type),金额 (Amount),手续费 (Fee),到账 (Net),状态 (Status),UTR,时间 (Time)\n';
+
+        results.forEach(r => {
+            let typeCn = r.type;
+            if (r.type === 'payin') typeCn = '代收';
+            else if (r.type === 'bank') typeCn = '银行代付';
+            else if (r.type === 'usdt') typeCn = 'USDT代付';
+
+            let statusCn = r.status === 'success' ? '成功' : (r.status === 'pending' || r.status === 'processing' ? '处理中' : '失败');
+            const date = new Date(r.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+
+            csv += `${r.order_id},${typeCn},${r.amount},${r.fee},${r.net_amount},${statusCn},${r.utr || ''},${date}\n`;
+        });
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`all_transactions-${Date.now()}.csv`);
+        res.send(csv);
+
+    } catch (error) {
+        console.error('Export all transactions error:', error);
         res.status(500).send('Server Error');
     }
 });

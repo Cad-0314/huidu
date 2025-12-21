@@ -1,6 +1,6 @@
 <div class="card">
     <div class="card-header d-flex justify-between align-center">
-        <h3 data-i18n="transactions_tab">Transactions</h3>
+        <h3 data-i18n="transactions_tab">Pay-in Orders</h3>
         <div class="search-box">
             <i class="fas fa-search"></i>
             <input type="text" id="txSearch" placeholder="Search Order ID, UTR..." data-i18n="search"
@@ -26,14 +26,8 @@
                 <option value="failed" data-i18n="failed">Failed</option>
             </select>
         </div>
-        <div class="form-group">
-            <label class="d-none">Type</label>
-            <select id="txType" class="form-control form-control-sm">
-                <option value="" data-i18n="all">All Types</option>
-                <option value="payin" data-i18n="pay_in_deposits">Pay-in</option>
-                <option value="payout" data-i18n="pay_out_withdrawals">Payout</option>
-            </select>
-        </div>
+        <!-- Type Selection Removed -->
+        <input type="hidden" id="txType" value="payin">
         <button class="btn btn-primary btn-sm" onclick="loadTransactionsData(1)">
             <i class="fas fa-filter"></i> <span data-i18n="filter">Filter</span>
         </button>

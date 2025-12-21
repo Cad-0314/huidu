@@ -327,6 +327,10 @@ async function initializeSchema() {
         await db.exec('ALTER TABLE users ADD COLUMN usdt_rate REAL DEFAULT 100.0');
         console.log('Applied migration: Added usdt_rate to users');
     } catch (e) { }
+    try {
+        await db.exec("ALTER TABLE payouts ADD COLUMN source TEXT DEFAULT 'api'");
+        console.log('Applied migration: Added source column to payouts');
+    } catch (e) { }
 }
 
 module.exports = { initDatabase, getDb };

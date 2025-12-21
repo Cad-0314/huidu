@@ -106,8 +106,9 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         // Note: Payouts table might not support param column, so we skip storing dynamic callback for now.
         // If needed, we must add column to schema.
 
-        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?)`)
-            .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName);
+        const source = req.isApiRequest ? 'api' : 'settlement';
+        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name, source) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?, ?)`)
+            .run(payoutUuid, merchant.id, orderId, internalOrderId, payoutAmount, fee, payoutAmount, account, ifsc, personName, source);
 
         // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
         // if (merchant.username === 'demo') { ... }
@@ -199,19 +200,37 @@ router.post('/usdt', unifiedAuth, async (req, res) => {
         }
 
         const rates = await getUserRates(db, merchant.id);
-        const { fee, totalDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
+        const { fee: calcFee, totalDeduction: calcDeduction } = calculatePayoutFee(payoutAmount, rates.payoutRate, rates.payoutFixed);
 
-        if (merchant.balance < totalDeduction) {
-            console.warn(`[PAYOUT USDT FAIL] Insufficient balance. Merchant: ${merchant.uuid}, Required: ${totalDeduction}, Available: ${merchant.balance}`);
-            return res.status(400).json({ code: 0, msg: `Insufficient balance. Required: ${totalDeduction}, Available: ${merchant.balance}` });
+        let fee = calcFee;
+        let totalDeduction = calcDeduction;
+
+        if (!req.isApiRequest) {
+            fee = 0;
+            totalDeduction = payoutAmount;
         }
-        console.log(`[PAYOUT USDT] Deducting balance. Merchant: ${merchant.uuid}, Amount: ${totalDeduction}`);
 
-        await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduction, merchant.id);
+        let finalFee = fee;
+        let finalDeduction = totalDeduction;
+
+        // No fee for Admin/Manual Settlement on USDT
+        if (!req.isApiRequest) {
+            finalFee = 0;
+            finalDeduction = payoutAmount;
+        }
+
+        if (merchant.balance < finalDeduction) {
+            console.warn(`[PAYOUT USDT FAIL] Insufficient balance. Merchant: ${merchant.uuid}, Required: ${finalDeduction}, Available: ${merchant.balance}`);
+            return res.status(400).json({ code: 0, msg: `Insufficient balance. Required: ${finalDeduction}, Available: ${merchant.balance}` });
+        }
+        console.log(`[PAYOUT USDT] Deducting balance. Merchant: ${merchant.uuid}, Amount: ${finalDeduction}`);
+
+        await db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(finalDeduction, merchant.id);
 
         const payoutUuid = uuidv4();
-        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, payout_type, amount, fee, net_amount, status, wallet_address, network) VALUES (?, ?, ?, 'usdt', ?, ?, ?, 'pending', ?, ?)`)
-            .run(payoutUuid, merchant.id, orderId, payoutAmount, fee, payoutAmount, walletAddress, network);
+        const source = req.isApiRequest ? 'api' : 'settlement';
+        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, payout_type, amount, fee, net_amount, status, wallet_address, network, source) VALUES (?, ?, ?, 'usdt', ?, ?, ?, 'pending', ?, ?, ?)`)
+            .run(payoutUuid, merchant.id, orderId, payoutAmount, finalFee, payoutAmount, walletAddress, network, source);
 
         res.json({ code: 1, msg: 'USDT payout submitted, awaiting admin approval', data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'pending' } });
     } catch (error) {

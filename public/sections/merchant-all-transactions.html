@@ -1,0 +1,72 @@
+<div class="card">
+    <div class="card-header d-flex justify-between align-center">
+        <h3 class="card-title" data-i18n="all_transactions_tab">All Transactions</h3>
+    </div>
+    <div class="filter-bar">
+        <div class="form-group">
+            <label class="d-none">Start</label>
+            <input type="date" id="matStartDate" class="form-control form-control-sm">
+        </div>
+        <div class="form-group">
+            <label class="d-none">End</label>
+            <input type="date" id="matEndDate" class="form-control form-control-sm">
+        </div>
+        <div class="form-group">
+            <label class="d-none">Status</label>
+            <select id="matStatus" class="form-control form-control-sm">
+                <option value="" data-i18n="all">All Status</option>
+                <option value="success" data-i18n="success">Success</option>
+                <option value="pending" data-i18n="status_pending">Pending</option>
+                <option value="processing" data-i18n="processing">Processing</option>
+                <option value="failed" data-i18n="failed">Failed</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="d-none">Type</label>
+            <select id="matType" class="form-control form-control-sm">
+                <option value="" data-i18n="filter_all_types">All Types</option>
+                <option value="payin" data-i18n="type_payin">Payin</option>
+                <option value="payout" data-i18n="type_payout">Payout</option>
+            </select>
+        </div>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="matSearch" placeholder="Search Order ID..." data-i18n="search"
+                onkeyup="debounce(loadMerchantAllTransactions, 500)()">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadMerchantAllTransactions(1)">
+            <i class="fas fa-filter"></i> <span data-i18n="filter">Filter</span>
+        </button>
+        <button class="btn btn-success btn-sm" onclick="exportMerchantAllTransactions()">
+            <i class="fas fa-file-export"></i> <span data-i18n="btn_export">Export</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="resetMerchantAllTransactionsFilters()">
+            <i class="fas fa-undo"></i> <span data-i18n="reset">Reset</span>
+        </button>
+    </div>
+    <div class="table-container" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th data-i18n="label_order_id">Order ID</th>
+                        <th data-i18n="type">Type</th>
+                        <th data-i18n="amount">Amount</th>
+                        <th data-i18n="fee">Fee</th>
+                        <th data-i18n="net">Net</th>
+                        <th data-i18n="status">Status</th>
+                        <th data-i18n="utr">UTR</th>
+                        <th data-i18n="date">Date</th>
+                    </tr>
+                </thead>
+                <tbody id="merchantAllTransactionsList">
+                    <tr>
+                        <td colspan="8" class="text-muted" style="text-align:center;" data-i18n="loading">Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="matPagination" class="p-3"></div>
+    </div>
+</div>

@@ -9,7 +9,7 @@ window.translations = {
 
         // Sidebar
         dashboard_tab: "Dashboard",
-        transactions_tab: "Transactions",
+        transactions_tab: "Payin",
         payouts_tab: "Payouts",
         settlement_tab: "Settlement",
         create_payment_link: "Payment Links",
@@ -108,6 +108,8 @@ window.translations = {
         placeholder_inr_val: "Equivalent INR Amount",
         hint_usdt_rate: "Rate: ~100 INR/USDT",
         btn_submit_usdt: "Submit USDT Withdrawal",
+        settlement_history: "Settlement History",
+        request_settlement: "Request Settlement",
 
         // Payouts & Transactions Specific
         search_payout: "Search Order ID, Account...",
@@ -374,7 +376,7 @@ window.translations = {
 
         // Sidebar
         dashboard_tab: "仪表盘",
-        transactions_tab: "交易记录",
+        transactions_tab: "充值订单",
         payouts_tab: "代付管理",
         settlement_tab: "结算申请",
         create_payment_link: "支付链接",
@@ -473,6 +475,8 @@ window.translations = {
         placeholder_inr_val: "等值 INR 金额",
         hint_usdt_rate: "参考汇率: ~100 INR/USDT",
         btn_submit_usdt: "提交 USDT 代付",
+        settlement_history: "结算记录",
+        request_settlement: "申请结算",
 
         // Payouts & Transactions Specific
         search_payout: "搜索订单号、账号...",

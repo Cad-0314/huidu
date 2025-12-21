@@ -305,6 +305,17 @@ async function initBot() {
                 `).get(user.id, minutes);
             };
 
+            const getPayoutStats = async (minutes) => {
+                return await db.prepare(`
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                    FROM payouts 
+                    WHERE user_id = ? AND source = 'api'
+                    AND created_at >= datetime('now', '-' || ? || ' minutes', 'localtime')
+                `).get(user.id, minutes);
+            };
+
             const getAllTimeStats = async () => {
                 return await db.prepare(`
                     SELECT 
@@ -315,10 +326,25 @@ async function initBot() {
                 `).get(user.id);
             };
 
+            const getAllTimePayoutStats = async () => {
+                return await db.prepare(`
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                    FROM payouts 
+                    WHERE user_id = ? AND source = 'api'
+                `).get(user.id);
+            };
+
             const stats5 = await getStats(5);
             const stats10 = await getStats(10);
             const stats30 = await getStats(30);
             const statsTotal = await getAllTimeStats();
+
+            const pStats5 = await getPayoutStats(5);
+            const pStats10 = await getPayoutStats(10);
+            const pStats30 = await getPayoutStats(30);
+            const pStatsTotal = await getAllTimePayoutStats();
 
             const formatRate = (s) => {
                 if (!s || s.total === 0) return '`0.00%`';
@@ -326,10 +352,17 @@ async function initBot() {
             };
 
             let msg = `📊 **支付成功率监控**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n`;
+            msg += `📥 **收款 (Payin)**\n`;
             msg += `🕒 05分钟: ${formatRate(stats5)} (${stats5.success || 0}/${stats5.total || 0})\n`;
             msg += `🕒 10分钟: ${formatRate(stats10)} (${stats10.success || 0}/${stats10.total || 0})\n`;
             msg += `🕒 30分钟: ${formatRate(stats30)} (${stats30.success || 0}/${stats30.total || 0})\n`;
-            msg += `🕒 总共: ${formatRate(statsTotal)} (${statsTotal.success || 0}/${statsTotal.total || 0})`;
+            msg += `🕒 总共: ${formatRate(statsTotal)} (${statsTotal.success || 0}/${statsTotal.total || 0})\n\n`;
+
+            msg += `📤 **下发 (Payout)**\n`;
+            msg += `🕒 05分钟: ${formatRate(pStats5)} (${pStats5.success || 0}/${pStats5.total || 0})\n`;
+            msg += `🕒 10分钟: ${formatRate(pStats10)} (${pStats10.success || 0}/${pStats10.total || 0})\n`;
+            msg += `🕒 30分钟: ${formatRate(pStats30)} (${pStats30.success || 0}/${pStats30.total || 0})\n`;
+            msg += `🕒 总共: ${formatRate(pStatsTotal)} (${pStatsTotal.success || 0}/${pStatsTotal.total || 0})`;
 
             reply(ctx, msg);
         } catch (error) {
