@@ -323,10 +323,9 @@ router.post('/callback', async (req, res) => {
         const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
         const actualAmount = parseFloat(amount);
 
-        // Use merchant's specific rate, convert from percentage to decimal
-        // DB stores: 10.0 for 10%, but calculatePayinFee expects 0.10
-        const merchantRatePercent = tx.payin_rate !== undefined ? tx.payin_rate : 5.0;
-        const merchantRate = merchantRatePercent / 100; // 10.0 → 0.10
+        // Use merchant's specific rate, already stored as decimal (e.g. 0.1 for 10%)
+        // If not found (legacy), fallback to 5% (0.05)
+        const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
         const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
 
         await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
