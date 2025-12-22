@@ -1175,10 +1175,18 @@ async function saveIpWhitelist() {
         } else {
             showToast(data.msg || 'Update failed', 'error');
         }
+
     } catch (e) {
         showToast('Server error', 'error');
     }
 }
+
+// Expose functions to global window object
+window.renderIpList = renderIpList;
+window.handleIpEnter = handleIpEnter;
+window.addIpFromInput = addIpFromInput;
+window.removeIp = removeIp;
+window.saveIpWhitelist = saveIpWhitelist;
 
 async function updateCallbackUrl() {
     const callbackUrl = document.getElementById('credCallback').value;
