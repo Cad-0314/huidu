@@ -14,7 +14,7 @@ This guide explains how to test the VSPAY API using the provided Postman Collect
 3. Update the following "Current Value" fields with your actual data (get these from your Admin Dashboard):
    - `merchant_uuid`: Your Merchant UUID (e.g., `550e8400-e29b...`)
    - `merchant_key`: Your Merchant Secret Key (e.g., `ABC123XYZ`)
-   - `base_url`: Your app URL (e.g., `https://your-app.onrender.com` or `http://localhost:3000`)
+   - `base_url`: Your app URL (e.g., `https://vspay.vip` or `http://localhost:3000`)
 
    **Note**: Leave `signature` empty. It is calculated automatically!
 
