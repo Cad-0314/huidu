@@ -625,6 +625,20 @@ print_r($response);
                     <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
+            </table>
+
+            <h3 data-i18n="success_response">Success Response</h3>
+            <pre><code>{
+    "code": 1,
+    "msg": "Payout submitted",
+    "data": {
+        "orderId": "MC001-998877",
+        "id": "e0b5...88",
+        "amount": 500,
+        "fee": 21,  // 3% + 6 INR
+        "status": "processing"
+    }
+}</code></pre>
         </section>
 
         <section id="payout-usdt">
@@ -674,6 +688,20 @@ print_r($response);
                     <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
+            </table>
+
+            <h3 data-i18n="success_response">Success Response</h3>
+            <pre><code>{
+    "code": 1,
+    "msg": "USDT payout submitted, awaiting admin approval",
+    "data": {
+        "orderId": "MC001-998877",
+        "id": "e0b5...88",
+        "amount": 50000,
+        "fee": 0,
+        "status": "pending"
+    }
+}</code></pre>
         </section>
 
         <section id="payout-check">

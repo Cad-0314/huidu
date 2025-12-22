@@ -190,6 +190,7 @@ app.get('/pay/:orderId', async (req, res) => {
         html = html.replace('{{DEEPLINK_GPAY}}', gpayLink);
 
         html = html.replace('{{DEEPLINK_UPI}}', deepLinks.upi_scan || tx.payment_url || '');
+        html = html.replace('{{SKIP_URL}}', skipUrl || '');
 
         res.send(html);
     } catch (error) {

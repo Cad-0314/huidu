@@ -202,6 +202,32 @@
             cursor: not-allowed;
         }
 
+        .paid-button {
+            width: 100%;
+            margin-top: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .paid-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+        }
+
+        .paid-button:active {
+            transform: translateY(0);
+        }
+
         .order-info {
             margin-top: 20px;
             padding-top: 16px;
@@ -313,6 +339,10 @@
                 Pay <span class="currency">₹</span> {{AMOUNT}}
             </button>
 
+            <button class="paid-button" id="paidBtn">
+                I have paid
+            </button>
+
             <div class="order-info">
                 <div class="order-row">
                     <span>Order ID</span>
@@ -337,6 +367,7 @@
 
     <!-- Fallback Payment URL -->
     <input type="hidden" id="fallbackUrl" value="{{PAYMENT_URL}}">
+    <input type="hidden" id="skipUrlData" value="{{SKIP_URL}}">
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -431,6 +462,30 @@
                 payBtn.disabled = false;
                 payBtn.textContent = 'Pay Now';
             }
+
+            // Paid button logic
+            const paidBtn = document.getElementById('paidBtn');
+            const skipUrlData = document.getElementById('skipUrlData').value;
+
+            // Only show if skipUrl is available (optional, but safer to always show if that's the UX)
+            // But requirement implies it's for redirecting to skipUrl. 
+            // If skipUrl is empty, maybe we shouldn't show it? 
+            // The instructions imply this flow is specifically for "redirect to skip url merchent give".
+
+            paidBtn.addEventListener('click', function () {
+                // Show popup
+                alert("We will update soon have patient"); // As requested literal text
+
+                // Redirect
+                if (skipUrlData && skipUrlData !== '') {
+                    window.location.href = skipUrlData;
+                } else {
+                    // If no skip url, what to do? User didn't specify. 
+                    // Maybe reload or just stay.
+                    // Assuming merchant provided it as per request "merchent give skip url"
+                    console.warn('No skip URL found');
+                }
+            });
         });
     </script>
 </body>
