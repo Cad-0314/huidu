@@ -450,6 +450,63 @@ async function initBot() {
         }
     });
 
+    // Command: /receipt <ORDER_ID>
+    bot.command('receipt', async (ctx) => {
+        try {
+            const message = ctx.message.text.split(' ');
+            if (message.length < 2) {
+                return reply(ctx, '❌ **格式错误**\n用法: `/receipt <Payout Order ID>`');
+            }
+
+            const queryId = message[1].trim();
+            const chatId = ctx.chat.id.toString();
+            const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
+
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
+
+            const payout = await db.prepare('SELECT * FROM payouts WHERE (order_id = ? OR platform_order_id = ? OR utr = ?) AND user_id = ?').get(queryId, queryId, queryId, user.id);
+
+            if (!payout) {
+                return reply(ctx, '❌ **未找到下发记录**\n请检查单号是否正确。');
+            }
+
+            // Generate Receipt Image using Placehold.co
+            // We use simple text formatting. 
+            // encoding for URL is crucial.
+            const statusIcon = payout.status === 'success' ? '✅' : (payout.status === 'failed' ? '❌' : '⏳');
+            const dateStr = new Date(payout.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+            const lines = [
+                'VSPAY TRANSFER RECEIPT',
+                '--------------------------------',
+                `ORDER ID  : ${payout.order_id}`,
+                `AMOUNT    : ${payout.amount}`,
+                `STATUS    : ${payout.status.toUpperCase()} ${statusIcon}`,
+                `UTR       : ${payout.utr || 'PENDING'}`,
+                `DATE      : ${dateStr}`,
+                '--------------------------------',
+                'Generated via VSPAY Bot'
+            ];
+
+            const text = lines.join('\\n'); // Use literal \n for the URL encoding logic usually, but placehold.co handles encoded newlines.
+            // Actually placehold.co uses `\n` in text query param? No, it usually takes standard URL encoding.
+            // Let's try constructing the URL safely.
+            const encodedText = encodeURIComponent(lines.join('\n'));
+
+            // Using a dark theme for professional look: Black BG, White Text
+            const imageUrl = `https://placehold.co/600x400/000000/ffffff.png?text=${encodedText}&font=roboto`;
+
+            await ctx.replyWithPhoto(imageUrl, {
+                caption: `🧾 **Receipt Generated**\nOrder: \`${payout.order_id}\``,
+                reply_to_message_id: ctx.message.message_id
+            });
+
+        } catch (error) {
+            console.error('Bot Receipt Error:', error);
+            reply(ctx, '❌ **生成凭证失败**');
+        }
+    });
+
     // Help / Start Command
     bot.start((ctx) => {
         const msg = `🤖 **收银助手机器人已就绪**\n` +
@@ -462,7 +519,8 @@ async function initBot() {
             `🔹 /last - 查看最后一条待处理\n` +
             `🔹 /apidetails - 查看 API 接入信息\n` +
             `🔹 /upi - 查看支持的支付方式\n` +
-            `🔹 /bind <密钥> - 绑定群组到商户`;
+            `🔹 /bind <密钥> - 绑定群组到商户\n` +
+            `🔹 /receipt <单号> - 生成下发回单图片`;
         reply(ctx, msg);
     });
 
