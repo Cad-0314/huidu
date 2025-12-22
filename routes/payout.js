@@ -396,6 +396,9 @@ router.post('/callback', async (req, res) => {
             }
         }
 
+        // Send "OK" to Silkpay immediately to prevent timeout
+        res.send('OK');
+
         const merchantCallback = payout.callback_url; // From DB join
         if (merchantCallback) {
             try {
@@ -406,16 +409,19 @@ router.post('/callback', async (req, res) => {
                     id: payout.uuid, utr: utr || '', param: '' // param not supported in Silkpay callback echo
                 };
                 merchantCallbackData.sign = generateSign(merchantCallbackData, payout.merchant_key);
+
+                // Fire and forget (don't await) to ensure main thread isn't blocked if we were serverless, 
+                // but since we've already replied, we can just let it run.
+                // However, to capture errors we should still await or catch chain.
+                // Since this is node server, awaiting here is fine as response is already sent.
                 await axios.post(merchantCallback, merchantCallbackData, { timeout: 10000 });
             } catch (callbackError) {
                 console.error('Failed to forward callback:', callbackError.message);
             }
         }
-
-        res.send('OK');
     } catch (error) {
         console.error('Payout callback error:', error);
-        res.send('OK');
+        if (!res.headersSent) res.send('OK'); // Ensure we always reply
     }
 });
 

@@ -371,6 +371,9 @@ router.post('/callback', async (req, res) => {
             originalParam = tx.param;
         }
 
+        // Send "OK" to Silkpay immediately
+        res.send('OK');
+
         const merchantCallback = callbackUrl || tx.callback_url;
         if (merchantCallback) {
             try {
@@ -386,11 +389,9 @@ router.post('/callback', async (req, res) => {
                 console.error('Failed to forward callback:', callbackError.message);
             }
         }
-
-        res.send('OK');
     } catch (error) {
         console.error('Payin callback error:', error);
-        res.send('OK');
+        if (!res.headersSent) res.send('OK');
     }
 });
 
