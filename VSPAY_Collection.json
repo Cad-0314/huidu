@@ -5,55 +5,72 @@
         "description": "Postman collection for testing VSPAY Payin, Payout, and Utility APIs. Includes automatic signature generation.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "const secret = pm.environment.get('merchant_secret');",
+                    "// 1. Resolve variables in raw body string (e.g. {{merchant_id}})",
+                    "const rawBody = pm.environment.replaceIn(pm.request.body.raw);",
+                    "let body;",
+                    "try {",
+                    "    body = JSON.parse(rawBody);",
+                    "} catch (e) {",
+                    "    body = {};",
+                    "}",
+                    "",
+                    "// 2. Auto-generate IDs if needed",
+                    "if (body.orderId === 'AUTO') {",
+                    "    body.orderId = 'ORD-' + Date.now();",
+                    "     // Update the ACTUAL request body so the server receives this ID",
+                    "    pm.request.body.raw = JSON.stringify(body);",
+                    "}",
+                    "",
+                    "// 3. Filter keys (remove empty, null, and 'sign')",
+                    "const filtered = {};",
+                    "Object.keys(body).forEach(k => {",
+                    "    if (k !== 'sign' && body[k] !== null && body[k] !== undefined && body[k] !== '') {",
+                    "        filtered[k] = body[k];",
+                    "    }",
+                    "});",
+                    "",
+                    "// 4. Sort Keys",
+                    "const keys = Object.keys(filtered).sort();",
+                    "",
+                    "// 5. Build Query String (key=value&...)",
+                    "const queryParts = keys.map(k => k + '=' + filtered[k]);",
+                    "const queryString = queryParts.join('&');",
+                    "",
+                    "// 6. Append Secret",
+                    "// Node Logic: `${queryString}&secret=${secret}`",
+                    "// Even if queryString is empty, logic appends &secret=...",
+                    "const signStr = queryString + '&secret=' + secret;",
+                    "",
+                    "// 7. Hash",
+                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                    "",
+                    "// 8. Set Headers",
+                    "pm.request.headers.add({key: 'x-signature', value: hash});",
+                    "console.log('Signature String:', signStr);",
+                    "console.log('Generated Hash:', hash);"
+                ]
+            }
+        }
+    ],
     "item": [
         {
             "name": "Payin",
             "item": [
                 {
                     "name": "Create Payin Order",
-                    "event": [
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "exec": [
-                                    "const secret = pm.environment.get('merchant_secret');",
-                                    "const body = JSON.parse(pm.request.body.raw);",
-                                    "",
-                                    "// Generate Order ID if placeholder",
-                                    "if (!body.orderId || body.orderId === 'AUTO') {",
-                                    "    body.orderId = 'ORD-' + Date.now();",
-                                    "    pm.request.body.raw = JSON.stringify(body);",
-                                    "}",
-                                    "",
-                                    "// Signature Logic",
-                                    "const keys = Object.keys(body).sort();",
-                                    "let signStr = '';",
-                                    "keys.forEach(key => {",
-                                    "    if (body[key] !== '' && body[key] !== null) {",
-                                    "        signStr += key + '=' + body[key] + '&';",
-                                    "    }",
-                                    "});",
-                                    "signStr += 'secret=' + secret;",
-                                    "",
-                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
-                                    "pm.environment.set('current_signature', hash);",
-                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
                             {
                                 "key": "x-merchant-id",
                                 "value": "{{merchant_id}}",
-                                "type": "text"
-                            },
-                            {
-                                "key": "x-signature",
-                                "value": "{{current_signature}}",
                                 "type": "text"
                             }
                         ],
@@ -82,28 +99,6 @@
                 },
                 {
                     "name": "Query Payin Status",
-                    "event": [
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "exec": [
-                                    "const secret = pm.environment.get('merchant_secret');",
-                                    "const body = JSON.parse(pm.request.body.raw);",
-                                    "const keys = Object.keys(body).sort();",
-                                    "let signStr = '';",
-                                    "keys.forEach(key => {",
-                                    "    if (body[key] !== '' && body[key] !== null) {",
-                                    "        signStr += key + '=' + body[key] + '&';",
-                                    "    }",
-                                    "});",
-                                    "signStr += 'secret=' + secret;",
-                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
-                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
@@ -138,28 +133,6 @@
                 },
                 {
                     "name": "Submit UTR",
-                    "event": [
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "exec": [
-                                    "const secret = pm.environment.get('merchant_secret');",
-                                    "const body = JSON.parse(pm.request.body.raw);",
-                                    "const keys = Object.keys(body).sort();",
-                                    "let signStr = '';",
-                                    "keys.forEach(key => {",
-                                    "    if (body[key] !== '' && body[key] !== null) {",
-                                    "        signStr += key + '=' + body[key] + '&';",
-                                    "    }",
-                                    "});",
-                                    "signStr += 'secret=' + secret;",
-                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
-                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
@@ -199,34 +172,6 @@
             "item": [
                 {
                     "name": "Bank Payout",
-                    "event": [
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "exec": [
-                                    "const secret = pm.environment.get('merchant_secret');",
-                                    "const body = JSON.parse(pm.request.body.raw);",
-                                    "",
-                                    "if (!body.orderId || body.orderId === 'AUTO') {",
-                                    "    body.orderId = 'PAY-' + Date.now();",
-                                    "    pm.request.body.raw = JSON.stringify(body);",
-                                    "}",
-                                    "",
-                                    "const keys = Object.keys(body).sort();",
-                                    "let signStr = '';",
-                                    "keys.forEach(key => {",
-                                    "    if (body[key] !== '' && body[key] !== null) {",
-                                    "        signStr += key + '=' + body[key] + '&';",
-                                    "    }",
-                                    "});",
-                                    "signStr += 'secret=' + secret;",
-                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
-                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
@@ -261,28 +206,6 @@
                 },
                 {
                     "name": "Query Payout",
-                    "event": [
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "exec": [
-                                    "const secret = pm.environment.get('merchant_secret');",
-                                    "const body = JSON.parse(pm.request.body.raw);",
-                                    "const keys = Object.keys(body).sort();",
-                                    "let signStr = '';",
-                                    "keys.forEach(key => {",
-                                    "    if (body[key] !== '' && body[key] !== null) {",
-                                    "        signStr += key + '=' + body[key] + '&';",
-                                    "    }",
-                                    "});",
-                                    "signStr += 'secret=' + secret;",
-                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
-                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
@@ -322,28 +245,6 @@
             "item": [
                 {
                     "name": "Balance Query",
-                    "event": [
-                        {
-                            "listen": "prerequest",
-                            "script": {
-                                "exec": [
-                                    "const secret = pm.environment.get('merchant_secret');",
-                                    "const body = JSON.parse(pm.request.body.raw);",
-                                    "const keys = Object.keys(body).sort();",
-                                    "let signStr = '';",
-                                    "keys.forEach(key => {",
-                                    "    if (body[key] !== '' && body[key] !== null) {",
-                                    "        signStr += key + '=' + body[key] + '&';",
-                                    "    }",
-                                    "});",
-                                    "signStr += 'secret=' + secret;",
-                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
-                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
                     "request": {
                         "method": "POST",
                         "header": [
