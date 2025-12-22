@@ -134,7 +134,7 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         res.json({
             code: 1,
             msg: 'Merchant created successfully',
-            data: { id: result.lastInsertRowid.toString(), username, name, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate, usdtRate: uRate }
+            data: { id: result.lastInsertRowid.toString(), username, name, password, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate, usdtRate: uRate }
         });
     } catch (error) {
         console.error('Create user error:', error);
