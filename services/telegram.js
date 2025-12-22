@@ -124,31 +124,30 @@ async function initBot() {
                 return reply(ctx, '⚠️ **未绑定商户**\n请先使用 `/bind <密钥>` 进行绑定。');
             }
 
-            const todayPayin = await db.prepare(`
-                SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-                WHERE user_id = ? AND type = 'payin' AND status = 'success' 
-                AND created_at >= datetime('now', 'start of day', 'localtime')
-            `).get(user.id);
-
-            const yesterdayPayin = await db.prepare(`
-                SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
-                WHERE user_id = ? AND type = 'payin' AND status = 'success' 
-                AND created_at >= datetime('now', 'start of day', '-1 day', 'localtime')
-                AND created_at < datetime('now', 'start of day', 'localtime')
-            `).get(user.id);
-
-            const todayPayout = await db.prepare(`
-                SELECT COALESCE(SUM(amount), 0) as total FROM payouts 
-                WHERE user_id = ? AND status = 'success'
-                AND created_at >= datetime('now', 'start of day', 'localtime')
-            `).get(user.id);
-
-            const yesterdayPayout = await db.prepare(`
-                SELECT COALESCE(SUM(amount), 0) as total FROM payouts 
-                WHERE user_id = ? AND status = 'success'
-                AND created_at >= datetime('now', 'start of day', '-1 day', 'localtime')
-                AND created_at < datetime('now', 'start of day', 'localtime')
-            `).get(user.id);
+            const [todayPayin, yesterdayPayin, todayPayout, yesterdayPayout] = await Promise.all([
+                db.prepare(`
+                    SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+                    WHERE user_id = ? AND type = 'payin' AND status = 'success' 
+                    AND created_at >= datetime('now', 'start of day', 'localtime')
+                `).get(user.id),
+                db.prepare(`
+                    SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+                    WHERE user_id = ? AND type = 'payin' AND status = 'success' 
+                    AND created_at >= datetime('now', 'start of day', '-1 day', 'localtime')
+                    AND created_at < datetime('now', 'start of day', 'localtime')
+                `).get(user.id),
+                db.prepare(`
+                    SELECT COALESCE(SUM(amount), 0) as total FROM payouts 
+                    WHERE user_id = ? AND status = 'success'
+                    AND created_at >= datetime('now', 'start of day', 'localtime')
+                `).get(user.id),
+                db.prepare(`
+                    SELECT COALESCE(SUM(amount), 0) as total FROM payouts 
+                    WHERE user_id = ? AND status = 'success'
+                    AND created_at >= datetime('now', 'start of day', '-1 day', 'localtime')
+                    AND created_at < datetime('now', 'start of day', 'localtime')
+                `).get(user.id)
+            ]);
 
             let msg = `💳 **商户资产概览**\n` +
                 `⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
@@ -336,15 +335,16 @@ async function initBot() {
                 `).get(user.id);
             };
 
-            const stats5 = await getStats(5);
-            const stats10 = await getStats(10);
-            const stats30 = await getStats(30);
-            const statsTotal = await getAllTimeStats();
-
-            const pStats5 = await getPayoutStats(5);
-            const pStats10 = await getPayoutStats(10);
-            const pStats30 = await getPayoutStats(30);
-            const pStatsTotal = await getAllTimePayoutStats();
+            const [stats5, stats10, stats30, statsTotal, pStats5, pStats10, pStats30, pStatsTotal] = await Promise.all([
+                getStats(5),
+                getStats(10),
+                getStats(30),
+                getAllTimeStats(),
+                getPayoutStats(5),
+                getPayoutStats(10),
+                getPayoutStats(30),
+                getAllTimePayoutStats()
+            ]);
 
             const formatRate = (s) => {
                 if (!s || s.total === 0) return '`0.00%`';

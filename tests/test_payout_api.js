@@ -42,9 +42,27 @@ async function setup() {
     });
 }
 
-function generateSign(body, key) {
-    const bodyStr = Object.keys(body).length > 0 ? JSON.stringify(body) : '{}';
-    return crypto.createHash('md5').update(bodyStr + key).digest('hex');
+function generateSign(params, secret) {
+    // Filter out empty values and sign itself (if present)
+    const filteredParams = {};
+    for (const key of Object.keys(params)) {
+        if (key !== 'sign' && params[key] !== null && params[key] !== undefined && params[key] !== '') {
+            filteredParams[key] = params[key];
+        }
+    }
+
+    // Sort keys by ASCII
+    const sortedKeys = Object.keys(filteredParams).sort();
+
+    // Build query string
+    const queryParts = sortedKeys.map(key => `${key}=${filteredParams[key]}`);
+    const queryString = queryParts.join('&');
+
+    // Append secret
+    const signString = `${queryString}&secret=${secret}`;
+
+    // MD5 hash and uppercase
+    return crypto.createHash('md5').update(signString).digest('hex').toUpperCase();
 }
 
 async function runTest() {
