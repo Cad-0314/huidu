@@ -272,11 +272,13 @@
             <a href="#payin-create" class="nav-item" data-i18n="create_order">Create Order</a>
             <a href="#payin-query" class="nav-item" data-i18n="query_status">Query Status</a>
             <a href="#payin-submit-utr" class="nav-item" data-i18n="submit_utr">Submit UTR</a>
+            <a href="#payin-check" class="nav-item">Check Pay-In (Public)</a>
 
             <div class="nav-group" data-i18n="pay_out_withdrawals">Pay-Out (Withdrawals)</div>
             <a href="#payout-bank" class="nav-item" data-i18n="bank_transfer">Bank Transfer</a>
             <a href="#payout-usdt" class="nav-item" data-i18n="usdt_transfer">USDT Transfer</a>
             <a href="#payout-query" class="nav-item" data-i18n="query_status">Query Status</a>
+            <a href="#payout-check" class="nav-item">Check Payout (Public)</a>
 
             <div class="nav-group" data-i18n="utilities">Utilities</div>
             <a href="#balance-query" class="nav-item" data-i18n="check_balance">Check Balance</a>
@@ -294,7 +296,8 @@
                 <strong data-i18n="base_url">Base URL:</strong> <code>https://your-domain.com</code>
             </p>
             <p data-i18n="req_https">All requests must be made over HTTPS with
-                <code>Content-Type: application/json</code>.</p>
+                <code>Content-Type: application/json</code>.
+            </p>
         </section>
 
         <section id="auth">
@@ -474,6 +477,43 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
 }</code></pre>
         </section>
 
+        <section id="payin-check">
+            <h2>Public Pay-In Check</h2>
+            <p>Check the status of a pay-in order without header-based authentication. Useful for client-side status
+                polling.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payin/check</span></p>
+
+            <table class="param-table">
+                <tr>
+                    <th>Parameter</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Merchant Order ID.</td>
+                </tr>
+                <tr>
+                    <td><code>userId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Merchant UUID (not secret key).</td>
+                </tr>
+            </table>
+
+            <h3 data-i18n="success_response">Response</h3>
+            <pre><code>{
+    "code": 1,
+    "msg": "Order found",
+    "data": {
+        "orderId": "MC001-998877",
+        "status": "success",
+        "amount": 500,
+        "utr": "123456789012"
+    }
+}</code></pre>
+        </section>
+
         <section id="payout-bank">
             <h2 data-i18n="bank_transfer">Bank Payout</h2>
             <p data-i18n="bank_payout_desc">Transfer funds to a bank account via IMPS/NEFT.</p>
@@ -545,9 +585,48 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
                     <td data-i18n="label_wallet_address">TRC20 Wallet Address.</td>
                 </tr>
                 <tr>
+                    <td><code>network</code></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td>Network type: <code>TRC20</code>, <code>ERC20</code>, or <code>BEP20</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>callbackUrl</code></td>
+                    <td>String <span class="optional" data-i18n="optional">Optional</span></td>
+                    <td>Your HTTPS URL to receive webhook notifications.</td>
+                </tr>
+                <tr>
+                    <td><code>param</code></td>
+                    <td>String <span class="optional" data-i18n="optional">Optional</span></td>
+                    <td>Custom data to return in callback.</td>
+                </tr>
+                <tr>
                     <td><code>code</code></td>
                     <td>String <span class="optional" data-i18n="optional">Optional</span></td>
                     <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
+                </tr>
+            </table>
+        </section>
+
+        <section id="payout-check">
+            <h2>Public Payout Check</h2>
+            <p>Check the status of a payout order without header-based authentication.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payout/check</span></p>
+
+            <table class="param-table">
+                <tr>
+                    <th>Parameter</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Merchant Order ID.</td>
+                </tr>
+                <tr>
+                    <td><code>userId</code></td>
+                    <td>String <span class="required">Required</span></td>
+                    <td>Merchant UUID.</td>
                 </tr>
             </table>
         </section>
@@ -578,9 +657,12 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
             <h3 data-i18n="webhook_struct">Notification Structure</h3>
             <pre><code>{
     "status": 1,                // 1 = Success, 0 = Failed
-    "amount": 500,              // Final Amount
+    "amount": 475.00,           // Net Amount (after fees)
+    "orderAmount": 500.00,      // Original amount requested
     "orderId": "MC001-998877",  // Your Order ID
+    "id": "uuid-v4-string",     // Gateway internal ID
     "utr": "123456789012",      // Bank UTR
+    "param": "custom-data",     // Your custom parameter
     "sign": "a1b2c3d4..."       // MD5 Signature
 }</code></pre>
 
@@ -588,8 +670,22 @@ const signature = crypto.createHash('md5').update(body + secretKey).digest('hex'
             <p data-i18n="verify_webhook_desc">You <strong>must</strong> verify the signature to ensure the request is
                 from us.</p>
             <div class="badge badge-warning" data-i18n="formula">Formula</div>
-            <p><code>sign == MD5( JSON_String_Body + Merchant_Secret_Key )</code></p>
-            <p>Depending on your server framework, ensure you allow us to send the raw JSON body.</p>
+            <p>1. <strong>Sort</strong> all received parameters alphabetically by key (ASCII).</p>
+            <p>2. <strong>Remove</strong> empty values and the <code>sign</code> field.</p>
+            <p>3. <strong>Join</strong> with <code>&</code> in <code>key=value</code> format.</p>
+            <p>4. <strong>Append</strong> <code>&secret=YOUR_MERCHANT_SECRET</code>.</p>
+            <p>5. <strong>Hash</strong> using MD5 and convert to uppercase.</p>
+
+            <h3 data-i18n="node_ex">Node.js Verification Example</h3>
+            <pre><code>function verifyCallbackSign(params, secret) {
+    const receivedSign = params.sign;
+    const sortedKeys = Object.keys(params).filter(k => k !== 'sign' && params[k]).sort();
+    const queryString = sortedKeys.map(k => `${k}=${params[k]}`).join('&');
+    const calculatedSign = crypto.createHash('md5')
+                                .update(`${queryString}&secret=${secret}`)
+                                .digest('hex').toUpperCase();
+    return receivedSign === calculatedSign;
+}</code></pre>
         </section>
 
     </main>
