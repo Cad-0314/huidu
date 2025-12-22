@@ -55,27 +55,28 @@ async function apiAuthenticate(req, res, next) {
         if (authSource === 'header') {
             if (!authSign) return res.status(401).json({ code: 0, msg: 'Missing Signature (x-signature)' });
 
-            // Reconstruct body string. Express parses body, so we stringify it back.
-            // WARNING: JSON.stringify key order isn't guaranteed. 
-            // Ideally, clients send raw body and we verify raw body. 
-            // In Node/Express with body-parser, req.body is obj. 
-            // For robustness in this demo, strict JSON stringify of (req.body)
+            // Verify using Standardized Utils (Sorted Keys + Secret)
+            // This matches Silkpay/payout.txt specification
+            const isValid = verifySign(req.body, user.merchant_key);
 
-            // If body is empty (e.g. GET or {}), use "{}" ?
-            const bodyStr = Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : '{}';
+            // For backward compatibility or debugging, we might check if existing ad-hoc method works?
+            // No, we are enforcing the new standard to fix integration issues.
 
-            // Note: In real prod, use raw-body. Here we assume standard serialization.
-            const { generateSign } = require('../utils/signature');
-            // We use a custom generation here to match the doc: MD5(body + secret)
-            // Existing generateSign utils might differ.
+            if (!isValid) {
+                // Double check: if verifySign expects 'sign' in body... 
+                // In Header mode, 'sign' is in header. verifySign() checks params.sign.
+                // We need to inject 'sign' into a copy of params for verifySign to check it, 
+                // OR compare generated hash with authSign.
 
-            const crypto = require('crypto');
-            const calculatedSign = crypto.createHash('md5').update(bodyStr + user.merchant_key).digest('hex');
+                // Let's use generateSign to compare manually since verifySign looks for params.sign
+                const calculatedSign = generateSign(req.body, user.merchant_key);
 
-            // Allow case-insensitive comparison
-            if (authSign.toLowerCase() !== calculatedSign.toLowerCase()) {
-                console.warn(`[API AUTH FAIL] Sign Mismatch. ID: ${authId}, Got: ${authSign}, Calc: ${calculatedSign}`);
-                return res.status(401).json({ code: 0, msg: 'Invalid Signature' });
+                if (authSign.toUpperCase() !== calculatedSign) {
+                    console.warn(`[API AUTH FAIL] Sign Mismatch. ID: ${authId}`);
+                    console.warn(`[API AUTH FAIL] Received: ${authSign}`);
+                    console.warn(`[API AUTH FAIL] Calculated: ${calculatedSign}`);
+                    return res.status(401).json({ code: 0, msg: 'Invalid Signature' });
+                }
             }
         }
         else {

@@ -263,6 +263,8 @@ window.translations = {
         msg_system_rules: "⚡ System Rules:",
         msg_api_details: "🔗 API Integration:",
         msg_docs: "Docs",
+        msg_login_details: "🔐 Login Credentials:",
+        label_login_url: "Login URL",
 
         // Login
         login_title: "Payment Gateway Portal",
@@ -354,7 +356,7 @@ window.translations = {
         verify_webhook_desc: "You must verify the signature to ensure the request is from us.",
 
         // New keys
-        placeholder_order_id_auto: "Auto-generate",
+        placeholder_order_id_auto: "System Auto-generate",
         label_order_id: "Order ID",
         label_utr: "UTR / Reference Number",
         placeholder_utr_12: "The 12-digit UTR/Reference Number",
@@ -364,7 +366,15 @@ window.translations = {
         label_2fa_opt: "2FA Code (Required for Dashboard, Optional for API)",
         label_network_type: "Network",
         label_inr_amount: "Amount in INR",
-        placeholder_inr_min_500usdt: "Amount in INR (Min equivalent of 500 USDT)"
+        placeholder_inr_min_500usdt: "Amount in INR (Min equivalent of 500 USDT)",
+
+        // New API Docs Keys
+        sig_step_1: "1. <strong>Sort</strong> all body parameters alphabetically by key (ASCII).",
+        sig_step_2: "2. <strong>Remove</strong> empty values and the <code>sign</code> field (if present).",
+        sig_step_3: "3. <strong>Join</strong> with <code>&</code> in <code>key=value</code> format.",
+        sig_step_4: "4. <strong>Append</strong> <code>&secret=YOUR_MERCHANT_SECRET_KEY</code>.",
+        sig_step_5: "5. <strong>Hash</strong> using MD5 and convert to uppercase.",
+        php_ex: "PHP Example"
     },
     zh: {
         // App Shell
@@ -596,6 +606,8 @@ window.translations = {
         msg_system_rules: "⚡ 系统费率:",
         msg_api_details: "🔗 开发接口:",
         msg_docs: "文档",
+        msg_login_details: "🔐 登录信息:",
+        label_login_url: "后台地址",
 
         // Login
         login_title: "支付网关管理后台",
@@ -699,7 +711,15 @@ window.translations = {
         label_2fa_opt: "2FA 验证码 (仪表盘操作必需, API 可选)",
         label_network_type: "网络协议",
         label_inr_amount: "转账卢比金额",
-        placeholder_inr_min_500usdt: "输入卢比金额 (至少等值 500 USDT)"
+        placeholder_inr_min_500usdt: "输入卢比金额 (至少等值 500 USDT)",
+
+        // New API Docs Keys - Chinese
+        sig_step_1: "1. 将所有 Body 参数按键名 (Key) 的 <strong>ASCII 码</strong> 进行升序排序。",
+        sig_step_2: "2. <strong>移除</strong> 值为空的参数以及 <code>sign</code> 字段本身（如果存在）。",
+        sig_step_3: "3. 将筛选后的参数用 <code>&</code> 拼接成 <code>key=value</code> 格式。",
+        sig_step_4: "4. 在拼接后的字符串末尾加上 <code>&secret=YOUR_MERCHANT_SECRET_KEY</code>。",
+        sig_step_5: "5. 进行 <strong>MD5</strong> 计算并转为大写。",
+        php_ex: "PHP 示例代码"
     }
 };
 

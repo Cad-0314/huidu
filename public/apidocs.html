@@ -320,36 +320,105 @@
                 </tr>
                 <tr>
                     <td><code>x-signature</code></td>
-                    <td><code>a1b2c3d4e5...</code></td>
-                    <td data-i18n="sig_desc">The MD5 hash of your request body.</td>
+                    <td><code>A1B2C3D4E5...</code></td>
+                    <td data-i18n="sig_desc">The MD5 hash of your request based on sorted parameters.</td>
                 </tr>
             </table>
 
             <h3 data-i18n="gen_sig">Generating the Signature</h3>
             <div class="badge badge-warning" data-i18n="formula">Formula</div>
-            <p><code>Signature = MD5( JSON_String_Body + Merchant_Secret_Key )</code></p>
+            <p data-i18n="sig_step_1">1. <strong>Sort</strong> all body parameters alphabetically by key (ASCII).</p>
+            <p data-i18n="sig_step_2">2. <strong>Remove</strong> empty values and the <code>sign</code> field (if
+                present).</p>
+            <p data-i18n="sig_step_3">3. <strong>Join</strong> with <code>&</code> in <code>key=value</code> format
+                (e.g. <code>amount=100&mId=TEST</code>).</p>
+            <p data-i18n="sig_step_4">4. <strong>Append</strong> <code>&secret=YOUR_MERCHANT_SECRET_KEY</code>.</p>
+            <p data-i18n="sig_step_5">5. <strong>Hash</strong> using MD5 and convert to uppercase.</p>
 
-            <h3 data-i18n="node_ex">Node.js Example</h3>
-            <pre><code>const crypto = require('crypto');
+            <div style="margin-top: 2rem;">
+                <!-- Tabs could go here but let's keep it simple -->
+                <h4 data-i18n="node_ex">Node.js Example</h4>
+                <pre><code>const crypto = require('crypto');
 
-// 1. Prepare Body (Must match exactly what you send)
-const body = JSON.stringify({
-    orderId: "ORD-123",
-    amount: 100
-});
+function generateSignature(params, secretKey) {
+    // 1. Filter empty values and 'sign' key
+    const filteredParams = {};
+    Object.keys(params).forEach(key => {
+        if (key !== 'sign' && params[key] !== '' && params[key] != null) {
+            filteredParams[key] = params[key];
+        }
+    });
 
-// 2. Your Secret Key
-const secretKey = "YOUR_MERCHANT_SECRET_KEY";
+    // 2. Sort keys
+    const sortedKeys = Object.keys(filteredParams).sort();
 
-// 3. Generate MD5 Hash
-const signature = crypto.createHash('md5').update(body + secretKey).digest('hex');
+    // 3. Build query string
+    const queryString = sortedKeys.map(key => `${key}=${filteredParams[key]}`).join('&');
 
-// 4. Send Request
-// Headers: { 
-//   'Content-Type': 'application/json',
-//   'x-merchant-id': 'YOUR_UUID',
-//   'x-signature': signature 
-// }</code></pre>
+    // 4. Append secret
+    const stringToSign = `${queryString}&secret=${secretKey}`;
+
+    // 5. MD5 Hash (Uppercase)
+    return crypto.createHash('md5').update(stringToSign).digest('hex').toUpperCase();
+}</code></pre>
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <h4 data-i18n="php_ex">PHP Example</h4>
+                <pre><code>&lt;?php
+function generateSignature($params, $secretKey) {
+    // 1. Remove empty values and 'sign'
+    $filtered = array_filter($params, function($v) { return $v !== '' && $v !== null; });
+    if(isset($filtered['sign'])) unset($filtered['sign']);
+
+    // 2. Sort by key
+    ksort($filtered);
+
+    // 3. Build query string (key=value&...)
+    // Note: http_build_query encodes values, we need raw parameter string? 
+    // Usually Silkpay expects raw joining. manually join to avoid URL encoding issues if spec says so.
+    // Spec says: "key=value" joined by "&".
+    $queryParts = [];
+    foreach ($filtered as $key => $value) {
+        $queryParts[] = $key . "=" . $value;
+    }
+    $queryString = implode('&', $queryParts);
+
+    // 4. Append secret
+    $stringToSign = $queryString . "&secret=" . $secretKey;
+
+    // 5. MD5 Hash
+    return strtoupper(md5($stringToSign));
+}
+
+// Sending Request (cURL)
+$merchantId = "YOUR_MERCHANT_UUID";
+$secretKey = "YOUR_MERCHANT_KEY";
+$url = "https://vspay.vip/api/payin/create";
+
+$body = [
+    "orderId" => "ORD-" . time(),
+    "orderAmount" => 100,
+    "callbackUrl" => "https://your-domain.com/callback"
+];
+
+$signature = generateSignature($body, $secretKey);
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_POST, 1);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/json',
+    'x-merchant-id: ' . $merchantId,
+    'x-signature: ' . $signature
+]);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+curl_close($ch);
+
+print_r($response);
+?&gt;</code></pre>
+            </div>
         </section>
 
         <section id="payin-create">

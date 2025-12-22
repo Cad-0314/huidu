@@ -2357,13 +2357,18 @@ function copyShareableMessage() {
 
         const message = `${t('msg_welcome')}
 
+${t('msg_login_details')}
+- ${t('label_login_url')}: ${baseUrl}/login.html
+- ${t('label_username')}: ${data.username}
+- ${t('label_password')}: ${data.password}
+
 ${t('msg_account_details')}
-${t('label_merchant_id')}: ${data.id}
-${t('label_merchant_key')}: ${data.merchantKey}
+- ${t('label_merchant_id')}: ${data.id}
+- ${t('label_merchant_key')}: ${data.merchantKey}
 
 ${t('msg_system_rules')}
 - ${t('label_payin_rate')}: ${data.payinRate}%
-- ${t('label_payout_rate')}: ${data.payoutRate}%
+- ${t('label_payout_rate')}: ${data.payoutRate}% + 6 INR
 - ${t('label_settlement')}: ${t('val_settlement')}
 
 ${t('msg_api_details')}
