@@ -1191,27 +1191,21 @@ async function loadUsersData(page = 1) {
             if (users && users.length > 0) {
                 container.innerHTML = users.map(u => `
                 <tr>
-                    <td>
-                        <div style="display:flex; align-items:center; gap:5px;">
-                            <code style="font-size: 0.75rem;">${u.id}</code>
-                            <i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.id}').then(() => showToast(t('toast_id_copied'), 'success'))" title="Copy ID"></i>
-                        </div>
-                    </td>
-                    <td>
-                         <div style="display:flex; align-items:center; gap:5px;">
-                            <code style="font-size: 0.75rem;">${u.merchantKey ? u.merchantKey.substring(0, 8) + '...' : '-'}</code>
-                             ${u.merchantKey ? `<i class="fas fa-copy text-primary" style="cursor:pointer;" onclick="navigator.clipboard.writeText('${u.merchantKey}').then(() => showToast(t('toast_key_copied'), 'success'))" title="Copy Key"></i>` : ''}
-                        </div>
-                    </td>
-                    <td>${u.name}</td>
+                    <td>${formatDate(u.createdAt)}</td>
                     <td>${u.username}</td>
+                    <td>${u.name}</td>
+                    <td><code style="font-size: 0.85rem;">${u.id || '-'}</code></td>
+                    <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
+                    <td>
+                        <span class="badge badge-${u.twoFactorEnabled ? 'success' : 'warning'}">
+                            ${u.twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                    </td>
                     <td>
                         <small>In: ${u.payinRate || 5}%</small><br>
                         <small>Out: ${u.payoutRate || 3}% + 6 INR</small>
                     </td>
                     <td>₹${parseFloat(u.balance).toFixed(2)}</td>
-                    <td><span class="badge badge-${u.status === 'active' ? 'success' : 'failed'}">${u.status}</span></td>
-                    <td>${formatDate(u.createdAt)}</td>
                     <td>
                         <button class="btn btn-primary btn-sm" onclick="showAdjustBalanceModal('${u.id}', '${u.name}', ${u.balance})" title="Adjust Balance">
                             <i class="fas fa-wallet"></i>
