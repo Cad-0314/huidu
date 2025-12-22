@@ -916,7 +916,7 @@ async function submitBankPayout() {
         if (data.code === 1) {
             showToast(t('toast_success_bank'), 'success');
             closeModal();
-            loadPayouts();
+            loadPayoutsData();
             loadBalance();
         } else {
             showToast(data.msg || t('toast_payout_create_failed'), 'error');
@@ -1003,7 +1003,7 @@ async function submitUsdtPayout() {
         if (data.code === 1) {
             showToast(t('toast_success_usdt'), 'success');
             closeModal();
-            loadPayouts();
+            loadPayoutsData();
             loadBalance();
         } else {
             showToast(data.msg || t('toast_payout_create_failed'), 'error');
@@ -1125,6 +1125,7 @@ async function updateCallbackUrl() {
         const data = await API.put('/auth/profile', { callbackUrl });
         if (data.code === 1) {
             showToast(t('toast_callback_updated'), 'success');
+            loadCredentialsData();
         } else {
             showToast(data.msg || 'Failed to update', 'error');
         }
@@ -1141,6 +1142,7 @@ async function regenerateKey() {
         if (data.code === 1) {
             document.getElementById('credMerchantKey').value = data.data.merchantKey;
             showToast(t('toast_key_regen'), 'success');
+            loadCredentialsData();
         } else {
             showToast(data.msg || 'Failed to regenerate', 'error');
         }
@@ -1686,7 +1688,10 @@ async function adjustBalance(userId) {
         if (data.code === 1) {
             showToast(`${t('toast_2fa_enabled')}! ${t('balance')}: ₹${data.data.newBalance.toFixed(2)}`, 'success');
             closeModal();
-            loadUsersData(); // Fix function name
+            loadUsersData();
+            if (currentDetailUserId && currentDetailUserId === userId) {
+                loadAdminUserDetail(userId);
+            }
         } else {
             showToast(data.msg || t('toast_update_failed'), 'error');
         }
@@ -1874,6 +1879,7 @@ async function submitSettlement(type) {
             if (res.code === 1) {
                 showToast(t('toast_success_bank'), 'success');
                 loadBalance(); // Refresh balance
+                if (currentSection === 'settlement') loadSettlementHistory(); // Refresh history
                 document.getElementById('settleBankAccount').value = '';
                 document.getElementById('settleBankAmount').value = '';
                 document.getElementById('settleBankCode').value = '';
@@ -1904,6 +1910,7 @@ async function submitSettlement(type) {
             if (res.code === 1) {
                 showToast(t('toast_success_usdt'), 'success');
                 loadBalance();
+                if (currentSection === 'settlement') loadSettlementHistory(); // Refresh history
                 document.getElementById('settleUsdtAddress').value = '';
                 document.getElementById('settleUsdtAmount').value = '';
                 document.getElementById('settleUsdtCode').value = '';
