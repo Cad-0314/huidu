@@ -1,0 +1,433 @@
+{
+    "info": {
+        "_postman_id": "b8f5c6a1-9d2e-4b3f-8c1a-5e6f7g8h9i0j",
+        "name": "VSPAY API Collection",
+        "description": "Postman collection for testing VSPAY Payin, Payout, and Utility APIs. Includes automatic signature generation.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Payin",
+            "item": [
+                {
+                    "name": "Create Payin Order",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const secret = pm.environment.get('merchant_secret');",
+                                    "const body = JSON.parse(pm.request.body.raw);",
+                                    "",
+                                    "// Generate Order ID if placeholder",
+                                    "if (!body.orderId || body.orderId === 'AUTO') {",
+                                    "    body.orderId = 'ORD-' + Date.now();",
+                                    "    pm.request.body.raw = JSON.stringify(body);",
+                                    "}",
+                                    "",
+                                    "// Signature Logic",
+                                    "const keys = Object.keys(body).sort();",
+                                    "let signStr = '';",
+                                    "keys.forEach(key => {",
+                                    "    if (body[key] !== '' && body[key] !== null) {",
+                                    "        signStr += key + '=' + body[key] + '&';",
+                                    "    }",
+                                    "});",
+                                    "signStr += 'secret=' + secret;",
+                                    "",
+                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                                    "pm.environment.set('current_signature', hash);",
+                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "x-signature",
+                                "value": "{{current_signature}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"AUTO\",\n    \"orderAmount\": 500,\n    \"callbackUrl\": \"https://your-callback-url.com/api/notify\",\n    \"skipUrl\": \"https://your-site.com/success\",\n    \"param\": \"test-param\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/create",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "create"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Query Payin Status",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const secret = pm.environment.get('merchant_secret');",
+                                    "const body = JSON.parse(pm.request.body.raw);",
+                                    "const keys = Object.keys(body).sort();",
+                                    "let signStr = '';",
+                                    "keys.forEach(key => {",
+                                    "    if (body[key] !== '' && body[key] !== null) {",
+                                    "        signStr += key + '=' + body[key] + '&';",
+                                    "    }",
+                                    "});",
+                                    "signStr += 'secret=' + secret;",
+                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"YOUR_ORDER_ID_HERE\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Submit UTR",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const secret = pm.environment.get('merchant_secret');",
+                                    "const body = JSON.parse(pm.request.body.raw);",
+                                    "const keys = Object.keys(body).sort();",
+                                    "let signStr = '';",
+                                    "keys.forEach(key => {",
+                                    "    if (body[key] !== '' && body[key] !== null) {",
+                                    "        signStr += key + '=' + body[key] + '&';",
+                                    "    }",
+                                    "});",
+                                    "signStr += 'secret=' + secret;",
+                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"YOUR_ORDER_ID_HERE\",\n    \"utr\": \"123456789012\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/submit-utr",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "submit-utr"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Payout",
+            "item": [
+                {
+                    "name": "Bank Payout",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const secret = pm.environment.get('merchant_secret');",
+                                    "const body = JSON.parse(pm.request.body.raw);",
+                                    "",
+                                    "if (!body.orderId || body.orderId === 'AUTO') {",
+                                    "    body.orderId = 'PAY-' + Date.now();",
+                                    "    pm.request.body.raw = JSON.stringify(body);",
+                                    "}",
+                                    "",
+                                    "const keys = Object.keys(body).sort();",
+                                    "let signStr = '';",
+                                    "keys.forEach(key => {",
+                                    "    if (body[key] !== '' && body[key] !== null) {",
+                                    "        signStr += key + '=' + body[key] + '&';",
+                                    "    }",
+                                    "});",
+                                    "signStr += 'secret=' + secret;",
+                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"AUTO\",\n    \"amount\": 100,\n    \"account\": \"1234567890\",\n    \"ifsc\": \"SBIN0001234\",\n    \"personName\": \"John Doe\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payout/bank",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "bank"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Query Payout",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const secret = pm.environment.get('merchant_secret');",
+                                    "const body = JSON.parse(pm.request.body.raw);",
+                                    "const keys = Object.keys(body).sort();",
+                                    "let signStr = '';",
+                                    "keys.forEach(key => {",
+                                    "    if (body[key] !== '' && body[key] !== null) {",
+                                    "        signStr += key + '=' + body[key] + '&';",
+                                    "    }",
+                                    "});",
+                                    "signStr += 'secret=' + secret;",
+                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"YOUR_PAYOUT_ID\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payout/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "Utility",
+            "item": [
+                {
+                    "name": "Balance Query",
+                    "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "const secret = pm.environment.get('merchant_secret');",
+                                    "const body = JSON.parse(pm.request.body.raw);",
+                                    "const keys = Object.keys(body).sort();",
+                                    "let signStr = '';",
+                                    "keys.forEach(key => {",
+                                    "    if (body[key] !== '' && body[key] !== null) {",
+                                    "        signStr += key + '=' + body[key] + '&';",
+                                    "    }",
+                                    "});",
+                                    "signStr += 'secret=' + secret;",
+                                    "const hash = CryptoJS.MD5(signStr).toString().toUpperCase();",
+                                    "pm.request.headers.add({key: 'x-signature', value: hash});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/balance/query",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "balance",
+                                "query"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "IP Whitelist (Manage)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer YOUR_JWT_TOKEN",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"ips\": \"1.2.3.4, 8.8.8.8\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/merchant/ip-whitelist",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "merchant",
+                                "ip-whitelist"
+                            ]
+                        }
+                    },
+                    "response": []
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "https://vspay.vip",
+            "type": "string"
+        },
+        {
+            "key": "merchant_id",
+            "value": "YOUR_MERCHANT_UUID",
+            "type": "string"
+        },
+        {
+            "key": "merchant_secret",
+            "value": "YOUR_MERCHANT_KEY",
+            "type": "string"
+        }
+    ]
+}
