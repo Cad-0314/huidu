@@ -76,6 +76,7 @@ app.use('/api/merchant', require('./routes/merchant'));
 app.use('/api/payin', require('./routes/payin'));
 app.use('/api/payout', require('./routes/payout'));
 app.use('/api/balance', require('./routes/balance'));
+app.use('/api/callback', require('./routes/callback'));
 
 // Bot Webhook (For Vercel)
 app.post('/api/telegram/webhook', async (req, res) => {

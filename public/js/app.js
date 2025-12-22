@@ -1106,6 +1106,8 @@ function copyGeneratedLink() {
 // CREDENTIALS
 // ========================================
 
+let currentIpWhitelist = [];
+
 async function loadCredentialsData() {
     try {
         const data = await API.get('/merchant/credentials');
@@ -1113,9 +1115,68 @@ async function loadCredentialsData() {
             document.getElementById('credUserId').value = data.data.userId;
             document.getElementById('credMerchantKey').value = data.data.merchantKey;
             document.getElementById('credCallback').value = data.data.callbackUrl || '';
+
+            // Handle IP Whitelist
+            const ipString = data.data.ipWhitelist || '';
+            currentIpWhitelist = ipString ? ipString.split(',').map(s => s.trim()).filter(s => s) : [];
+            renderIpList();
         }
     } catch (error) {
         showToast(t('toast_load_credentials_failed'), 'error');
+    }
+}
+
+function renderIpList() {
+    const container = document.getElementById('ipListContainer');
+    if (!container) return;
+
+    container.innerHTML = currentIpWhitelist.map((ip, index) => `
+        <span class="badge badge-info" style="font-size: 0.9rem; padding: 8px 12px; display: flex; align-items: center; gap: 8px;">
+            ${ip}
+            <i class="fas fa-times" style="cursor: pointer; opacity: 0.8;" onclick="removeIp(${index})"></i>
+        </span>
+    `).join('');
+}
+
+function handleIpEnter(event) {
+    if (event.key === 'Enter') {
+        addIpFromInput();
+    }
+}
+
+function addIpFromInput() {
+    const input = document.getElementById('ipInput');
+    const ip = input.value.trim();
+
+    if (!ip) return;
+
+    if (currentIpWhitelist.includes(ip)) {
+        showToast('IP already exists', 'error');
+        return;
+    }
+
+    currentIpWhitelist.push(ip);
+    input.value = '';
+    renderIpList();
+}
+
+function removeIp(index) {
+    currentIpWhitelist.splice(index, 1);
+    renderIpList();
+}
+
+async function saveIpWhitelist() {
+    const ips = currentIpWhitelist.join(',');
+
+    try {
+        const data = await API.post('/merchant/ip-whitelist', { ips });
+        if (data.code === 1) {
+            showToast('IP Whitelist updated successfully', 'success');
+        } else {
+            showToast(data.msg || 'Update failed', 'error');
+        }
+    } catch (e) {
+        showToast('Server error', 'error');
     }
 }
 

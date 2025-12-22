@@ -39,7 +39,8 @@ router.post('/create', apiAuthenticate, async (req, res) => {
                 id: result.id,
                 orderAmount: result.amount,
                 fee: result.fee,
-                paymentUrl: result.paymentUrl
+                paymentUrl: result.paymentUrl,
+                deepLinks: result.deepLinks
             }
         });
 
@@ -273,127 +274,7 @@ router.post('/submit-utr', apiAuthenticate, async (req, res) => {
     }
 });
 
-/**
- * POST /api/payin/callback
- */
-router.post('/callback', async (req, res) => {
-    try {
-        console.log('Pay-in callback received:', req.body);
-        const { status, amount, payOrderId, mId, mOrderId, sign, utr } = req.body;
-        const db = getDb();
 
-        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status) VALUES ('payin', ?, ?, ?)`).run(mOrderId || payOrderId, JSON.stringify(req.body), status);
-
-        // 1. Lookup Transaction FIRST to determine correct Secret (Demo vs Prod)
-        // Lookup transaction by payOrderId (platform_order_id) or mOrderId
-        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
-            .get(payOrderId);
-
-        if (!tx) {
-            // Fallback: Lookup by mOrderId matching order_id
-            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
-                .get(mOrderId);
-        }
-
-        if (!tx) {
-            console.log('Transaction not found for payOrderId:', payOrderId, 'or mOrderId:', mOrderId);
-            return res.send('OK');
-        }
-
-        // 2. Determine Secret
-        let secretToUse = process.env.SILKPAY_SECRET;
-        if (tx.username === 'demo') {
-            secretToUse = 'SIb3DQEBAQ'; // Dev/Sandbox Secret
-        }
-
-        // 3. Verify Signature with correct secret
-        if (!silkpayService.verifyPayinCallback(req.body, secretToUse)) {
-            const { amount, mId, mOrderId, timestamp, sign } = req.body;
-            const str = `${amount}${mId}${mOrderId}${timestamp}${secretToUse}`;
-            const calculated = crypto.createHash('md5').update(str).digest('hex').toLowerCase();
-
-            console.error(`[PAYIN FAILURE] Signature verification failed for user: ${tx.username}`);
-            console.error(`[PAYIN FAILURE] Expected: ${calculated}`);
-            console.error(`[PAYIN FAILURE] Received: ${sign}`);
-            console.error(`[PAYIN FAILURE] String: ${str}`);
-
-            return res.send('OK');
-        }
-
-        const newStatus = status === '1' || status === 1 ? 'success' : 'failed';
-        const actualAmount = parseFloat(amount);
-
-        // Use merchant's specific rate, already stored as decimal (e.g. 0.1 for 10%)
-        // If not found (legacy), fallback to 5% (0.05)
-        const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
-        const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
-
-        await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
-            .run(newStatus, actualAmount, fee, netAmount, utr || null, JSON.stringify(req.body), tx.id);
-
-        if (newStatus === 'success' && tx.status !== 'success') {
-            await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
-
-            // Credit Admin Profit
-            // Profit = Fee - (Amount * CostRate)
-            try {
-                const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
-                const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
-                const cost = actualAmount * adminCostRate;
-                const profit = fee - cost;
-
-                if (profit !== 0) { // Credit even if negative? Usually yes (loss).
-                    await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
-                }
-            } catch (errProfile) {
-                console.error('Failed to credit admin profit:', errProfile);
-            }
-        }
-
-        // Unwrap stored param
-        let callbackUrl = null;
-        let originalParam = null;
-        try {
-            if (tx.param) {
-                const parsed = JSON.parse(tx.param);
-                // Check if it's our wrapper structure
-                if (parsed.c !== undefined || parsed.p !== undefined) {
-                    callbackUrl = parsed.c;
-                    originalParam = parsed.p;
-                } else {
-                    // Legacy or plain string? If it's json but not our structure, treat as original?
-                    // Safe bet: if parsing works, use it, but our wrapper is strictly {c, p}
-                    originalParam = tx.param;
-                }
-            }
-        } catch (e) {
-            // Not JSON, assume string param
-            originalParam = tx.param;
-        }
-
-        // Send "OK" to Silkpay immediately
-        res.send('OK');
-
-        const merchantCallback = callbackUrl || tx.callback_url;
-        if (merchantCallback) {
-            try {
-                const merchantCallbackData = {
-                    status: newStatus === 'success' ? 1 : 0,
-                    amount: netAmount, orderAmount: actualAmount,
-                    orderId: tx.order_id, // User's order ID
-                    id: tx.uuid, utr: utr || '', param: originalParam || ''
-                };
-                merchantCallbackData.sign = generateSign(merchantCallbackData, tx.merchant_key);
-                await axios.post(merchantCallback, merchantCallbackData, { timeout: 10000 });
-            } catch (callbackError) {
-                console.error('Failed to forward callback:', callbackError.message);
-            }
-        }
-    } catch (error) {
-        console.error('Payin callback error:', error);
-        if (!res.headersSent) res.send('OK');
-    }
-});
 
 /**
  * GET /api/payin/redirect

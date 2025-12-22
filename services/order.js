@@ -34,7 +34,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     // Note: order_id is globally unique in our DB, so this is safe for Silkpay mid.
     const silkpayOrderId = finalOrderId;
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
-    const ourCallbackUrl = `${appUrl}/api/payin/callback`;
+    const ourCallbackUrl = `${appUrl}/api/callback/silkpay/payin`;
     const ourSkipUrl = `${appUrl}/api/payin/redirect?url=${encodeURIComponent(skipUrl || `${appUrl}/payment/complete`)}`;
 
     // Demo User Override
@@ -65,6 +65,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
 
     const storedParam = JSON.stringify({
         c: callbackUrl,
+        sc: ourCallbackUrl, // Store System Callback URL (Silkpay)
         p: param,
         s: skipUrl, // Store skipUrl for expiration return
         deepLinks: deepLinks
@@ -125,7 +126,8 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         fee,
         paymentUrl: localPaymentUrl,
         // Internal data if needed
-        platformOrderId
+        platformOrderId,
+        deepLinks
     };
 }
 

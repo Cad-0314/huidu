@@ -43,6 +43,29 @@ async function apiAuthenticate(req, res, next) {
             return res.status(401).json({ code: 0, msg: 'Invalid Merchant ID or Account Suspended' });
         }
 
+        // --- IP Whitelist Check ---
+        // Exempt 'demo' user from IP checks
+        if (user.username !== 'demo' && user.ip_whitelist) {
+            const whitelist = user.ip_whitelist.split(',').map(ip => ip.trim()).filter(ip => ip);
+
+            if (whitelist.length > 0) {
+                // Get Client IP
+                // Render/Proxy sets x-forwarded-for. Format: "client, proxy1, proxy2"
+                let clientIp = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket.remoteAddress;
+
+                // Handle IPv6 mapping for localhost (::1 or ::ffff:127.0.0.1)
+                if (clientIp.startsWith('::ffff:')) {
+                    clientIp = clientIp.substring(7);
+                }
+
+                if (!whitelist.includes(clientIp)) {
+                    console.warn(`[API AUTH BLOCKED] IP ${clientIp} not in whitelist for user ${user.username}`);
+                    return res.status(403).json({ code: 0, msg: `Access denied from IP: ${clientIp}` });
+                }
+            }
+        }
+        // --------------------------
+
         // Verify Signature
         // Formula: MD5(JSON.stringify(body) + merchant_key)
         // Note: For GET requests, body is empty "{}". For POST, it's the body string.

@@ -596,11 +596,33 @@ router.get('/credentials', authenticate, (req, res) => {
             data: {
                 userId: req.user.uuid,
                 merchantKey: req.user.merchant_key,
-                callbackUrl: req.user.callback_url
+                callbackUrl: req.user.callback_url,
+                ipWhitelist: req.user.ip_whitelist || '' // Return as string
             }
         });
     } catch (error) {
         console.error('Get credentials error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
+/**
+ * POST /api/merchant/ip-whitelist
+ * Update IP Whitelist
+ */
+router.post('/ip-whitelist', authenticate, async (req, res) => {
+    try {
+        const { ips } = req.body; // Expects comma separated string
+        const db = getDb();
+
+        // Basic validation: Check if IPs are valid structure (optional but recommended)
+        // For now text storage
+
+        await db.prepare('UPDATE users SET ip_whitelist = ? WHERE id = ?').run(ips || '', req.user.id);
+
+        res.json({ code: 1, msg: 'IP Whitelist updated' });
+    } catch (error) {
+        console.error('Update IP whitelist error:', error);
         res.status(500).json({ code: 0, msg: 'Server error' });
     }
 });

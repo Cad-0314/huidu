@@ -331,6 +331,11 @@ async function initializeSchema() {
         await db.exec("ALTER TABLE payouts ADD COLUMN source TEXT DEFAULT 'api'");
         console.log('Applied migration: Added source column to payouts');
     } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE users ADD COLUMN ip_whitelist TEXT');
+        console.log('Applied migration: Added ip_whitelist to users');
+    } catch (e) { }
 }
 
 module.exports = { initDatabase, getDb };

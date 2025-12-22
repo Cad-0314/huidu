@@ -102,7 +102,7 @@ router.post('/bank', unifiedAuth, async (req, res) => {
             console.log(`[Demo] Using Sandbox for Payout ${silkpayOrderId}`);
         }
         const appUrl = process.env.APP_URL || 'http://localhost:3000';
-        const ourCallbackUrl = `${appUrl}/api/payout/callback`;
+        const ourCallbackUrl = `${appUrl}/api/callback/silkpay/payout`;
 
         const payoutUuid = uuidv4();
 
@@ -324,105 +324,6 @@ router.post('/check', async (req, res) => {
     }
 });
 
-/**
- * POST /api/payout/callback
- */
-router.post('/callback', async (req, res) => {
-    try {
-        console.log('Payout callback received:', req.body);
-        // Silkpay Payout Callback: mOrderId (Merchant Order ID), payOrderId (Silkpay ID), amount, status...
-        const { status, amount, payOrderId, message, mOrderId: orderId, utr, sign } = req.body; // Map mOrderId -> orderId variable
-        const db = getDb();
 
-        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status) VALUES ('payout', ?, ?, ?)`).run(orderId || payOrderId, JSON.stringify(req.body), status);
-
-        // 1. Lookup Payout FIRST to determine correct Secret (Demo vs Prod)
-        let payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
-            .get(payOrderId);
-
-        if (!payout) {
-            // Fallback: Lookup by mOrderId (which matches our order_id)
-            payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
-                .get(orderId);
-        }
-
-        if (!payout) {
-            console.log('Payout not found for payOrderId:', payOrderId, 'or mOrderId:', orderId);
-            return res.send('OK');
-        }
-
-        // 2. Determine Secret
-        let secretToUse = process.env.SILKPAY_SECRET;
-        if (payout.username === 'demo') {
-            secretToUse = 'SIb3DQEBAQ'; // Dev/Sandbox Secret
-        }
-
-        // 3. Verify Signature
-        if (!silkpayService.verifyPayoutCallback(req.body, secretToUse)) {
-            const { mId, mOrderId, amount, timestamp, sign } = req.body;
-            const str = `${mId}${mOrderId}${amount}${timestamp}${secretToUse}`;
-            const calculated = crypto.createHash('md5').update(str).digest('hex').toLowerCase();
-
-            console.error(`[PAYOUT FAILURE] Signature verification failed for user: ${payout.username}`);
-            console.error(`[PAYOUT FAILURE] Expected: ${calculated}`);
-            console.error(`[PAYOUT FAILURE] Received: ${sign}`);
-            console.error(`[PAYOUT FAILURE] String: ${str}`);
-
-            return res.send('OK');
-        }
-
-        // Status: 2: Success, 3: Failed
-        const newStatus = status === '2' || status === 2 ? 'success' : 'failed';
-
-        await db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
-            .run(newStatus, utr || null, message || null, JSON.stringify(req.body), payout.id);
-
-        // Refund if failed
-        if (newStatus === 'failed' && payout.status !== 'failed') {
-            await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount + payout.fee, payout.user_id);
-        }
-
-        // Credit Admin if Success (Payout Fee is Profit)
-        if (newStatus === 'success' && payout.status !== 'success') {
-            try {
-                // Assuming no specialized Payout Cost from Silkpay in settings yet.
-                // Profit = Fee.
-                const profit = payout.fee;
-                if (profit > 0) {
-                    await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
-                }
-            } catch (errAdmin) {
-                console.error('Failed to credit admin payout profit:', errAdmin);
-            }
-        }
-
-        // Send "OK" to Silkpay immediately to prevent timeout
-        res.send('OK');
-
-        const merchantCallback = payout.callback_url; // From DB join
-        if (merchantCallback) {
-            try {
-                const merchantCallbackData = {
-                    status: newStatus === 'success' ? 1 : 2, amount: payout.amount, commission: payout.fee,
-                    message: message || (newStatus === 'success' ? 'success' : 'failed'),
-                    orderId: payout.order_id, // User's orderId
-                    id: payout.uuid, utr: utr || '', param: '' // param not supported in Silkpay callback echo
-                };
-                merchantCallbackData.sign = generateSign(merchantCallbackData, payout.merchant_key);
-
-                // Fire and forget (don't await) to ensure main thread isn't blocked if we were serverless, 
-                // but since we've already replied, we can just let it run.
-                // However, to capture errors we should still await or catch chain.
-                // Since this is node server, awaiting here is fine as response is already sent.
-                await axios.post(merchantCallback, merchantCallbackData, { timeout: 10000 });
-            } catch (callbackError) {
-                console.error('Failed to forward callback:', callbackError.message);
-            }
-        }
-    } catch (error) {
-        console.error('Payout callback error:', error);
-        if (!res.headersSent) res.send('OK'); // Ensure we always reply
-    }
-});
 
 module.exports = router;
