@@ -528,6 +528,7 @@ async function loadProfileData() {
 
     } catch (e) {
         console.error('Profile load error:', e);
+        showToast(t('error_profile_load'), 'error');
     }
 }
 
@@ -1590,7 +1591,7 @@ async function createUser() {
         hideLoader(); // Hide loader
 
         if (data.code === 1) {
-            // showToast(t('toast_merchant_created'), 'success');
+            showToast(t('toast_merchant_created'), 'success');
             loadUsersData();
             showWelcomeModal(data.data); // Show the fancy welcome popup
         } else {
