@@ -61,6 +61,131 @@
     ],
     "item": [
         {
+            "name": "Auth (Admin/Merchant)",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.code === 2) {",
+                                    "    pm.environment.set(\"temp_token\", jsonData.tempToken);",
+                                    "    console.log(\"2FA Required. Use 'Verify 2FA' request.\");",
+                                    "} else if (jsonData.code === 1) {",
+                                    "    pm.environment.set(\"auth_token\", jsonData.data.token);",
+                                    "    console.log(\"Login Successful\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Verify 2FA",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.code === 1) {",
+                                    "    pm.environment.set(\"auth_token\", jsonData.data.token);",
+                                    "    console.log(\"Token Saved\");",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"tempToken\": \"{{temp_token}}\",\n    \"code\": \"111111\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/verify-2fa",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "verify-2fa"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Callback Simulation",
+            "item": [
+                {
+                    "name": "Simulate Silkpay Payin Callback",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"mId\": \"TEST\",\n    \"mOrderId\": \"YOUR_ORDER_ID\",\n    \"payOrderId\": \"SILK_PAY_ID\",\n    \"amount\": 100,\n    \"status\": 1,\n    \"timestamp\": 1234567890,\n    \"sign\": \"GENERATED_VIA_SCRIPT_IF_NEEDED\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/callback/silkpay/payin",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "callback",
+                                "silkpay",
+                                "payin"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
             "name": "Payin",
             "item": [
                 {
