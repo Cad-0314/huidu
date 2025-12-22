@@ -27,6 +27,11 @@ function generateSign(params, secret) {
     // Append secret
     const signString = `${queryString}&secret=${secret}`;
 
+    if (arguments[2] === true) {
+        console.log('[SIGN DEBUG] Params:', filteredParams);
+        console.log('[SIGN DEBUG] String to Sign:', signString);
+    }
+
     // MD5 hash and uppercase
     const hash = crypto.createHash('md5').update(signString).digest('hex');
     return hash.toUpperCase();

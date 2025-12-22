@@ -98,6 +98,8 @@ async function apiAuthenticate(req, res, next) {
                     console.warn(`[API AUTH FAIL] Sign Mismatch. ID: ${authId}`);
                     console.warn(`[API AUTH FAIL] Received: ${authSign}`);
                     console.warn(`[API AUTH FAIL] Calculated: ${calculatedSign}`);
+                    // DEBUG: Re-run generation logic to show string
+                    const _debugSign = require('../utils/signature').generateSign(req.body, user.merchant_key, true);
                     return res.status(401).json({ code: 0, msg: 'Invalid Signature' });
                 }
             }
