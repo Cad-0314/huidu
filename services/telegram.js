@@ -471,7 +471,8 @@ async function initBot() {
             }
 
             // Format data for receipt
-            const statusText = payout.status === 'success' ? 'SUCCESS ✅' : (payout.status === 'failed' ? 'FAILED ❌' : 'PENDING ⏳');
+            const statusText = payout.status === 'success' ? 'SUCCESS' : (payout.status === 'failed' ? 'FAILED' : 'PENDING');
+            const statusEmoji = payout.status === 'success' ? '✅' : (payout.status === 'failed' ? '❌' : '⏳');
             const dateStr = new Date(payout.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
             const amount = parseFloat(payout.amount).toFixed(2);
             const fee = parseFloat(payout.fee || 0).toFixed(2);
@@ -479,75 +480,54 @@ async function initBot() {
             const accountNo = payout.account_number ? `****${payout.account_number.slice(-4)}` : 'N/A';
             const accountName = payout.account_name || 'N/A';
 
-            // Create receipt using QuickChart.io text-to-image API
-            const receiptData = {
-                format: 'png',
-                width: 500,
-                height: 380,
-                backgroundColor: '#1a1a2e',
-                text: `╔══════════════════════════════════╗
-║       VSPAY TRANSFER RECEIPT      ║
-╠══════════════════════════════════╣
-║  Order ID: ${payout.order_id.padEnd(20)}║
-║  ─────────────────────────────── ║
-║  Amount:    ₹${amount.padEnd(19)}║
-║  Fee:       ₹${fee.padEnd(19)}║
-║  Status:    ${statusText.padEnd(20)}║
-║  ─────────────────────────────── ║
-║  UTR:       ${utr.padEnd(20)}║
-║  Account:   ${accountNo.padEnd(20)}║
-║  Name:      ${accountName.substring(0, 18).padEnd(20)}║
-║  ─────────────────────────────── ║
-║  Date: ${dateStr.padEnd(25)}║
-╠══════════════════════════════════╣
-║  Merchant: ${user.name.substring(0, 21).padEnd(22)}║
-╚══════════════════════════════════╝`,
-                fontSize: 14,
-                fontFamily: 'monospace',
-                fontColor: '#00ff88'
-            };
+            // Build receipt content lines for QuickChart title
+            const receiptLines = [
+                '╔════════════════════════════════╗',
+                '║     VSPAY TRANSFER RECEIPT     ║',
+                '╠════════════════════════════════╣',
+                `║ Order: ${payout.order_id.substring(0, 22).padEnd(23)}║`,
+                '║────────────────────────────────║',
+                `║ Amount:  ₹${amount.padEnd(20)}║`,
+                `║ Fee:     ₹${fee.padEnd(20)}║`,
+                `║ Status:  ${statusText.padEnd(21)}║`,
+                '║────────────────────────────────║',
+                `║ UTR:     ${utr.substring(0, 21).padEnd(21)}║`,
+                `║ Account: ${accountNo.padEnd(21)}║`,
+                `║ Name:    ${accountName.substring(0, 19).padEnd(21)}║`,
+                '║────────────────────────────────║',
+                `║ ${dateStr.padEnd(30)}║`,
+                `║ Merchant: ${user.name.substring(0, 20).padEnd(20)}║`,
+                '╚════════════════════════════════╝'
+            ];
 
-            // URL encode the chart config for QuickChart
+            // Generate receipt image using QuickChart.io with a dummy chart and custom labels
             const chartConfig = {
-                type: 'text',
+                type: 'bar',
                 data: {
-                    text: receiptData.text
+                    labels: [''],
+                    datasets: [{ data: [0], backgroundColor: 'transparent' }]
                 },
                 options: {
-                    backgroundColor: receiptData.backgroundColor,
-                    textColor: receiptData.fontColor,
-                    fontSize: receiptData.fontSize,
-                    fontFamily: 'monospace'
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: receiptLines,
+                            color: '#00ff88',
+                            font: { size: 13, family: 'monospace', weight: 'normal' },
+                            padding: { top: 20, bottom: 20 }
+                        },
+                        legend: { display: false }
+                    },
+                    scales: { x: { display: false }, y: { display: false } }
                 }
             };
 
-            // Use simple text overlay approach via placeholder service
-            // Since quickchart text isn't ideal, let's use a clean HTML-like approach with a chart service
-            // Alternative: Use a simple formatted message as fallback
+            const encodedConfig = encodeURIComponent(JSON.stringify(chartConfig));
+            const imageUrl = `https://quickchart.io/chart?c=${encodedConfig}&w=400&h=380&bkg=%231a1a2e&f=png`;
 
-            // Send a nicely formatted text receipt instead (more reliable)
-            const receiptMsg = `
-🧾 *VSPAY TRANSFER RECEIPT*
-━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 *Order ID:* \`${payout.order_id}\`
-
-💰 *Amount:* ₹${amount}
-💸 *Fee:* ₹${fee}
-📊 *Status:* ${statusText}
-
-🔢 *UTR:* \`${utr}\`
-🏦 *Account:* ${accountNo}
-👤 *Name:* ${accountName}
-
-📅 *Date:* ${dateStr}
-🏪 *Merchant:* ${user.name}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━
-_Generated via VSPAY Bot_
-`;
-
-            await ctx.replyWithMarkdown(receiptMsg, {
+            await ctx.replyWithPhoto(imageUrl, {
+                caption: `🧾 *Receipt Generated* ${statusEmoji}\nOrder: \`${payout.order_id}\`\nAmount: ₹${amount} | Status: *${statusText}*`,
+                parse_mode: 'Markdown',
                 reply_to_message_id: ctx.message.message_id
             });
 
