@@ -119,6 +119,38 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
 
     const localPaymentUrl = `${appUrl}/pay/${platformOrderId}`;
 
+    // Normalize deepLinks with consistent naming for API response
+    const normalizedDeepLinks = {
+        upi_phonepe: deepLinks.upi_phonepe || deepLinks.phonepe || '',
+        upi_paytm: deepLinks.upi_paytm || deepLinks.paytm || '',
+        upi_scan: deepLinks.upi_scan || deepLinks.upi || ''
+    };
+
+    // Generate Google Pay (tez://) link if not present
+    let gpayLink = deepLinks.upi_gpay || deepLinks.gpay || '';
+    if (!gpayLink) {
+        try {
+            const sourceUrl = normalizedDeepLinks.upi_scan || normalizedDeepLinks.upi_phonepe || paymentUrl || '';
+            if (sourceUrl) {
+                const urlObj = new URL(sourceUrl.startsWith('http') ? sourceUrl : sourceUrl.replace(/^[a-zA-Z]+:\/\//, 'http://'));
+                const params = new URLSearchParams(urlObj.search);
+
+                const pa = params.get('pa');
+                const pn = params.get('pn');
+                const tn = params.get('tn');
+                const am = params.get('am');
+                const cu = params.get('cu') || 'INR';
+
+                if (pa && am) {
+                    gpayLink = `tez://upi/pay?pa=${pa}&pn=${encodeURIComponent(pn || '')}&tn=${encodeURIComponent(tn || '')}&am=${am}&cu=${cu}`;
+                }
+            }
+        } catch (err) {
+            console.error('Error generating GPay link for API:', err);
+        }
+    }
+    normalizedDeepLinks.upi_gpay = gpayLink;
+
     return {
         orderId: finalOrderId,
         id: txUuid,
@@ -127,7 +159,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         paymentUrl: localPaymentUrl,
         // Internal data if needed
         platformOrderId,
-        deepLinks
+        deepLinks: normalizedDeepLinks
     };
 }
 
