@@ -509,8 +509,12 @@ print_r($response);
     "code": 1,
     "data": {
         "orderId": "MC001-998877",
+        "id": "e0b5...88",
         "status": "success", // pending, success, failed
         "amount": 500,
+        "orderAmount": 500,
+        "fee": 25,
+        "netAmount": 475,
         "utr": "123456789012",
         "createdAt": "2025-01-01T12:00:00Z"
     }
@@ -777,10 +781,14 @@ print_r($response);
     "code": 1,
     "data": {
         "orderId": "MC001-998877",
+        "id": "e0b5...88",
+        "type": "bank",
         "status": "success", // pending, processing, success, failed
         "amount": 500,
         "fee": 21,
+        "netAmount": 500,
         "utr": "123456789012",
+        "message": "success",
         "createdAt": "2025-01-01T12:00:00Z"
     }
 }</code></pre>
