@@ -475,7 +475,8 @@ print_r($response);
         "orderId": "MC001-998877",
         "id": "e0b5...88",
         "orderAmount": 500,
-        "paymentUrl": "https://gateway.com/pay/MC001-998877",
+        "fee": 25,
+        "paymentUrl": "https://vspay.vip/pay/DF-123456",
         "deepLinks": {
             "phonepe": "phonepe://...",
             "paytm": "paytmmp://...",
@@ -551,6 +552,7 @@ print_r($response);
     "msg": "UTR Submitted successfully",
     "data": {
         "orderId": "MC001-998877",
+        "utr": "123456789012",
         "status": "processing"
     }
 }</code></pre>
@@ -586,9 +588,15 @@ print_r($response);
     "msg": "Order found",
     "data": {
         "orderId": "MC001-998877",
+        "id": "e0b5...88",
         "status": "success",
         "amount": 500,
-        "utr": "123456789012"
+        "orderAmount": 500,
+        "fee": 25,
+        "netAmount": 475,
+        "utr": "123456789012",
+        "createdAt": "2025-01-01T12:00:00Z",
+        "updatedAt": "2025-01-01T12:05:00Z"
     }
 }</code></pre>
         </section>
@@ -748,12 +756,19 @@ print_r($response);
             <h3 data-i18n="success_response">Response</h3>
             <pre><code>{
     "code": 1,
-    "msg": "Order found",
+    "msg": "Payout found",
     "data": {
         "orderId": "MC001-998877",
+        "id": "e0b5...88",
+        "type": "bank",
         "status": "success",
         "amount": 500,
-        "utr": "123456789012"
+        "fee": 21,
+        "netAmount": 500,
+        "utr": "123456789012",
+        "message": "success",
+        "createdAt": "2025-01-01T12:00:00Z",
+        "updatedAt": "2025-01-01T12:05:00Z"
     }
 }</code></pre>
         </section>
