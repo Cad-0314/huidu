@@ -631,7 +631,6 @@ print_r($response);
                     <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
-            </table>
 
             <h3 data-i18n="success_response">Success Response</h3>
             <pre><code>{
@@ -694,7 +693,6 @@ print_r($response);
                     <td data-i18n="label_2fa_opt">2FA Code (Required for Dashboard, Optional for API).</td>
                 </tr>
             </table>
-            </table>
 
             <h3 data-i18n="success_response">Success Response</h3>
             <pre><code>{
@@ -732,6 +730,50 @@ print_r($response);
                     <td>Merchant UUID.</td>
                 </tr>
             </table>
+
+            <h3 data-i18n="success_response">Response</h3>
+            <pre><code>{
+    "code": 1,
+    "msg": "Order found",
+    "data": {
+        "orderId": "MC001-998877",
+        "status": "success",
+        "amount": 500,
+        "utr": "123456789012"
+    }
+}</code></pre>
+        </section>
+
+        <section id="payout-query">
+            <h2 data-i18n="query_status">Query Payout Status</h2>
+            <p>Check the real-time status of a payout.</p>
+            <p><span class="method post">POST</span> <span class="endpoint">/api/payout/query</span></p>
+
+            <table class="param-table">
+                <tr>
+                    <th data-i18n="parameter">Parameter</th>
+                    <th data-i18n="param_type">Type</th>
+                    <th data-i18n="description">Description</th>
+                </tr>
+                <tr>
+                    <td><code>orderId</code></td>
+                    <td>String <span class="required" data-i18n="required">Required</span></td>
+                    <td>Your unique Payout Order ID.</td>
+                </tr>
+            </table>
+
+            <h3 data-i18n="success_response">Response</h3>
+            <pre><code>{
+    "code": 1,
+    "data": {
+        "orderId": "MC001-998877",
+        "status": "success", // pending, processing, success, failed
+        "amount": 500,
+        "fee": 21,
+        "utr": "123456789012",
+        "createdAt": "2025-01-01T12:00:00Z"
+    }
+}</code></pre>
         </section>
 
         <section id="balance-query">
@@ -770,7 +812,8 @@ print_r($response);
 }</code></pre>
 
             <h3 data-i18n="verify_webhook_sig">Verifying Callback Signature</h3>
-            <p data-i18n="verify_webhook_desc">You <strong>must</strong> verify the signature to ensure the request is
+            <p data-i18n="verify_webhook_desc">You <strong>must</strong> verify the signature to ensure the request
+                is
                 from us.</p>
             <div class="badge badge-warning" data-i18n="formula">Formula</div>
             <p>1. <strong>Sort</strong> all received parameters alphabetically by key (ASCII).</p>
