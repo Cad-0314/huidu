@@ -95,12 +95,33 @@ async function apiAuthenticate(req, res, next) {
                 const calculatedSign = generateSign(req.body, user.merchant_key);
 
                 if (authSign.toUpperCase() !== calculatedSign) {
+                    // DEBUG: Generate the raw string
+                    let debugString = '';
+                    const filteredParams = {};
+                    for (const key of Object.keys(req.body)) {
+                        if (key !== 'sign' && req.body[key] !== null && req.body[key] !== undefined && req.body[key] !== '') {
+                            filteredParams[key] = req.body[key];
+                        }
+                    }
+                    const sortedKeys = Object.keys(filteredParams).sort();
+                    const queryParts = sortedKeys.map(key => `${key}=${filteredParams[key]}`);
+                    debugString = queryParts.join('&') + '&secret=' + user.merchant_key;
+
                     console.warn(`[API AUTH FAIL] Sign Mismatch. ID: ${authId}`);
                     console.warn(`[API AUTH FAIL] Received: ${authSign}`);
                     console.warn(`[API AUTH FAIL] Calculated: ${calculatedSign}`);
-                    // DEBUG: Re-run generation logic to show string
-                    const _debugSign = require('../utils/signature').generateSign(req.body, user.merchant_key, true);
-                    return res.status(401).json({ code: 0, msg: 'Invalid Signature' });
+                    console.warn(`[API AUTH FAIL] String: ${debugString}`);
+
+                    return res.status(401).json({
+                        code: 0,
+                        msg: 'Invalid Signature',
+                        debug: {
+                            received: authSign.toUpperCase(),
+                            calculated: calculatedSign,
+                            stringToSign: debugString,
+                            bodyReceived: req.body
+                        }
+                    });
                 }
             }
         }
@@ -108,7 +129,11 @@ async function apiAuthenticate(req, res, next) {
             // Legacy Body Auth - we can skip strict verify or implement if needed. 
             // Existing code had it commented out. Let's leave it open or simple check.
             // For security, we should ideally verify.
-            // But let's verify new endpoints ONLY via headers.
+
+            // Enforce Signature Check for Leagcy Body Auth too
+            if (!verifySign(req.body, user.merchant_key)) {
+                return res.status(401).json({ code: 0, msg: 'Invalid Signature (Body)' });
+            }
         }
 
         req.merchant = user;
