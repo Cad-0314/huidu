@@ -336,6 +336,16 @@ async function initializeSchema() {
         await db.exec('ALTER TABLE users ADD COLUMN ip_whitelist TEXT');
         console.log('Applied migration: Added ip_whitelist to users');
     } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE payouts ADD COLUMN callback_url TEXT');
+        console.log('Applied migration: Added callback_url to payouts');
+    } catch (e) { }
+
+    try {
+        await db.exec('ALTER TABLE payouts ADD COLUMN param TEXT');
+        console.log('Applied migration: Added param to payouts');
+    } catch (e) { }
 }
 
 module.exports = { initDatabase, getDb };

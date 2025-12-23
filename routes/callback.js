@@ -156,11 +156,11 @@ router.post('/silkpay/payout', async (req, res) => {
             .run(orderId || payOrderId, JSON.stringify(req.body), status);
 
         // 2. Find Payout
-        let payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+        let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
             .get(payOrderId);
 
         if (!payout) {
-            payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
+            payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
                 .get(orderId);
         }
 
@@ -212,7 +212,10 @@ router.post('/silkpay/payout', async (req, res) => {
         // 5. Forward Callback
         res.send('OK');
 
-        if (payout.callback_url) {
+        // Prefer payout-specific callback URL, fallback to user's default
+        const callbackUrl = payout.payout_callback_url || payout.user_callback_url;
+
+        if (callbackUrl) {
             const merchantCallbackData = {
                 status: newStatus === 'success' ? 1 : 2,
                 amount: payout.amount,
@@ -221,13 +224,13 @@ router.post('/silkpay/payout', async (req, res) => {
                 orderId: payout.order_id,
                 id: payout.uuid,
                 utr: utr || '',
-                param: ''
+                param: payout.param || ''
             };
             merchantCallbackData.sign = generateSign(merchantCallbackData, payout.merchant_key);
 
-            console.log(`[Silkpay Payout] Forwarding callback to ${payout.callback_url}`);
+            console.log(`[Silkpay Payout] Forwarding callback to ${callbackUrl}`);
             try {
-                await axios.post(payout.callback_url, merchantCallbackData, { timeout: 10000 });
+                await axios.post(callbackUrl, merchantCallbackData, { timeout: 10000 });
             } catch (err) {
                 console.error(`[Silkpay Payout] Failed to forward callback: ${err.message}`);
             }

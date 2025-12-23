@@ -111,8 +111,8 @@ router.post('/bank', unifiedAuth, async (req, res) => {
 
         const source = req.isApiRequest ? 'api' : 'settlement';
         // Insert with null platform_order_id initially (to be updated with Silkpay ID)
-        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name, source) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?, ?)`)
-            .run(payoutUuid, merchant.id, orderId, null, payoutAmount, fee, payoutAmount, account, ifsc, personName, source);
+        await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name, source, callback_url, param) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?, ?, ?, ?)`)
+            .run(payoutUuid, merchant.id, orderId, null, payoutAmount, fee, payoutAmount, account, ifsc, personName, source, callbackUrl || null, param || null);
 
         // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
         // if (merchant.username === 'demo') { ... }

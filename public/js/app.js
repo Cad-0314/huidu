@@ -566,13 +566,6 @@ async function changePassword(event) {
 // DASHBOARD
 // ========================================
 
-// ========================================
-// DASHBOARD
-// ========================================
-
-// DASHBOARD
-// ========================================
-
 let dashboardChartInstance = null;
 
 async function loadDashboardData() {
@@ -748,7 +741,6 @@ async function loadTransactionsData(page = 1) {
         if (type) url += `&type=${type}`;
 
         const data = await API.get(url);
-        console.log('[App] Transactions Data:', data);
         const container = document.getElementById('transactionsList');
         if (!container) return;
 
@@ -801,7 +793,6 @@ async function loadPayoutsData(page = 1) {
         url += `&source=api`;
 
         const data = await API.get(url);
-        console.log('[App] Payouts Data:', data);
         const container = document.getElementById('payoutsList');
         if (!container) return;
 
@@ -1057,7 +1048,6 @@ async function generatePaymentLink() {
             skipUrl: window.location.origin + '/payment-success.html'
         });
 
-        console.log('Payment link API response:', JSON.stringify(response, null, 2));
 
         if (response.code === 1) {
             const paymentUrl = response.data.paymentUrl || response.data.rechargeUrl || response.data.url || `Payment Link Generated - Order: ${orderId}`;
@@ -1251,7 +1241,6 @@ async function loadUsersData(page = 1) {
         // For now, I'll pass it.
 
         const data = await API.get(url);
-        console.log('[App] Users Data:', data);
         const container = document.getElementById('usersTableBody') || document.getElementById('usersList');
         if (!container) return;
 
