@@ -11,9 +11,14 @@
             "script": {
                 "type": "text/javascript",
                 "exec": [
-                    "const secret = pm.environment.get('merchant_secret');",
+                    "// Get secret from Environment OR Collection Variables",
+                    "let secret = pm.environment.get('merchant_secret') || pm.collectionVariables.get('merchant_secret');",
+                    "if (!secret || secret === 'YOUR_MERCHANT_KEY') {",
+                    "    console.error('❌ ERROR: merchant_secret is not set! Go to Collection Variables or Environment and set it.');",
+                    "}",
+                    "",
                     "// 1. Resolve variables in raw body string (e.g. {{merchant_id}})",
-                    "const rawBody = pm.environment.replaceIn(pm.request.body.raw);",
+                    "const rawBody = pm.request.body ? pm.environment.replaceIn(pm.request.body.raw) : '{}';",
                     "let body;",
                     "try {",
                     "    body = JSON.parse(rawBody);",
@@ -24,7 +29,6 @@
                     "// 2. Auto-generate IDs if needed",
                     "if (body.orderId === 'AUTO') {",
                     "    body.orderId = 'ORD-' + Date.now();",
-                    "     // Update the ACTUAL request body so the server receives this ID",
                     "    pm.request.body.raw = JSON.stringify(body);",
                     "}",
                     "",
@@ -36,7 +40,7 @@
                     "    }",
                     "});",
                     "",
-                    "// 4. Sort Keys",
+                    "// 4. Sort Keys (ASCII order)",
                     "const keys = Object.keys(filtered).sort();",
                     "",
                     "// 5. Build Query String (key=value&...)",
@@ -44,8 +48,6 @@
                     "const queryString = queryParts.join('&');",
                     "",
                     "// 6. Append Secret",
-                    "// Node Logic: `${queryString}&secret=${secret}`",
-                    "// Even if queryString is empty, logic appends &secret=...",
                     "const signStr = queryString + '&secret=' + secret;",
                     "",
                     "// 7. Hash",
@@ -53,8 +55,14 @@
                     "",
                     "// 8. Set Headers",
                     "pm.request.headers.add({key: 'x-signature', value: hash});",
-                    "console.log('Signature String:', signStr);",
-                    "console.log('Generated Hash:', hash);"
+                    "",
+                    "// 9. DEBUG OUTPUT",
+                    "console.log('--- SIGNATURE DEBUG ---');",
+                    "console.log('Secret Used:', secret ? (secret.substring(0, 10) + '...') : 'MISSING!');",
+                    "console.log('Body Parsed:', JSON.stringify(filtered));",
+                    "console.log('String to Sign:', signStr);",
+                    "console.log('Generated Hash:', hash);",
+                    "console.log('-----------------------');"
                 ]
             }
         }
