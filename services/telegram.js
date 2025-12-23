@@ -460,7 +460,7 @@ async function initBot() {
 
             const queryId = message[1].trim();
             const chatId = ctx.chat.id.toString();
-            const user = await db.prepare('SELECT id FROM users WHERE telegram_group_id = ?').get(chatId);
+            const user = await db.prepare('SELECT id, name FROM users WHERE telegram_group_id = ?').get(chatId);
 
             if (!user) return reply(ctx, '⚠️ **未绑定商户**');
 
@@ -470,34 +470,84 @@ async function initBot() {
                 return reply(ctx, '❌ **未找到下发记录**\n请检查单号是否正确。');
             }
 
-            // Generate Receipt Image using Placehold.co
-            // We use simple text formatting. 
-            // encoding for URL is crucial.
-            const statusIcon = payout.status === 'success' ? '✅' : (payout.status === 'failed' ? '❌' : '⏳');
+            // Format data for receipt
+            const statusText = payout.status === 'success' ? 'SUCCESS ✅' : (payout.status === 'failed' ? 'FAILED ❌' : 'PENDING ⏳');
             const dateStr = new Date(payout.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+            const amount = parseFloat(payout.amount).toFixed(2);
+            const fee = parseFloat(payout.fee || 0).toFixed(2);
+            const utr = payout.utr || 'PENDING';
+            const accountNo = payout.account_number ? `****${payout.account_number.slice(-4)}` : 'N/A';
+            const accountName = payout.account_name || 'N/A';
 
-            const lines = [
-                'VSPAY TRANSFER RECEIPT',
-                '--------------------------------',
-                `ORDER ID  : ${payout.order_id}`,
-                `AMOUNT    : ${payout.amount}`,
-                `STATUS    : ${payout.status.toUpperCase()} ${statusIcon}`,
-                `UTR       : ${payout.utr || 'PENDING'}`,
-                `DATE      : ${dateStr}`,
-                '--------------------------------',
-                'Generated via VSPAY Bot'
-            ];
+            // Create receipt using QuickChart.io text-to-image API
+            const receiptData = {
+                format: 'png',
+                width: 500,
+                height: 380,
+                backgroundColor: '#1a1a2e',
+                text: `╔══════════════════════════════════╗
+║       VSPAY TRANSFER RECEIPT      ║
+╠══════════════════════════════════╣
+║  Order ID: ${payout.order_id.padEnd(20)}║
+║  ─────────────────────────────── ║
+║  Amount:    ₹${amount.padEnd(19)}║
+║  Fee:       ₹${fee.padEnd(19)}║
+║  Status:    ${statusText.padEnd(20)}║
+║  ─────────────────────────────── ║
+║  UTR:       ${utr.padEnd(20)}║
+║  Account:   ${accountNo.padEnd(20)}║
+║  Name:      ${accountName.substring(0, 18).padEnd(20)}║
+║  ─────────────────────────────── ║
+║  Date: ${dateStr.padEnd(25)}║
+╠══════════════════════════════════╣
+║  Merchant: ${user.name.substring(0, 21).padEnd(22)}║
+╚══════════════════════════════════╝`,
+                fontSize: 14,
+                fontFamily: 'monospace',
+                fontColor: '#00ff88'
+            };
 
-            const text = lines.join('\\n'); // Use literal \n for the URL encoding logic usually, but placehold.co handles encoded newlines.
-            // Actually placehold.co uses `\n` in text query param? No, it usually takes standard URL encoding.
-            // Let's try constructing the URL safely.
-            const encodedText = encodeURIComponent(lines.join('\n'));
+            // URL encode the chart config for QuickChart
+            const chartConfig = {
+                type: 'text',
+                data: {
+                    text: receiptData.text
+                },
+                options: {
+                    backgroundColor: receiptData.backgroundColor,
+                    textColor: receiptData.fontColor,
+                    fontSize: receiptData.fontSize,
+                    fontFamily: 'monospace'
+                }
+            };
 
-            // Using a dark theme for professional look: Black BG, White Text
-            const imageUrl = `https://placehold.co/600x400/000000/ffffff.png?text=${encodedText}&font=roboto`;
+            // Use simple text overlay approach via placeholder service
+            // Since quickchart text isn't ideal, let's use a clean HTML-like approach with a chart service
+            // Alternative: Use a simple formatted message as fallback
 
-            await ctx.replyWithPhoto(imageUrl, {
-                caption: `🧾 **Receipt Generated**\nOrder: \`${payout.order_id}\``,
+            // Send a nicely formatted text receipt instead (more reliable)
+            const receiptMsg = `
+🧾 *VSPAY TRANSFER RECEIPT*
+━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 *Order ID:* \`${payout.order_id}\`
+
+💰 *Amount:* ₹${amount}
+💸 *Fee:* ₹${fee}
+📊 *Status:* ${statusText}
+
+🔢 *UTR:* \`${utr}\`
+🏦 *Account:* ${accountNo}
+👤 *Name:* ${accountName}
+
+📅 *Date:* ${dateStr}
+🏪 *Merchant:* ${user.name}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━
+_Generated via VSPAY Bot_
+`;
+
+            await ctx.replyWithMarkdown(receiptMsg, {
                 reply_to_message_id: ctx.message.message_id
             });
 
