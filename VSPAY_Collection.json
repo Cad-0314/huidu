@@ -297,6 +297,62 @@
                         }
                     },
                     "response": []
+                },
+                {
+                    "name": "Public Check Order (No Auth)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"YOUR_ORDER_ID\",\n    \"userId\": \"{{merchant_id}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/check",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "check"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "Check by UTR (No Auth)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"utr\": \"123456789012\",\n    \"userId\": \"{{merchant_id}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payin/check-utr",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payin",
+                                "check-utr"
+                            ]
+                        }
+                    },
+                    "response": []
                 }
             ]
         },
@@ -332,6 +388,40 @@
                                 "api",
                                 "payout",
                                 "bank"
+                            ]
+                        }
+                    },
+                    "response": []
+                },
+                {
+                    "name": "USDT Payout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-merchant-id",
+                                "value": "{{merchant_id}}",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"orderId\": \"AUTO\",\n    \"amount\": 50000,\n    \"walletAddress\": \"TRC20_WALLET_ADDRESS\",\n    \"network\": \"TRC20\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/payout/usdt",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "payout",
+                                "usdt"
                             ]
                         }
                     },
