@@ -46,12 +46,35 @@ const api = axios.create({
  * Create RSA Signature using SHA256WithRSA
  * Signs the bizContent JSON string with the merchant private key
  */
+/**
+ * Helper to format key with PEM headers and 64-char line breaks
+ */
+function formatPem(keyStr, type) {
+    if (!keyStr) return '';
+    // If already has headers, return as is (simple check)
+    if (keyStr.includes('-----BEGIN')) return keyStr;
+
+    const header = `-----BEGIN ${type} KEY-----`;
+    const footer = `-----END ${type} KEY-----`;
+
+    // Remove any existing spaces/newlines just in case
+    const cleanKey = keyStr.replace(/[\r\n\s]/g, '');
+
+    // Split into 64 char chunks
+    const chunks = cleanKey.match(/.{1,64}/g);
+    const body = chunks ? chunks.join('\n') : cleanKey;
+
+    return `${header}\n${body}\n${footer}`;
+}
+
+/**
+ * Create RSA Signature using SHA256WithRSA
+ * Signs the bizContent JSON string with the merchant private key
+ */
 function createRsaSign(data, privateKeyOverride = null) {
     try {
-        const privateKey = privateKeyOverride || MERCHANT_PRIVATE_KEY;
-
-        // Format the private key with PEM headers
-        const formattedKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
+        const rawKey = privateKeyOverride || MERCHANT_PRIVATE_KEY;
+        const formattedKey = formatPem(rawKey, 'PRIVATE');
 
         const sign = crypto.createSign('SHA256');
         sign.update(data, 'utf8');
@@ -70,10 +93,8 @@ function createRsaSign(data, privateKeyOverride = null) {
  */
 function verifyRsaSign(data, signature, publicKeyOverride = null) {
     try {
-        const publicKey = publicKeyOverride || PLATFORM_PUBLIC_KEY;
-
-        // Format the public key with PEM headers
-        const formattedKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
+        const rawKey = publicKeyOverride || PLATFORM_PUBLIC_KEY;
+        const formattedKey = formatPem(rawKey, 'PUBLIC');
 
         const verify = crypto.createVerify('SHA256');
         verify.update(data, 'utf8');
