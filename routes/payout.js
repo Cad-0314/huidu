@@ -114,9 +114,22 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         await db.prepare(`INSERT INTO payouts (uuid, user_id, order_id, platform_order_id, payout_type, amount, fee, net_amount, status, account_number, ifsc_code, account_name, source, callback_url, param) VALUES (?, ?, ?, ?, 'bank', ?, ?, ?, 'processing', ?, ?, ?, ?, ?, ?)`)
             .run(payoutUuid, merchant.id, orderId, null, payoutAmount, fee, payoutAmount, account, ifsc, personName, source, callbackUrl || null, param || null);
 
-        // --- INSTANT CALLBACK REMOVED (Handled by Upstream) ---
-        // if (merchant.username === 'demo') { ... }
-        // ------------------------------------------------------
+        // --- Demo User Restriction: Mock Success ---
+        if (merchant.username === 'demo') {
+            console.log(`[Demo] Mocking Payout Success for ${orderId}`);
+
+            // Mark as success immediately
+            await db.prepare("UPDATE payouts SET status = 'success', platform_order_id = 'DEMO_MOCK_PAYOUT', utr = 'DEMO_UTR_SUCCESS', updated_at = datetime('now') WHERE uuid = ?")
+                .run(payoutUuid);
+
+            // Return success response to client
+            return res.json({
+                code: 1,
+                msg: 'Payout submitted successfully (Demo Mode)',
+                data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'success' }
+            });
+        }
+        // -------------------------------------------
 
         try {
             const silkpayResponse = await silkpayService.createPayout({
