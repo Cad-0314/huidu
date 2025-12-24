@@ -132,31 +132,63 @@ router.post('/bank', unifiedAuth, async (req, res) => {
         // -------------------------------------------
 
         try {
-            const silkpayResponse = await silkpayService.createPayout({
-                amount,
-                orderId: silkpayOrderId,
-                account: account, // Silkpay mapping? createPayout checks "bankNo"
-                bankNo: account,
-                ifsc: ifsc,
-                name: personName, // Silkpay "name"
-                personName: personName,
-                notifyUrl: ourCallbackUrl
-            }, silkpayConfig);
+            // Channel Routing
+            const channel = merchant.channel || 'silkpay';
+            let apiResponse = null;
+            let platformOrderId = null;
 
-            if (silkpayResponse.status !== '200') {
-                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
-                await db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', silkpayResponse.message || 'Silkpay API error', payoutUuid);
-                return res.status(400).json({ code: 0, msg: silkpayResponse.message || 'Failed to create payout' });
+            if (channel === 'f2pay') {
+                const f2payService = require('../services/f2pay');
+                console.log(`[PAYOUT] Using F2PAY for merchant ${merchant.username} (Channel: ${channel})`);
+
+                apiResponse = await f2payService.createPayout({
+                    orderId: orderId,
+                    amount: amount,
+                    name: personName,
+                    bankNo: account,
+                    ifsc: ifsc,
+                    notifyUrl: ourCallbackUrl
+                });
+
+                if (apiResponse.code !== 1) { // F2PAY uses code: 1 for success in our wrapper
+                    throw new Error(apiResponse.message || 'F2PAY API error');
+                }
+
+                platformOrderId = apiResponse.data.payOrderId || orderId; // F2PAY returns platNo
+
+            } else {
+                // Default: Silkpay
+                console.log(`[PAYOUT] Using Silkpay for merchant ${merchant.username} (Channel: ${channel})`);
+
+                apiResponse = await silkpayService.createPayout({
+                    amount,
+                    orderId: silkpayOrderId,
+                    account: account,
+                    bankNo: account,
+                    ifsc: ifsc,
+                    name: personName,
+                    personName: personName,
+                    notifyUrl: ourCallbackUrl
+                }, silkpayConfig);
+
+                if (apiResponse.status !== '200') {
+                    throw new Error(apiResponse.message || 'Silkpay API error');
+                }
+
+                platformOrderId = apiResponse.data.payOrderId || silkpayOrderId;
             }
 
-            // Silkpay response data: { payOrderId: '...' }
-            // Store Silkpay ID. Fallback to silkpayOrderId (Merchant ID)
-            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(silkpayResponse.data.payOrderId || silkpayOrderId, payoutUuid);
+            // Success Handling
+            await db.prepare('UPDATE payouts SET platform_order_id = ? WHERE uuid = ?').run(platformOrderId, payoutUuid);
             res.json({ code: 1, msg: 'Payout submitted', data: { orderId, id: payoutUuid, amount: payoutAmount, fee, status: 'processing' } });
+
         } catch (apiError) {
+            console.error('[PAYOUT ERROR]', apiError.message);
+            // Refund balance on failure
             await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(totalDeduction, merchant.id);
             await db.prepare('UPDATE payouts SET status = ?, message = ? WHERE uuid = ?').run('failed', apiError.message, payoutUuid);
-            throw apiError;
+
+            return res.status(400).json({ code: 0, msg: apiError.message || 'Failed to create payout' });
         }
     } catch (error) {
         console.error('Create bank payout error:', error);

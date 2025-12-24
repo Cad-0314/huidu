@@ -305,6 +305,86 @@ async function queryPayin(orderId, config = {}) {
 }
 
 /**
+ * Create Payout Order
+ * Endpoint: /payout/inr/order/create (Inferred)
+ */
+async function createPayout(data, config = {}) {
+    const startTime = Date.now();
+    const merchantId = config.merchantId || MERCHANT_ID;
+    const privateKey = config.privateKey || MERCHANT_PRIVATE_KEY;
+
+    const traceId = data.orderId || generateTraceId('OUT');
+
+    // Build bizContent object based on Payout Query Response structure
+    const bizContent = {
+        mchOrderNo: data.orderId,
+        amount: parseFloat(data.amount).toFixed(2),
+        methodCode: 'BANK_INR', // From Test Params
+        payeeName: data.name,
+        payeeAccountNo: data.bankNo,
+        payeeIfsc: data.ifsc, // Guessing field name (payeeIfsc vs ifsc)
+        ifsc: data.ifsc,      // Sending both to be safe
+        notifyUrl: data.notifyUrl
+    };
+
+    const bizContentStr = JSON.stringify(bizContent);
+    const sign = createRsaSign(bizContentStr, privateKey);
+
+    const requestBody = {
+        traceId: traceId,
+        merchantId: merchantId,
+        bizContent: bizContentStr,
+        signType: 'RSA',
+        sign: sign
+    };
+
+    console.log(`[F2PAY] Creating Payout Order: ${data.orderId}`);
+
+    try {
+        // Warning: Endpoint inferred from Payin pattern
+        const response = await api.post('/payout/inr/order/create', requestBody);
+        const duration = Date.now() - startTime;
+
+        logRequest('/payout/inr/order/create', requestBody, response.data, duration);
+
+        const resData = response.data;
+
+        if (resData.code === '0000') {
+            let bizContentResp = resData.bizContent;
+            if (typeof bizContentResp === 'string') {
+                bizContentResp = JSON.parse(bizContentResp);
+            }
+
+            return {
+                status: '200',
+                code: 1,
+                message: 'success',
+                data: {
+                    payOrderId: bizContentResp.platNo,
+                    mchOrderNo: bizContentResp.mchOrderNo,
+                    status: 'processing' // Assume processing on success
+                }
+            };
+        } else {
+            console.error('[F2PAY] Create Payout Error:', resData);
+            return {
+                status: '500',
+                code: 0,
+                message: resData.msg || 'Failed to create payout'
+            };
+        }
+
+    } catch (error) {
+        logError('/payout/inr/order/create', error, requestBody);
+        return {
+            status: '500',
+            code: 0,
+            message: error.message || 'Network error'
+        };
+    }
+}
+
+/**
  * Submit UTR for Order
  * Endpoint: POST /payin/inr/order/resubmit
  */
@@ -466,6 +546,7 @@ async function getBalance(currency = 'INR', config = {}) {
 module.exports = {
     createPayinV2,
     queryPayin,
+    createPayout,
     submitUtr,
     getBalance,
     verifyPayinCallback,
