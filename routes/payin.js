@@ -321,4 +321,32 @@ router.get('/redirect', (req, res) => {
     res.send(html);
 });
 
+/**
+ * GET /api/payin/status/:id
+ * Public status check for payment page polling
+ */
+router.get('/status/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const db = getDb();
+
+        const tx = await db.prepare('SELECT status, updated_at FROM transactions WHERE uuid = ?').get(id);
+
+        if (!tx) {
+            return res.status(404).json({ code: 0, msg: 'Transaction not found' });
+        }
+
+        res.json({
+            code: 1,
+            data: {
+                status: tx.status,
+                updatedAt: tx.updated_at
+            }
+        });
+    } catch (error) {
+        console.error('Status check error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
 module.exports = router;

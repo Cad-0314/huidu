@@ -160,6 +160,7 @@ app.get('/pay/:orderId', async (req, res) => {
 
         html = html.replace(/\{\{AMOUNT\}\}/g, parseFloat(tx.amount).toFixed(2));
         html = html.replace('{{ORDER_ID}}', tx.order_id);
+        html = html.replace('{{UUID}}', tx.uuid);
         html = html.replace('{{DATE}}', new Date(tx.created_at).toLocaleDateString());
         html = html.replace('{{PAYMENT_URL}}', tx.payment_url);
 

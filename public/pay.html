@@ -292,6 +292,9 @@
                 <span class="currency">₹</span>{{AMOUNT}}
             </div>
             <div class="amount-subtitle">The amount you need to pay</div>
+            <div class="amount-notice" style="font-size: 13px; color: #e53e3e; margin-top: 5px; font-weight: 500;">
+                Note: Amount might be slightly different (e.g. ₹1 less) for faster verification.
+            </div>
         </div>
 
         <div class="payment-body">
@@ -339,9 +342,7 @@
                 Pay <span class="currency">₹</span> {{AMOUNT}}
             </button>
 
-            <button class="paid-button" id="paidBtn">
-                I have paid
-            </button>
+
 
             <div class="order-info">
                 <div class="order-row">
@@ -368,6 +369,7 @@
     <!-- Fallback Payment URL -->
     <input type="hidden" id="fallbackUrl" value="{{PAYMENT_URL}}">
     <input type="hidden" id="skipUrlData" value="{{SKIP_URL}}">
+    <input type="hidden" id="txUuid" value="{{UUID}}">
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -463,29 +465,26 @@
                 payBtn.textContent = 'Pay Now';
             }
 
-            // Paid button logic
-            const paidBtn = document.getElementById('paidBtn');
-            const skipUrlData = document.getElementById('skipUrlData').value;
-
-            // Only show if skipUrl is available (optional, but safer to always show if that's the UX)
-            // But requirement implies it's for redirecting to skipUrl. 
-            // If skipUrl is empty, maybe we shouldn't show it? 
-            // The instructions imply this flow is specifically for "redirect to skip url merchent give".
-
-            paidBtn.addEventListener('click', function () {
-                // Show popup
-                alert("We will update soon have patient"); // As requested literal text
-
-                // Redirect
-                if (skipUrlData && skipUrlData !== '') {
-                    window.location.href = skipUrlData;
-                } else {
-                    // If no skip url, what to do? User didn't specify. 
-                    // Maybe reload or just stay.
-                    // Assuming merchant provided it as per request "merchent give skip url"
-                    console.warn('No skip URL found');
-                }
-            });
+            // Auto-polling for status
+            const txUuid = document.getElementById('txUuid').value;
+            if (txUuid) {
+                const pollInterval = setInterval(() => {
+                    fetch(`/api/payin/status/${txUuid}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 1 && data.data.status === 'success') {
+                                clearInterval(pollInterval);
+                                // Success - Redirect
+                                if (skipUrlData && skipUrlData !== '') {
+                                    window.location.href = skipUrlData;
+                                } else {
+                                    document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:sans-serif;"><h2 style="color:green;">Payment Successful</h2><p>You can close this window.</p></div>';
+                                }
+                            }
+                        })
+                        .catch(err => console.error('Polling error:', err));
+                }, 3000); // Check every 3 seconds
+            }
         });
     </script>
 </body>
