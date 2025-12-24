@@ -193,7 +193,7 @@ async function createPayinV2(data, config = {}) {
                     deepLink: {
                         upi_scan: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : '',
                         upi_phonepe: accountInfo?.upiPhonepe || '',
-                        upi_gpay: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : '',
+                        upi_gpay: (accountInfo?.upiScan) ? `tez://upi/pay?${accountInfo.upiScan}` : '',
                         upi_paytm: (accountInfo?.upiIntent) ? `paytmmp://cash_wallet?${accountInfo.upiIntent}&featuretype=money_transfer` : '',
                         upi: accountInfo?.upi || '',
                         upi_intent: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : ''
