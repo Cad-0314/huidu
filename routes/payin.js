@@ -6,6 +6,7 @@ const axios = require('axios');
 const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
 const silkpayService = require('../services/silkpay');
+const f2payService = require('../services/f2pay');
 const { createPayinOrder } = require('../services/order');
 const { calculatePayinFee } = require('../utils/rates');
 const { generateSign } = require('../utils/signature');
@@ -237,15 +238,24 @@ router.post('/submit-utr', apiAuthenticate, async (req, res) => {
         // Note: Silkpay might require the original mOrderId sent during creation.
         // tx.order_id IS our mOrderId sent to Silkpay (based on createPayinOrder logic).
 
+        // Check routing
+        const channel = tx.channel || 'silkpay';
+
         try {
-            const result = await silkpayService.submitUtr(tx.order_id, utr);
+            let result;
 
-            if (result.status === '200' && result.data && result.data.code === 1) {
-                // Success upstream. We can mark it as success immediately OR wait for callback.
-                // Usually better to wait, but if "code: 1" means "Success" as per docs, we can update local.
-                // Docs say: "1 for successful order processing".
+            let isSuccess = false;
 
-                // Let's rely on callback for full confirmation, BUT we can proactively update UTR in DB.
+            if (channel === 'f2pay') {
+                result = await f2payService.submitUtr(tx.order_id, utr);
+                isSuccess = (result.code === 1);
+            } else {
+                result = await silkpayService.submitUtr(tx.order_id, utr);
+                isSuccess = (result.status === '200' && result.data && result.data.code === 1);
+            }
+
+            if (isSuccess) {
+                // Success upstream
                 await db.prepare('UPDATE transactions SET utr = ? WHERE id = ?').run(utr, tx.id);
 
                 return res.json({
@@ -254,7 +264,7 @@ router.post('/submit-utr', apiAuthenticate, async (req, res) => {
                     data: {
                         orderId: tx.order_id,
                         utr: utr,
-                        status: 'processing' // Upstream says success, but usually means "accepted for processing"
+                        status: 'processing'
                     }
                 });
             } else {
@@ -264,7 +274,7 @@ router.post('/submit-utr', apiAuthenticate, async (req, res) => {
                 });
             }
         } catch (upstreamError) {
-            console.error('Silkpay Submit UTR Error:', upstreamError);
+            console.error('Submit UTR Error:', upstreamError);
             return res.status(502).json({ code: 0, msg: 'Failed to communicate with payment provider' });
         }
 
