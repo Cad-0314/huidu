@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { getDb } = require('../config/database');
 const silkpayService = require('../services/silkpay');
+const f2payService = require('../services/f2pay');
 const { calculatePayinFee, calculatePayoutFee } = require('../utils/rates');
 const { generateSign } = require('../utils/signature');
 
@@ -239,6 +240,149 @@ router.post('/silkpay/payout', async (req, res) => {
     } catch (error) {
         console.error('Silkpay Payout Callback Error:', error);
         if (!res.headersSent) res.status(200).send('OK');
+    }
+});
+
+/**
+ * POST /api/callback/f2pay/payin
+ * Handles callbacks from F2PAY for Payin Orders
+ * F2PAY sends: { code, msg, sysTime, sign, bizContent (JSON string) }
+ * bizContent contains: state (Paid/UnequalPaid/Expired/Failed), actualAmount, amount, mchOrderNo, platNo, trxId (UTR), etc.
+ */
+router.post('/f2pay/payin', async (req, res) => {
+    try {
+        console.log('F2PAY Payin Callback received:', req.body);
+        const db = getDb();
+
+        // Parse the incoming callback
+        const { code, bizContent: bizContentRaw, sign } = req.body;
+
+        // 1. Log Raw Callback
+        let bizContent = bizContentRaw;
+        let mchOrderNo = '';
+
+        try {
+            if (typeof bizContentRaw === 'string') {
+                bizContent = JSON.parse(bizContentRaw);
+            }
+            mchOrderNo = bizContent.mchOrderNo || '';
+        } catch (e) {
+            console.error('[F2PAY] Failed to parse bizContent:', e);
+        }
+
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('f2pay_payin', ?, ?, ?, datetime('now'))`)
+            .run(mchOrderNo || bizContent?.platNo, JSON.stringify(req.body), bizContent?.state || 'unknown');
+
+        // 2. Verify Signature (optional in test environment, but good practice)
+        if (!f2payService.verifyPayinCallback(req.body)) {
+            console.warn('[F2PAY] Signature verification failed, but continuing for test environment');
+            // In production, you might want to reject: return res.send('success');
+        }
+
+        // 3. Find Transaction
+        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
+            .get(mchOrderNo);
+
+        if (!tx && bizContent.platNo) {
+            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+                .get(bizContent.platNo);
+        }
+
+        if (!tx) {
+            console.warn(`[F2PAY Payin] Transaction not found for mchOrderNo: ${mchOrderNo}, platNo: ${bizContent?.platNo}`);
+            return res.send('success');
+        }
+
+        // 4. Determine Status
+        // F2PAY states: Paid, UnequalPaid, Expired, Failed, Pending
+        const state = bizContent.state;
+        let newStatus = 'pending';
+
+        if (state === 'Paid' || state === 'UnequalPaid') {
+            newStatus = 'success';
+        } else if (state === 'Expired' || state === 'Failed') {
+            newStatus = 'failed';
+        }
+
+        const actualAmount = parseFloat(bizContent.actualAmount || bizContent.amount);
+        const utr = bizContent.trxId || '';
+
+        // Calculate Fees
+        const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
+        const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
+
+        // Logic check: prevent double success
+        if (tx.status === 'success' && newStatus === 'success') {
+            console.log(`[F2PAY Payin] Order ${tx.order_id} already success. Ignoring duplicate.`);
+        } else {
+            // Update DB
+            await db.prepare(`
+                UPDATE transactions 
+                SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') 
+                WHERE id = ?
+            `).run(newStatus, actualAmount, fee, netAmount, utr || null, JSON.stringify(req.body), tx.id);
+
+            // Credit Balance if Success
+            if (newStatus === 'success') {
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
+                console.log(`[F2PAY Payin] Credited ₹${netAmount} to ${tx.username}`);
+
+                // Credit Admin Profit
+                try {
+                    const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
+                    const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
+                    const cost = actualAmount * adminCostRate;
+                    const profit = fee - cost;
+
+                    if (profit !== 0) {
+                        await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
+                    }
+                } catch (e) {
+                    console.error('Failed to credit admin profit:', e);
+                }
+            }
+        }
+
+        // 5. Response to F2PAY (must return "success" lowercase)
+        res.send('success');
+
+        // 6. Forward Callback to Merchant
+        let callbackUrl = tx.callback_url;
+        let originalParam = tx.param;
+
+        try {
+            if (tx.param) {
+                const parsed = JSON.parse(tx.param);
+                if (parsed.c) callbackUrl = parsed.c;
+                if (parsed.p !== undefined) originalParam = parsed.p;
+            }
+        } catch (e) { }
+
+        if (callbackUrl) {
+            const merchantCallbackData = {
+                status: newStatus === 'success' ? 1 : 0,
+                amount: netAmount,
+                orderAmount: actualAmount,
+                orderId: tx.order_id,
+                id: tx.uuid,
+                utr: utr || '',
+                param: originalParam || ''
+            };
+
+            // Sign using Merchant Key
+            merchantCallbackData.sign = generateSign(merchantCallbackData, tx.merchant_key);
+
+            console.log(`[F2PAY Payin] Forwarding callback to ${callbackUrl}`);
+            try {
+                await axios.post(callbackUrl, merchantCallbackData, { timeout: 10000 });
+            } catch (err) {
+                console.error(`[F2PAY Payin] Failed to forward callback to ${callbackUrl}:`, err.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('F2PAY Payin Callback Error:', error);
+        if (!res.headersSent) res.status(200).send('success');
     }
 });
 

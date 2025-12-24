@@ -1261,6 +1261,11 @@ async function loadUsersData(page = 1) {
                         </span>
                     </td>
                     <td>
+                        <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : 'success'}">
+                            ${u.channel === 'f2pay' ? 'F2PAY' : 'Payable'}
+                        </span>
+                    </td>
+                    <td>
                         <small>In: ${u.payinRate || 5}%</small><br>
                         <small>Out: ${u.payoutRate || 3}% + 6 INR</small>
                     </td>
@@ -1281,7 +1286,7 @@ async function loadUsersData(page = 1) {
 
             } else {
                 container.innerHTML = `
-                <tr><td colspan="9" class="text-muted" style="text-align:center;">${t('error_no_payouts')}</td></tr>
+                <tr><td colspan="10" class="text-muted" style="text-align:center;">${t('error_no_payouts')}</td></tr>
             `;
                 updatePaginationControls('usersPagination', { page: 1, pages: 1 }, 'loadUsersData');
             }
@@ -1519,11 +1524,10 @@ function showCreateUserModal() {
             <div class="form-group">
                 <label data-i18n="label_channel">Channel</label>
                 <select id="newUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
-                    <option value="payable" selected>Payable (5.0% / 3.0% + 6 INR)</option>
-                    <option value="channel_a" disabled>Channel A (Coming Soon - Unavailable)</option>
-                    <option value="channel_b" disabled>Channel B (Coming Soon - Unavailable)</option>
+                    <option value="silkpay" selected>Payable (5.0% / 3.0% + 6 INR)</option>
+                    <option value="f2pay">F2PAY (5.0% / 3.0% + 6 INR)</option>
                 </select>
-                <small class="text-muted">Currently only Payable channel is available.</small>
+                <small class="text-muted">Select the payment channel for this merchant.</small>
             </div>
             <div class="form-group">
                 <label data-i18n="label_callback_url">${t('label_callback_url')} (optional)</label>
@@ -1560,6 +1564,7 @@ async function createUser() {
     const payinRate = document.getElementById('newUserPayinRate').value;
     const payoutRate = document.getElementById('newUserPayoutRate').value;
     const usdtRate = document.getElementById('newUserUsdtRate').value;
+    const channel = document.getElementById('newUserChannel').value;
 
     if (!name || !username || !password) {
         showToast(t('toast_fill_fields'), 'error');
@@ -1571,7 +1576,7 @@ async function createUser() {
 
     try {
         const data = await API.post('/admin/users', {
-            name, username, password, callbackUrl,
+            name, username, password, callbackUrl, channel,
             payinRate: parseFloat(payinRate),
             payoutRate: parseFloat(payoutRate),
             usdtRate: parseFloat(usdtRate)
@@ -1594,7 +1599,7 @@ async function createUser() {
 }
 
 function updateRatesByChannel(channel) {
-    if (channel === 'payable') {
+    if (channel === 'silkpay' || channel === 'f2pay') {
         document.getElementById('newUserPayinRate').value = 5.0;
         document.getElementById('newUserPayoutRate').value = 3.0;
         document.getElementById('newUserUsdtRate').value = 100.0;

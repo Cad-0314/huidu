@@ -346,6 +346,16 @@ async function initializeSchema() {
         await db.exec('ALTER TABLE payouts ADD COLUMN param TEXT');
         console.log('Applied migration: Added param to payouts');
     } catch (e) { }
+
+    try {
+        await db.exec("ALTER TABLE users ADD COLUMN channel TEXT DEFAULT 'silkpay'");
+        console.log('Applied migration: Added channel to users');
+    } catch (e) { }
+
+    try {
+        await db.exec("ALTER TABLE transactions ADD COLUMN channel TEXT DEFAULT 'silkpay'");
+        console.log('Applied migration: Added channel to transactions');
+    } catch (e) { }
 }
 
 module.exports = { initDatabase, getDb };

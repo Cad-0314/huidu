@@ -24,7 +24,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
 
         // Base Query
         let query = `
-            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, created_at
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, channel, created_at
             FROM users
             WHERE role != 'admin'
         `;
@@ -82,6 +82,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
                     payoutRate: u.payout_rate,
                     usdtRate: u.usdt_rate,
                     twoFactorEnabled: !!u.two_factor_enabled,
+                    channel: u.channel || 'silkpay',
                     createdAt: u.created_at
                 })),
                 total,
@@ -102,7 +103,7 @@ router.get('/users', authenticate, requireAdmin, async (req, res) => {
  */
 router.post('/users', authenticate, requireAdmin, async (req, res) => {
     try {
-        const { username, password, name, callbackUrl, payinRate, payoutRate, usdtRate } = req.body;
+        const { username, password, name, callbackUrl, payinRate, payoutRate, usdtRate, channel } = req.body;
         const db = getDb();
 
         if (!username || !password || !name) {
@@ -126,15 +127,19 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, 10);
         const merchantKey = generateMerchantKey();
 
+        // Validate channel
+        const validChannels = ['silkpay', 'f2pay'];
+        const userChannel = validChannels.includes(channel) ? channel : 'silkpay';
+
         const result = await db.prepare(`
-            INSERT INTO users(uuid, username, password, name, role, merchant_key, callback_url, payin_rate, payout_rate, usdt_rate)
-            VALUES(?, ?, ?, ?, 'merchant', ?, ?, ?, ?, ?)
-                `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null, pRate, poRate, uRate);
+            INSERT INTO users(uuid, username, password, name, role, merchant_key, callback_url, payin_rate, payout_rate, usdt_rate, channel)
+            VALUES(?, ?, ?, ?, 'merchant', ?, ?, ?, ?, ?, ?)
+                `).run(uuid, username, hashedPassword, name, merchantKey, callbackUrl || null, pRate, poRate, uRate, userChannel);
 
         res.json({
             code: 1,
             msg: 'Merchant created successfully',
-            data: { id: result.lastInsertRowid.toString(), username, name, password, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate, usdtRate: uRate }
+            data: { id: result.lastInsertRowid.toString(), username, name, password, merchantKey, callbackUrl, payinRate: pRate, payoutRate: poRate, usdtRate: uRate, channel: userChannel }
         });
     } catch (error) {
         console.error('Create user error:', error);
@@ -151,7 +156,7 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
         const { id } = req.params;
         const db = getDb();
         const user = await db.prepare(`
-            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, created_at
+            SELECT id, uuid, username, name, role, balance, status, callback_url, merchant_key, payin_rate, payout_rate, usdt_rate, two_factor_enabled, channel, created_at
             FROM users
             WHERE uuid = ? OR id = ?
         `).get(id, id);
@@ -176,6 +181,7 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
                 payoutRate: user.payout_rate,
                 usdtRate: user.usdt_rate,
                 twoFactorEnabled: !!user.two_factor_enabled,
+                channel: user.channel || 'silkpay',
                 createdAt: user.created_at
             }
         });
@@ -191,14 +197,26 @@ router.get('/users/:id', authenticate, requireAdmin, async (req, res) => {
 router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, status, callbackUrl, payinRate, payoutRate, usdtRate } = req.body;
+        const { name, status, callbackUrl, payinRate, payoutRate, usdtRate, channel } = req.body;
         const db = getDb();
 
-        await db.prepare(`
-            UPDATE users 
-            SET name = ?, status = ?, callback_url = ?, payin_rate = ?, payout_rate = ?, usdt_rate = ?, updated_at = datetime('now')
-            WHERE uuid = ?
-        `).run(name, status, callbackUrl, parseFloat(payinRate), parseFloat(payoutRate), parseFloat(usdtRate || 0), id);
+        // Validate channel if provided
+        const validChannels = ['silkpay', 'f2pay'];
+        const userChannel = channel && validChannels.includes(channel) ? channel : undefined;
+
+        if (userChannel) {
+            await db.prepare(`
+                UPDATE users 
+                SET name = ?, status = ?, callback_url = ?, payin_rate = ?, payout_rate = ?, usdt_rate = ?, channel = ?, updated_at = datetime('now')
+                WHERE uuid = ?
+            `).run(name, status, callbackUrl, parseFloat(payinRate), parseFloat(payoutRate), parseFloat(usdtRate || 0), userChannel, id);
+        } else {
+            await db.prepare(`
+                UPDATE users 
+                SET name = ?, status = ?, callback_url = ?, payin_rate = ?, payout_rate = ?, usdt_rate = ?, updated_at = datetime('now')
+                WHERE uuid = ?
+            `).run(name, status, callbackUrl, parseFloat(payinRate), parseFloat(payoutRate), parseFloat(usdtRate || 0), id);
+        }
 
         res.json({ code: 1, msg: 'User updated' });
     } catch (error) {

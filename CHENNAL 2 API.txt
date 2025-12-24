@@ -1,0 +1,2085 @@
+﻿# Interface Description
+
+
+# F2PAY API Documentation
+
+
+---
+
+
+## API Conventions
+
+
+1. **Content-Type**: All POST requests must use `application/json`.
+2. **Character Encoding**: UTF-8 encoding is mandatory.
+3. **Data Format**: Both request and response data must be in JSON format.
+4. **Signature Algorithm**: `OPENSSL_ALGO_SHA256`.
+5. **Amount Precision**: Amounts must be rounded to **two decimal places**.
+
+
+---
+
+
+## Important Notes
+
+
+**Please carefully read the following notes to avoid financial losses due to integration issues.**
+
+
+### 1. IP Configuration
+- Add your server IP address in the merchant backend under `Setting -> Configuration -> Api Key`.
+- Add our server IP address to your whitelist.
+
+
+### 2. Response Handling
+- All API responses include a `code` field. Any value other than `0000` indicates a failed request.
+- The failure reason and the message displayed to the user should be encapsulated based on the `status` enumeration.
+- **Do not directly display the `msg` field from the API response to the user** (it may contain sensitive information).
+
+
+### 3. Currency
+- The system automatically switches **currencies** based on the API used.
+
+
+### 4. Payin Callbacks(Very important)
+- **When the player’s order amount does not match the actual payment amount, the order state will be `UnequalPaid`. By default, we do not send callbacks in this case. If you need callbacks to be sent for `UnequalPaid` orders, please make sure to process the `actualAmount` field from the callback API, and contact our operations team to enable the callback for `UnequalPaid` status.**
+
+
+- **For payin callbacks, regardless of whether the state is `Paid` or `UnequalPaid`, the player's balance should be credited based on the `actualAmount` field.**
+
+
+
+
+### 5. Payin Request Frequency
+- For the same user and the same payin amount, avoid repeatedly calling the payin API within a short time frame.
+
+
+### 6. Payout Order Creation
+- When using the **payout** order creation API, always check the response status `code`.
+- If the `code` is not `0000`, consult our operations team to confirm the **channel status** before resubmitting.
+- If the request times out or encounters a network error, consult our operations team to confirm the **channel status** before resubmitting.
+
+
+### 7. Response Handling Logic
+- Check the protocol field response.
+- Check the business response.
+- Check the transaction status.
+
+
+### 8. How to test callbacks
+- Please send the order number to the group and @ our technicians, we will manually call back for testing
+
+
+### 9. Risk Control
+- **Customer Name + Phone Number + Email + Amount** is used to determine different customer requests.
+- Avoid hardcoding the name, phone number, and email, as this may lead to **risk control misjudgments**.
+
+
+---
+
+
+## Support
+
+
+Integration can be completed independently by carefully reading this documentation. If you encounter issues during integration, please tag our technical staff in the Telegram group.
+
+
+### Required Information for Support
+To expedite issue resolution, provide the following details:
+
+
+#### General Issues
+- Request URL
+- Request Body
+- Response
+
+
+#### Signature Issues
+- Request URL
+- Request Body
+- Signature original string
+- Response
+
+
+Providing this information in a structured manner will help resolve integration issues more quickly.
+# Signature & Verification Protocol
+
+
+## Request Parameters
+| Parameter    | Field Name         | Definition          | Length | Required | Description                              |
+|:------------|:---------------------|:--------------------|:-------|:---------|:-----------------------------------------|
+| traceId     | Business Trace ID    | String              | 512    | Y        | Randomized alphanumeric string,Unique for each request          |
+| signType    | Signature Type       | String              | 512    | Y        | Supported: RSA                           |
+| merchantId  | Merchant ID          | String              | 32     | Y        |                                          |
+| sign        | Signature Result     | String              | 512    | Y        | Request signature                        |
+| bizContent  | Request Data         | String              | 512    | Y        | JSON string of request payload (see API docs) |
+
+
+### Notes
+1. All request structures follow this schema
+2. `bizContent` must be JSON string representation of API-specific objects
+
+
+---
+
+
+## Response Parameters
+| Parameter    | Field Name         | Definition          | Length | Required | Description                              |
+|:------------|:---------------------|:--------------------|:-------|:---------|:-----------------------------------------|
+| code        | Response Code        | String              | 16     | Y        | See response code list                   |
+| msg         | Response Message     | String              | 512    | N        | Diagnostic information                   |
+| sysTime     | System Timestamp     | String              | 24     | Y        | Format: `yyyyMMddHHmmssSSS`              |
+| sign        | Signature Result     | String              | 512    | Y        | Response signature                       |
+| bizContent  | Response Data        | JSON                |        | N        | JSON string of business data (see API docs) |
+
+
+### Notes
+3. All responses/callbacks follow this structure
+
+
+---
+
+
+## Signature & Verification
+- **Signing**: Generate signature with merchant private key  
+  `sign = RSAUtils.createSign(bizContent, 'merchant_private_key')`
+  
+- **Verification**: Validate signature with platform public key  
+  `isValid = RSAUtils.verifySign(bizContent, 'platform_public_key')`
+
+
+---
+
+
+## Critical Rules
+1. Signature original string (`stringA`) uses raw parameter names/values **without URLEncode**
+2. Algorithm: `OPENSSL_ALGO_SHA256` (Sign with merchant private key, verify with platform public key)
+3. This implements RSA signature creation, **not** RSA encryption
+
+
+---
+## Signature Example
+### JAVA Implementation
+```java
+public class Test {
+    private final String platPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2YC5ccCiPGsAWpn4d1lCCl/sGzZkZ56zLJOFgKQmYagdZK6Oe3UErWc2C6pe71sIkd6i0tHnEeA0wch5wg0c4j7dYhZ0e/Pb4usMjr8oBVsSmpXH9Gf2/+YPoVHvyAdxnvL3n//MpPmSaG9qXE7/OjofIcxmK58mjrvyWcwIyqS6sXKA9O+8plK2nALJ+XXD1VX1bg2D0tNnym3yE7lEFUZ0ShDWsxBIR8nwtXhFNKRQBYUfPFa6nc7YiHu80TW9WnFEIx2b31XsV0jRkhPwcqxyW7h6yY2UnzNqEfTIUeZNDgnMotuL0EFFpIU2jikm1KGFeNG2b6dZlsgiHu6roQIDAQAB";
+    private final String merchantPrivateKey = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCLGvNP9Z8FhyRZRaklASJiwKW21fMXhhnuFeBZhbveWtmcSHpxaL2UJ6z57Id+1azCJKSOs9kQJOHEmQTi7hrEWNgNJrKwKudHL0pwTmC5lroK/tVHHcIWslaukkwSNW1ArBk7rBdoaiwnlMKB6HwyAfwh0Xm1a1Vomhw4/ww+GVu1V1g/gHq5Dep57PE5VkaNhX7f8gJE/CJ1PmKmfN0MWVVsu+13RgpzgcfHg/2LSmGsqB9fBK0SmbGHIFOcST4PXuNwFIGbd5LqSBaK2w9bTaVCalymeDbp4+kx8vsg3er+0IZ7hPNp9ItvY/uFKHBe433MZ0WjAVkXlmvuysGHAgMBAAECggEAdscUa3o3xuiWSQQKYeaODfShi3U0lSmUio9zef2PZVX96kyZAK2G8zLNqLonGE4rrbrMKG25MufLP6vJWFwnzvBtywz4FyULRuVCkpLaVJ43TZw7UPY//FFbYsTY39Nu7oIFKcbQVgASo9mKHJL/OVQojlfnrNlxnFe7MY/WTE7gVvC8Xm9CMEZPrPd5hJQLf9uaw+MJEgRo9lqQav5ZIg48XIKGlvLPcwZtQ2ZgqWtgcG8DwAV9j69nRikf6uNCes6PgsJlMF4GBZe3uv1mU5j0eB+lSC6O5ldwmAlc8OfWyx7FzQaxvJcyygCVPqtm9YdYs1Kj+EqqZ6Wg3Z2uAQKBgQDsdg8wYUl2uqsNa+SfQ/Pku5ZfdvOEou8HXx42wdTLNt6dsmHQnwmc6+LYuA5oUBmVSupTaCWoWBHC+Ece+yIF3If+4g18x63H0XZzQyGLYcGT6uAcFobr7jtrXJlj4VkvzTz+WeGxxlMu1o9hSqD23wQG1uuTgmjkaP6OePkb4QKBgQCWmX1tOWZCnUECzvqQ/2L3ofVxK+LfnkGu0XPW0KSvDiKic8KoYmwMckHwJmOrC1bQkrYg8sQ9d8EaHsjtr2AH72wEbNx+Irbql0YagK8BiVefhMF9Y2K/483cznXuYGXYIPjdwJjU7etKqKANQhoYZuJv64Nrz1rsRbRV7LHKZwKBgFr3YAiApL5kOYHETANpJN6Nu9+l5zDTbZksYnc2QiKbTTDlevPC+vO/W1l8FS7UAcOJOnQz0KjemJak5NdqTUBsAnVviTjDqHsCfcsBvFnelZXN+cFUeTsyPvGigfAGtUTKc/h1o3m8jiuqpyYKi7ntOaNX8vCgbrHQIn201ECBAoGAOy27jOUmWvziZBEjg0DoCfk5sqwVLdxJYUHrLDm2zRdX4tBsaLCsVsO7R3w+ZCNDjRhpu07KcIETf4kjWcs1iEi8AI0qo+JOUKb7JET3ADqRFR0cz4HzdwY0ihUTYIW+34wtXy5koB+R+zeCFVOpX3dmeaZpcT79MqU9dRpazvcCgYBYszR3YNDqYsEquhsFyI+xiwek/Tk22M8ewUG7ddTS2xeAuhwvtqRgUETmu8cWjObIdrnTsFLFinTvpkmRl4XDaNFhGXIvUckA1EwuOj26I+9fG0BQKT1VQnZBsWGTpKTKdQyJjCI6C0HrWF1vj0DRhOk450ylbuBhBOpA7L5a2A==";
+    
+    @Test
+    public void request() {
+        HashMap<String, Object> data = new HashMap<>();
+        HashMap<String, Object> bizContent = new HashMap<>();
+
+
+        bizContent.put("amount","100.00");
+        bizContent.put("body","123");
+        bizContent.put("customerEmail","123456789@gmail.com");
+        bizContent.put("customerIpAddress","127.0.0.1");
+        bizContent.put("customerName","test");
+        bizContent.put("customerPhone","123456789");
+        bizContent.put("mchOrderNo", "IN2025022600001");
+        bizContent.put("methodCode","UpiMixed");
+        bizContent.put("notifyUrl", "https://www.google.com");
+        bizContent.put("returnUrl","https://www.google.com");
+        bizContent.put("subject","test");
+
+
+        data.put("traceId", "IN2025022600001");
+        data.put("merchantId", "test");
+        data.put("bizContent", JSON.toJSONString(bizContent));
+        data.put("signType","RSA");
+
+
+        String jsonString = JSON.toJSONString(bizContent);
+        String sign = encrypt(jsonString, merchantPrivateKey);
+        data.put("sign", sign);
+
+
+        String request = JSON.toJSONString(data);
+        System.out.println(request);
+    }
+
+
+    @Test
+    public void callBack() {
+        String callStr = "{"bizContent":"{\"actualAmount\":\"100.00\",\"amount\":\"100.00\",\"body\":\"123\",\"currency\":\"INR\",\"customerEmail\":\"123@gmail.com\",\"customerName\":\"test\",\"customerPhone\":\"123456789\",\"feeAmount\":\"10.00\",\"mchOrderNo\":\"IN2025022600004988\",\"methodCode\":\"UpiMixed\",\"notifyUrl\":\"www.google.com\",\"orderTime\":\"2025-02-26 13:49:49\",\"platNo\":\"A05491055810576\",\"returnUrl\":\"www.google.com\",\"state\":\"Paid\",\"subject\":\"123\"}","code":"0000","msg":"success","sign":"mfjyl+e87Wjgi3BZxlQB0G6BJcCo+n9s+68fjZs2j3orvBxy8P9hS8CxTQgKTchD3SRfC/gUUtZQ1wQnZ9KPSwv6Fd3aAlXpwN+IVOuElbHZaEcZjkGMuDExH0D1EN2WeVkQMvoEyK5MmQKlh6rSJ7UQoo8+frvV5AQWRHcxMcRWbt4gtpzPJh5w6reT0vW4vEvlRnwyGUzJ3wWYp+Aj0Vwh5CZNe09sybAm2DYrvr2jYKJwllqSqPk2Z3IQzMu1y9no6geLGCBCQdTwl66ZyHWEQbAhBvvyqUk5bydxxagKD5sD58gz5+aSQK06smdv5V7hVBGeiB9WkoKDW22OtQ==","sysTime":"20250306125817202"}";
+
+
+        JSONObject jsonObject = JSON.parseObject(callStr);
+        String bizContent = jsonObject.getString("bizContent");
+        String sign = jsonObject.getString("sign");
+        System.out.println(verify(bizContent, platPublicKey, sign));
+    }
+
+
+    public static String encrypt(String data, String privateKey) {
+        // Base64 --> Key
+        try {
+            byte[] bytes = Base64.getDecoder().decode(privateKeyBase64);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(bytes);
+            KeyFactory keyFactory;
+            keyFactory = KeyFactory.getInstance("RSA");
+            PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+            // Sign
+            Signature signature = Signature.getInstance("SHA256WithRSA");
+            signature.initSign(privateKey);
+            signature.update(data.getBytes("UTF-8"));
+            return Base64.getEncoder().encodeToString(signature.sign());
+        } catch (Exception e) {
+            log.error("Exception", e);
+            return null;
+        }
+    }
+
+
+    public static boolean verify(String data, String publicKey, String sign) {
+        // Base64 --> Key
+        try {
+            byte[] bytes = Base64.getDecoder().decode(publicKeyBase64);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(bytes);
+            KeyFactory keyFactory;
+            keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey publicKey = keyFactory.generatePublic(keySpec);
+            // verify
+            Signature signature = Signature.getInstance("SHA256WithRSA");
+            signature.initVerify(publicKey);
+            signature.update(data.getBytes("UTF-8"));
+            return signature.verify(Base64.getDecoder().decode(sign));
+        } catch (Exception e) {
+            log.error("Exception", e);
+            return false;
+        }
+    }
+}
+```
+---
+### PHP Implementation
+```PHP
+<?php
+
+
+class Test {
+    private $platPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2YC5ccCiPGsAWpn4d1lCCl/sGzZkZ56zLJOFgKQmYagdZK6Oe3UErWc2C6pe71sIkd6i0tHnEeA0wch5wg0c4j7dYhZ0e/Pb4usMjr8oBVsSmpXH9Gf2/+YPoVHvyAdxnvL3n//MpPmSaG9qXE7/OjofIcxmK58mjrvyWcwIyqS6sXKA9O+8plK2nALJ+XXD1VX1bg2D0tNnym3yE7lEFUZ0ShDWsxBIR8nwtXhFNKRQBYUfPFa6nc7YiHu80TW9WnFEIx2b31XsV0jRkhPwcqxyW7h6yY2UnzNqEfTIUeZNDgnMotuL0EFFpIU2jikm1KGFeNG2b6dZlsgiHu6roQIDAQAB";
+    private $merchantPrivateKey = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCLGvNP9Z8FhyRZRaklASJiwKW21fMXhhnuFeBZhbveWtmcSHpxaL2UJ6z57Id+1azCJKSOs9kQJOHEmQTi7hrEWNgNJrKwKudHL0pwTmC5lroK/tVHHcIWslaukkwSNW1ArBk7rBdoaiwnlMKB6HwyAfwh0Xm1a1Vomhw4/ww+GVu1V1g/gHq5Dep57PE5VkaNhX7f8gJE/CJ1PmKmfN0MWVVsu+13RgpzgcfHg/2LSmGsqB9fBK0SmbGHIFOcST4PXuNwFIGbd5LqSBaK2w9bTaVCalymeDbp4+kx8vsg3er+0IZ7hPNp9ItvY/uFKHBe433MZ0WjAVkXlmvuysGHAgMBAAECggEAdscUa3o3xuiWSQQKYeaODfShi3U0lSmUio9zef2PZVX96kyZAK2G8zLNqLonGE4rrbrMKG25MufLP6vJWFwnzvBtywz4FyULRuVCkpLaVJ43TZw7UPY//FFbYsTY39Nu7oIFKcbQVgASo9mKHJL/OVQojlfnrNlxnFe7MY/WTE7gVvC8Xm9CMEZPrPd5hJQLf9uaw+MJEgRo9lqQav5ZIg48XIKGlvLPcwZtQ2ZgqWtgcG8DwAV9j69nRikf6uNCes6PgsJlMF4GBZe3uv1mU5j0eB+lSC6O5ldwmAlc8OfWyx7FzQaxvJcyygCVPqtm9YdYs1Kj+EqqZ6Wg3Z2uAQKBgQDsdg8wYUl2uqsNa+SfQ/Pku5ZfdvOEou8HXx42wdTLNt6dsmHQnwmc6+LYuA5oUBmVSupTaCWoWBHC+Ece+yIF3If+4g18x63H0XZzQyGLYcGT6uAcFobr7jtrXJlj4VkvzTz+WeGxxlMu1o9hSqD23wQG1uuTgmjkaP6OePkb4QKBgQCWmX1tOWZCnUECzvqQ/2L3ofVxK+LfnkGu0XPW0KSvDiKic8KoYmwMckHwJmOrC1bQkrYg8sQ9d8EaHsjtr2AH72wEbNx+Irbql0YagK8BiVefhMF9Y2K/483cznXuYGXYIPjdwJjU7etKqKANQhoYZuJv64Nrz1rsRbRV7LHKZwKBgFr3YAiApL5kOYHETANpJN6Nu9+l5zDTbZksYnc2QiKbTTDlevPC+vO/W1l8FS7UAcOJOnQz0KjemJak5NdqTUBsAnVviTjDqHsCfcsBvFnelZXN+cFUeTsyPvGigfAGtUTKc/h1o3m8jiuqpyYKi7ntOaNX8vCgbrHQIn201ECBAoGAOy27jOUmWvziZBEjg0DoCfk5sqwVLdxJYUHrLDm2zRdX4tBsaLCsVsO7R3w+ZCNDjRhpu07KcIETf4kjWcs1iEi8AI0qo+JOUKb7JET3ADqRFR0cz4HzdwY0ihUTYIW+34wtXy5koB+R+zeCFVOpX3dmeaZpcT79MqU9dRpazvcCgYBYszR3YNDqYsEquhsFyI+xiwek/Tk22M8ewUG7ddTS2xeAuhwvtqRgUETmu8cWjObIdrnTsFLFinTvpkmRl4XDaNFhGXIvUckA1EwuOj26I+9fG0BQKT1VQnZBsWGTpKTKdQyJjCI6C0HrWF1vj0DRhOk450ylbuBhBOpA7L5a2A==";
+
+
+    public function request() {
+        $bizContent = [
+            "amount" => "100.00",
+            "body" => "123",
+            "customerEmail" => "123456789@gmail.com",
+            "customerIpAddress" => "127.0.0.1",
+            "customerName" => "test",
+            "customerPhone" => "123456789",
+            "mchOrderNo" => "IN2025022600001",
+            "methodCode" => "UpiMixed",
+            "notifyUrl" => "https://www.google.com",
+            "returnUrl" => "https://www.google.com",
+            "subject" => "123"
+        ];
+
+
+        $data = [
+            "traceId" => "IN2025022600001",
+            "merchantId" => "test",
+            "bizContent" => json_encode($bizContent, JSON_UNESCAPED_SLASHES),
+            "signType" => "RSA"
+        ];
+
+
+        $jsonString = json_encode($bizContent, JSON_UNESCAPED_SLASHES);
+        $sign = $this->encrypt($jsonString, $this->merchantPrivateKey);
+        $data["sign"] = $sign;
+
+
+        echo json_encode($data, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+    }
+
+
+    public function callBack() {
+        $callStr = '{"bizContent":"{\"actualAmount\":\"100.00\",\"amount\":\"100.00\",\"body\":\"123\",\"currency\":\"INR\",\"customerEmail\":\"123@gmail.com\",\"customerName\":\"test\",\"customerPhone\":\"123456789\",\"feeAmount\":\"10.00\",\"mchOrderNo\":\"IN2025022600004988\",\"methodCode\":\"UpiMixed\",\"notifyUrl\":\"www.google.com\",\"orderTime\":\"2025-02-26 13:49:49\",\"platNo\":\"A05491055810576\",\"returnUrl\":\"www.google.com\",\"state\":\"Paid\",\"subject\":\"123\"}","code":"0000","msg":"success","sign":"mfjyl+e87Wjgi3BZxlQB0G6BJcCo+n9s+68fjZs2j3orvBxy8P9hS8CxTQgKTchD3SRfC/gUUtZQ1wQnZ9KPSwv6Fd3aAlXpwN+IVOuElbHZaEcZjkGMuDExH0D1EN2WeVkQMvoEyK5MmQKlh6rSJ7UQoo8+frvV5AQWRHcxMcRWbt4gtpzPJh5w6reT0vW4vEvlRnwyGUzJ3wWYp+Aj0Vwh5CZNe09sybAm2DYrvr2jYKJwllqSqPk2Z3IQzMu1y9no6geLGCBCQdTwl66ZyHWEQbAhBvvyqUk5bydxxagKD5sD58gz5+aSQK06smdv5V7hVBGeiB9WkoKDW22OtQ==","sysTime":"20250306125817202"}';
+
+
+        $jsonObject = json_decode($callStr, true);
+        $bizContent = $jsonObject["bizContent"];
+        $sign = $jsonObject["sign"];
+
+
+        echo $this->verify($bizContent, $this->platPublicKey, $sign) ? "Valid Signature" : "Invalid Signature";
+    }
+
+
+    private function encrypt($data, $privateKey) {
+        $privateKeyResource = openssl_pkey_get_private($privateKey);
+        if (!$privateKeyResource) {
+            error_log("Invalid private key.");
+            return null;
+        }
+        
+        openssl_sign($data, $signature, $privateKeyResource, OPENSSL_ALGO_SHA256);
+        return base64_encode($signature);
+    }
+
+
+    private function verify($data, $publicKey, $sign) {
+        $publicKeyFormatted = "-----BEGIN PUBLIC KEY-----\n" . wordwrap($publicKey, 64, "\n", true) . "\n-----END PUBLIC KEY-----";
+        $publicKeyResource = openssl_pkey_get_public($publicKeyFormatted);
+
+
+        if (!$publicKeyResource) {
+            error_log("Invalid public key.");
+            return false;
+        }
+
+
+        $decodedSign = base64_decode($sign);
+        return openssl_verify($data, $decodedSign, $publicKeyResource, OPENSSL_ALGO_SHA256) === 1;
+    }
+}
+
+
+$test = new Test();
+$test->request();
+$test->callBack();
+
+
+?>
+
+
+```
+# Signature & Verification Protocol
+
+
+## Request Parameters
+| Parameter    | Field Name         | Definition          | Length | Required | Description                              |
+|:------------|:---------------------|:--------------------|:-------|:---------|:-----------------------------------------|
+| traceId     | Business Trace ID    | String              | 512    | Y        | Randomized alphanumeric string,Unique for each request          |
+| signType    | Signature Type       | String              | 512    | Y        | Supported: RSA                           |
+| merchantId  | Merchant ID          | String              | 32     | Y        |                                          |
+| sign        | Signature Result     | String              | 512    | Y        | Request signature                        |
+| bizContent  | Request Data         | String              | 512    | Y        | JSON string of request payload (see API docs) |
+
+
+### Notes
+1. All request structures follow this schema
+2. `bizContent` must be JSON string representation of API-specific objects
+
+
+---
+
+
+## Response Parameters
+| Parameter    | Field Name         | Definition          | Length | Required | Description                              |
+|:------------|:---------------------|:--------------------|:-------|:---------|:-----------------------------------------|
+| code        | Response Code        | String              | 16     | Y        | See response code list                   |
+| msg         | Response Message     | String              | 512    | N        | Diagnostic information                   |
+| sysTime     | System Timestamp     | String              | 24     | Y        | Format: `yyyyMMddHHmmssSSS`              |
+| sign        | Signature Result     | String              | 512    | Y        | Response signature                       |
+| bizContent  | Response Data        | JSON                |        | N        | JSON string of business data (see API docs) |
+
+
+### Notes
+3. All responses/callbacks follow this structure
+
+
+---
+
+
+## Signature & Verification
+- **Signing**: Generate signature with merchant private key  
+  `sign = RSAUtils.createSign(bizContent, 'merchant_private_key')`
+  
+- **Verification**: Validate signature with platform public key  
+  `isValid = RSAUtils.verifySign(bizContent, 'platform_public_key')`
+
+
+---
+
+
+## Critical Rules
+1. Signature original string (`stringA`) uses raw parameter names/values **without URLEncode**
+2. Algorithm: `OPENSSL_ALGO_SHA256` (Sign with merchant private key, verify with platform public key)
+3. This implements RSA signature creation, **not** RSA encryption
+
+
+---
+## Signature Example
+### JAVA Implementation
+```java
+public class Test {
+    private final String platPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2YC5ccCiPGsAWpn4d1lCCl/sGzZkZ56zLJOFgKQmYagdZK6Oe3UErWc2C6pe71sIkd6i0tHnEeA0wch5wg0c4j7dYhZ0e/Pb4usMjr8oBVsSmpXH9Gf2/+YPoVHvyAdxnvL3n//MpPmSaG9qXE7/OjofIcxmK58mjrvyWcwIyqS6sXKA9O+8plK2nALJ+XXD1VX1bg2D0tNnym3yE7lEFUZ0ShDWsxBIR8nwtXhFNKRQBYUfPFa6nc7YiHu80TW9WnFEIx2b31XsV0jRkhPwcqxyW7h6yY2UnzNqEfTIUeZNDgnMotuL0EFFpIU2jikm1KGFeNG2b6dZlsgiHu6roQIDAQAB";
+    private final String merchantPrivateKey = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCLGvNP9Z8FhyRZRaklASJiwKW21fMXhhnuFeBZhbveWtmcSHpxaL2UJ6z57Id+1azCJKSOs9kQJOHEmQTi7hrEWNgNJrKwKudHL0pwTmC5lroK/tVHHcIWslaukkwSNW1ArBk7rBdoaiwnlMKB6HwyAfwh0Xm1a1Vomhw4/ww+GVu1V1g/gHq5Dep57PE5VkaNhX7f8gJE/CJ1PmKmfN0MWVVsu+13RgpzgcfHg/2LSmGsqB9fBK0SmbGHIFOcST4PXuNwFIGbd5LqSBaK2w9bTaVCalymeDbp4+kx8vsg3er+0IZ7hPNp9ItvY/uFKHBe433MZ0WjAVkXlmvuysGHAgMBAAECggEAdscUa3o3xuiWSQQKYeaODfShi3U0lSmUio9zef2PZVX96kyZAK2G8zLNqLonGE4rrbrMKG25MufLP6vJWFwnzvBtywz4FyULRuVCkpLaVJ43TZw7UPY//FFbYsTY39Nu7oIFKcbQVgASo9mKHJL/OVQojlfnrNlxnFe7MY/WTE7gVvC8Xm9CMEZPrPd5hJQLf9uaw+MJEgRo9lqQav5ZIg48XIKGlvLPcwZtQ2ZgqWtgcG8DwAV9j69nRikf6uNCes6PgsJlMF4GBZe3uv1mU5j0eB+lSC6O5ldwmAlc8OfWyx7FzQaxvJcyygCVPqtm9YdYs1Kj+EqqZ6Wg3Z2uAQKBgQDsdg8wYUl2uqsNa+SfQ/Pku5ZfdvOEou8HXx42wdTLNt6dsmHQnwmc6+LYuA5oUBmVSupTaCWoWBHC+Ece+yIF3If+4g18x63H0XZzQyGLYcGT6uAcFobr7jtrXJlj4VkvzTz+WeGxxlMu1o9hSqD23wQG1uuTgmjkaP6OePkb4QKBgQCWmX1tOWZCnUECzvqQ/2L3ofVxK+LfnkGu0XPW0KSvDiKic8KoYmwMckHwJmOrC1bQkrYg8sQ9d8EaHsjtr2AH72wEbNx+Irbql0YagK8BiVefhMF9Y2K/483cznXuYGXYIPjdwJjU7etKqKANQhoYZuJv64Nrz1rsRbRV7LHKZwKBgFr3YAiApL5kOYHETANpJN6Nu9+l5zDTbZksYnc2QiKbTTDlevPC+vO/W1l8FS7UAcOJOnQz0KjemJak5NdqTUBsAnVviTjDqHsCfcsBvFnelZXN+cFUeTsyPvGigfAGtUTKc/h1o3m8jiuqpyYKi7ntOaNX8vCgbrHQIn201ECBAoGAOy27jOUmWvziZBEjg0DoCfk5sqwVLdxJYUHrLDm2zRdX4tBsaLCsVsO7R3w+ZCNDjRhpu07KcIETf4kjWcs1iEi8AI0qo+JOUKb7JET3ADqRFR0cz4HzdwY0ihUTYIW+34wtXy5koB+R+zeCFVOpX3dmeaZpcT79MqU9dRpazvcCgYBYszR3YNDqYsEquhsFyI+xiwek/Tk22M8ewUG7ddTS2xeAuhwvtqRgUETmu8cWjObIdrnTsFLFinTvpkmRl4XDaNFhGXIvUckA1EwuOj26I+9fG0BQKT1VQnZBsWGTpKTKdQyJjCI6C0HrWF1vj0DRhOk450ylbuBhBOpA7L5a2A==";
+    
+    @Test
+    public void request() {
+        HashMap<String, Object> data = new HashMap<>();
+        HashMap<String, Object> bizContent = new HashMap<>();
+
+
+        bizContent.put("amount","100.00");
+        bizContent.put("body","123");
+        bizContent.put("customerEmail","123456789@gmail.com");
+        bizContent.put("customerIpAddress","127.0.0.1");
+        bizContent.put("customerName","test");
+        bizContent.put("customerPhone","123456789");
+        bizContent.put("mchOrderNo", "IN2025022600001");
+        bizContent.put("methodCode","UpiMixed");
+        bizContent.put("notifyUrl", "https://www.google.com");
+        bizContent.put("returnUrl","https://www.google.com");
+        bizContent.put("subject","test");
+
+
+        data.put("traceId", "IN2025022600001");
+        data.put("merchantId", "test");
+        data.put("bizContent", JSON.toJSONString(bizContent));
+        data.put("signType","RSA");
+
+
+        String jsonString = JSON.toJSONString(bizContent);
+        String sign = encrypt(jsonString, merchantPrivateKey);
+        data.put("sign", sign);
+
+
+        String request = JSON.toJSONString(data);
+        System.out.println(request);
+    }
+
+
+    @Test
+    public void callBack() {
+        String callStr = "{"bizContent":"{\"actualAmount\":\"100.00\",\"amount\":\"100.00\",\"body\":\"123\",\"currency\":\"INR\",\"customerEmail\":\"123@gmail.com\",\"customerName\":\"test\",\"customerPhone\":\"123456789\",\"feeAmount\":\"10.00\",\"mchOrderNo\":\"IN2025022600004988\",\"methodCode\":\"UpiMixed\",\"notifyUrl\":\"www.google.com\",\"orderTime\":\"2025-02-26 13:49:49\",\"platNo\":\"A05491055810576\",\"returnUrl\":\"www.google.com\",\"state\":\"Paid\",\"subject\":\"123\"}","code":"0000","msg":"success","sign":"mfjyl+e87Wjgi3BZxlQB0G6BJcCo+n9s+68fjZs2j3orvBxy8P9hS8CxTQgKTchD3SRfC/gUUtZQ1wQnZ9KPSwv6Fd3aAlXpwN+IVOuElbHZaEcZjkGMuDExH0D1EN2WeVkQMvoEyK5MmQKlh6rSJ7UQoo8+frvV5AQWRHcxMcRWbt4gtpzPJh5w6reT0vW4vEvlRnwyGUzJ3wWYp+Aj0Vwh5CZNe09sybAm2DYrvr2jYKJwllqSqPk2Z3IQzMu1y9no6geLGCBCQdTwl66ZyHWEQbAhBvvyqUk5bydxxagKD5sD58gz5+aSQK06smdv5V7hVBGeiB9WkoKDW22OtQ==","sysTime":"20250306125817202"}";
+
+
+        JSONObject jsonObject = JSON.parseObject(callStr);
+        String bizContent = jsonObject.getString("bizContent");
+        String sign = jsonObject.getString("sign");
+        System.out.println(verify(bizContent, platPublicKey, sign));
+    }
+
+
+    public static String encrypt(String data, String privateKey) {
+        // Base64 --> Key
+        try {
+            byte[] bytes = Base64.getDecoder().decode(privateKeyBase64);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(bytes);
+            KeyFactory keyFactory;
+            keyFactory = KeyFactory.getInstance("RSA");
+            PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+            // Sign
+            Signature signature = Signature.getInstance("SHA256WithRSA");
+            signature.initSign(privateKey);
+            signature.update(data.getBytes("UTF-8"));
+            return Base64.getEncoder().encodeToString(signature.sign());
+        } catch (Exception e) {
+            log.error("Exception", e);
+            return null;
+        }
+    }
+
+
+    public static boolean verify(String data, String publicKey, String sign) {
+        // Base64 --> Key
+        try {
+            byte[] bytes = Base64.getDecoder().decode(publicKeyBase64);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(bytes);
+            KeyFactory keyFactory;
+            keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey publicKey = keyFactory.generatePublic(keySpec);
+            // verify
+            Signature signature = Signature.getInstance("SHA256WithRSA");
+            signature.initVerify(publicKey);
+            signature.update(data.getBytes("UTF-8"));
+            return signature.verify(Base64.getDecoder().decode(sign));
+        } catch (Exception e) {
+            log.error("Exception", e);
+            return false;
+        }
+    }
+}
+```
+---
+### PHP Implementation
+```PHP
+<?php
+
+
+class Test {
+    private $platPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2YC5ccCiPGsAWpn4d1lCCl/sGzZkZ56zLJOFgKQmYagdZK6Oe3UErWc2C6pe71sIkd6i0tHnEeA0wch5wg0c4j7dYhZ0e/Pb4usMjr8oBVsSmpXH9Gf2/+YPoVHvyAdxnvL3n//MpPmSaG9qXE7/OjofIcxmK58mjrvyWcwIyqS6sXKA9O+8plK2nALJ+XXD1VX1bg2D0tNnym3yE7lEFUZ0ShDWsxBIR8nwtXhFNKRQBYUfPFa6nc7YiHu80TW9WnFEIx2b31XsV0jRkhPwcqxyW7h6yY2UnzNqEfTIUeZNDgnMotuL0EFFpIU2jikm1KGFeNG2b6dZlsgiHu6roQIDAQAB";
+    private $merchantPrivateKey = "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCLGvNP9Z8FhyRZRaklASJiwKW21fMXhhnuFeBZhbveWtmcSHpxaL2UJ6z57Id+1azCJKSOs9kQJOHEmQTi7hrEWNgNJrKwKudHL0pwTmC5lroK/tVHHcIWslaukkwSNW1ArBk7rBdoaiwnlMKB6HwyAfwh0Xm1a1Vomhw4/ww+GVu1V1g/gHq5Dep57PE5VkaNhX7f8gJE/CJ1PmKmfN0MWVVsu+13RgpzgcfHg/2LSmGsqB9fBK0SmbGHIFOcST4PXuNwFIGbd5LqSBaK2w9bTaVCalymeDbp4+kx8vsg3er+0IZ7hPNp9ItvY/uFKHBe433MZ0WjAVkXlmvuysGHAgMBAAECggEAdscUa3o3xuiWSQQKYeaODfShi3U0lSmUio9zef2PZVX96kyZAK2G8zLNqLonGE4rrbrMKG25MufLP6vJWFwnzvBtywz4FyULRuVCkpLaVJ43TZw7UPY//FFbYsTY39Nu7oIFKcbQVgASo9mKHJL/OVQojlfnrNlxnFe7MY/WTE7gVvC8Xm9CMEZPrPd5hJQLf9uaw+MJEgRo9lqQav5ZIg48XIKGlvLPcwZtQ2ZgqWtgcG8DwAV9j69nRikf6uNCes6PgsJlMF4GBZe3uv1mU5j0eB+lSC6O5ldwmAlc8OfWyx7FzQaxvJcyygCVPqtm9YdYs1Kj+EqqZ6Wg3Z2uAQKBgQDsdg8wYUl2uqsNa+SfQ/Pku5ZfdvOEou8HXx42wdTLNt6dsmHQnwmc6+LYuA5oUBmVSupTaCWoWBHC+Ece+yIF3If+4g18x63H0XZzQyGLYcGT6uAcFobr7jtrXJlj4VkvzTz+WeGxxlMu1o9hSqD23wQG1uuTgmjkaP6OePkb4QKBgQCWmX1tOWZCnUECzvqQ/2L3ofVxK+LfnkGu0XPW0KSvDiKic8KoYmwMckHwJmOrC1bQkrYg8sQ9d8EaHsjtr2AH72wEbNx+Irbql0YagK8BiVefhMF9Y2K/483cznXuYGXYIPjdwJjU7etKqKANQhoYZuJv64Nrz1rsRbRV7LHKZwKBgFr3YAiApL5kOYHETANpJN6Nu9+l5zDTbZksYnc2QiKbTTDlevPC+vO/W1l8FS7UAcOJOnQz0KjemJak5NdqTUBsAnVviTjDqHsCfcsBvFnelZXN+cFUeTsyPvGigfAGtUTKc/h1o3m8jiuqpyYKi7ntOaNX8vCgbrHQIn201ECBAoGAOy27jOUmWvziZBEjg0DoCfk5sqwVLdxJYUHrLDm2zRdX4tBsaLCsVsO7R3w+ZCNDjRhpu07KcIETf4kjWcs1iEi8AI0qo+JOUKb7JET3ADqRFR0cz4HzdwY0ihUTYIW+34wtXy5koB+R+zeCFVOpX3dmeaZpcT79MqU9dRpazvcCgYBYszR3YNDqYsEquhsFyI+xiwek/Tk22M8ewUG7ddTS2xeAuhwvtqRgUETmu8cWjObIdrnTsFLFinTvpkmRl4XDaNFhGXIvUckA1EwuOj26I+9fG0BQKT1VQnZBsWGTpKTKdQyJjCI6C0HrWF1vj0DRhOk450ylbuBhBOpA7L5a2A==";
+
+
+    public function request() {
+        $bizContent = [
+            "amount" => "100.00",
+            "body" => "123",
+            "customerEmail" => "123456789@gmail.com",
+            "customerIpAddress" => "127.0.0.1",
+            "customerName" => "test",
+            "customerPhone" => "123456789",
+            "mchOrderNo" => "IN2025022600001",
+            "methodCode" => "UpiMixed",
+            "notifyUrl" => "https://www.google.com",
+            "returnUrl" => "https://www.google.com",
+            "subject" => "123"
+        ];
+
+
+        $data = [
+            "traceId" => "IN2025022600001",
+            "merchantId" => "test",
+            "bizContent" => json_encode($bizContent, JSON_UNESCAPED_SLASHES),
+            "signType" => "RSA"
+        ];
+
+
+        $jsonString = json_encode($bizContent, JSON_UNESCAPED_SLASHES);
+        $sign = $this->encrypt($jsonString, $this->merchantPrivateKey);
+        $data["sign"] = $sign;
+
+
+        echo json_encode($data, JSON_UNESCAPED_SLASHES) . PHP_EOL;
+    }
+
+
+    public function callBack() {
+        $callStr = '{"bizContent":"{\"actualAmount\":\"100.00\",\"amount\":\"100.00\",\"body\":\"123\",\"currency\":\"INR\",\"customerEmail\":\"123@gmail.com\",\"customerName\":\"test\",\"customerPhone\":\"123456789\",\"feeAmount\":\"10.00\",\"mchOrderNo\":\"IN2025022600004988\",\"methodCode\":\"UpiMixed\",\"notifyUrl\":\"www.google.com\",\"orderTime\":\"2025-02-26 13:49:49\",\"platNo\":\"A05491055810576\",\"returnUrl\":\"www.google.com\",\"state\":\"Paid\",\"subject\":\"123\"}","code":"0000","msg":"success","sign":"mfjyl+e87Wjgi3BZxlQB0G6BJcCo+n9s+68fjZs2j3orvBxy8P9hS8CxTQgKTchD3SRfC/gUUtZQ1wQnZ9KPSwv6Fd3aAlXpwN+IVOuElbHZaEcZjkGMuDExH0D1EN2WeVkQMvoEyK5MmQKlh6rSJ7UQoo8+frvV5AQWRHcxMcRWbt4gtpzPJh5w6reT0vW4vEvlRnwyGUzJ3wWYp+Aj0Vwh5CZNe09sybAm2DYrvr2jYKJwllqSqPk2Z3IQzMu1y9no6geLGCBCQdTwl66ZyHWEQbAhBvvyqUk5bydxxagKD5sD58gz5+aSQK06smdv5V7hVBGeiB9WkoKDW22OtQ==","sysTime":"20250306125817202"}';
+
+
+        $jsonObject = json_decode($callStr, true);
+        $bizContent = $jsonObject["bizContent"];
+        $sign = $jsonObject["sign"];
+
+
+        echo $this->verify($bizContent, $this->platPublicKey, $sign) ? "Valid Signature" : "Invalid Signature";
+    }
+
+
+    private function encrypt($data, $privateKey) {
+        $privateKeyResource = openssl_pkey_get_private($privateKey);
+        if (!$privateKeyResource) {
+            error_log("Invalid private key.");
+            return null;
+        }
+        
+        openssl_sign($data, $signature, $privateKeyResource, OPENSSL_ALGO_SHA256);
+        return base64_encode($signature);
+    }
+
+
+    private function verify($data, $publicKey, $sign) {
+        $publicKeyFormatted = "-----BEGIN PUBLIC KEY-----\n" . wordwrap($publicKey, 64, "\n", true) . "\n-----END PUBLIC KEY-----";
+        $publicKeyResource = openssl_pkey_get_public($publicKeyFormatted);
+
+
+        if (!$publicKeyResource) {
+            error_log("Invalid public key.");
+            return false;
+        }
+
+
+        $decodedSign = base64_decode($sign);
+        return openssl_verify($data, $decodedSign, $publicKeyResource, OPENSSL_ALGO_SHA256) === 1;
+    }
+}
+
+
+$test = new Test();
+$test->request();
+$test->callBack();
+
+
+?>
+
+
+```
+# Callback Mechanism
+
+
+## Production Environment
+- Contact staff via Telegram group for callback configuration
+
+
+---
+
+
+## Callback Protocol
+1. Transaction notifications will be sent to `notifyURL` provided during order creation
+2. **Mandatory Response**: Return lowercase `success` string to acknowledge receipt
+3. Retry Policy:
+ - 5 retry attempts at **5, 10, 15, 20, and 25-minute intervals**
+ - No further attempts after 5 failures
+4. Manual retrigger available via merchant console if needed
+
+
+---
+
+
+## Debugging Tips
+- Use `requestbin` to capture callbacks during testing
+- @mention technical staff in Telegram group if issues persist
+
+
+
+
+# Callback Mechanism
+
+
+## Production Environment
+- Contact staff via Telegram group for callback configuration
+
+
+---
+
+
+## Callback Protocol
+1. Transaction notifications will be sent to `notifyURL` provided during order creation
+2. **Mandatory Response**: Return lowercase `success` string to acknowledge receipt
+3. Retry Policy:
+ - 5 retry attempts at **5, 10, 15, 20, and 25-minute intervals**
+ - No further attempts after 5 failures
+4. Manual retrigger available via merchant console if needed
+
+
+---
+
+
+## Debugging Tips
+- Use `requestbin` to capture callbacks during testing
+- @mention technical staff in Telegram group if issues persist
+
+
+
+
+# Callback Mechanism
+
+
+## Production Environment
+- Contact staff via Telegram group for callback configuration
+
+
+---
+
+
+## Callback Protocol
+1. Transaction notifications will be sent to `notifyURL` provided during order creation
+2. **Mandatory Response**: Return lowercase `success` string to acknowledge receipt
+3. Retry Policy:
+ - 5 retry attempts at **5, 10, 15, 20, and 25-minute intervals**
+ - No further attempts after 5 failures
+4. Manual retrigger available via merchant console if needed
+
+
+---
+
+
+## Debugging Tips
+- Use `requestbin` to capture callbacks during testing
+- @mention technical staff in Telegram group if issues persist
+
+
+
+
+# Balance Query
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /balance:
+    post:
+      summary: Balance Query
+      deprecated: false
+      description: ''
+      tags:
+        - Query
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                merchantId:
+                  type: string
+                bizContent:
+                  $ref: '#/components/schemas/BalanceQueryReq'
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: test
+              merchantId: test
+              bizContent: '{"currency":"BDT"}'
+              sign: >-
+                MIWCEl773/7Mni9q4+hKLxIxo1Wvdbbrl2UWTKewtRv1R5SlTUFjGLdAmWqj99qKgjmpFsMxxfCj4zGXAEnDtFE/Oh79jpNGiBi6JoVJqpLp5cP/9MVE1ED4kw0VuHHsxhpYCLwwbxevwEUbwxF1KpSvVMahtrn1WzT0w5GHXXBludMOAAOIiM7mKbOEaRhcJr7TxOouwWMR6JXKVdvuGWA5m9o5CG6wJGybW0g2xjx5CRJQgCHeIfXh3Yy5GcwcoacgVPFjIuNki4RXwmW8jeJ5KdyqfvvZlTtQr7rT6KldVpijhJ/Q9DaGQXpppvaYVRc0j8/hltm16cujshBYvQ==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  sign:
+                    type: string
+                  bizContent:
+                    $ref: '#/components/schemas/BalanceQueryResp'
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212164101662'
+                sign: ''
+                bizContent: >-
+                  {"availiable":"88270.00","payinDisputed":"0.00","payinToBeSettled":"0.00","payoutPending":"1199.00","total":"89469.00"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Query
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-253159432-run
+components:
+  schemas:
+    BalanceQueryReq:
+      type: object
+      properties:
+        currency:
+          type: string
+      x-apifox-orders:
+        - currency
+      required:
+        - currency
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    BalanceQueryResp:
+      type: object
+      properties:
+        total:
+          type: string
+        availiable:
+          type: string
+        payinDisputed:
+          type: string
+        payinToBeSettled:
+          type: string
+        payoutPending:
+          type: string
+      x-apifox-orders:
+        - total
+        - availiable
+        - payinDisputed
+        - payinToBeSettled
+        - payoutPending
+      required:
+        - total
+        - availiable
+        - payinDisputed
+        - payinToBeSettled
+        - payoutPending
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Balance Query
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /balance:
+    post:
+      summary: Balance Query
+      deprecated: false
+      description: ''
+      tags:
+        - Query
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                merchantId:
+                  type: string
+                bizContent:
+                  $ref: '#/components/schemas/BalanceQueryReq'
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: test
+              merchantId: test
+              bizContent: '{"currency":"BDT"}'
+              sign: >-
+                MIWCEl773/7Mni9q4+hKLxIxo1Wvdbbrl2UWTKewtRv1R5SlTUFjGLdAmWqj99qKgjmpFsMxxfCj4zGXAEnDtFE/Oh79jpNGiBi6JoVJqpLp5cP/9MVE1ED4kw0VuHHsxhpYCLwwbxevwEUbwxF1KpSvVMahtrn1WzT0w5GHXXBludMOAAOIiM7mKbOEaRhcJr7TxOouwWMR6JXKVdvuGWA5m9o5CG6wJGybW0g2xjx5CRJQgCHeIfXh3Yy5GcwcoacgVPFjIuNki4RXwmW8jeJ5KdyqfvvZlTtQr7rT6KldVpijhJ/Q9DaGQXpppvaYVRc0j8/hltm16cujshBYvQ==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  sign:
+                    type: string
+                  bizContent:
+                    $ref: '#/components/schemas/BalanceQueryResp'
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212164101662'
+                sign: ''
+                bizContent: >-
+                  {"availiable":"88270.00","payinDisputed":"0.00","payinToBeSettled":"0.00","payoutPending":"1199.00","total":"89469.00"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Query
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-253159432-run
+components:
+  schemas:
+    BalanceQueryReq:
+      type: object
+      properties:
+        currency:
+          type: string
+      x-apifox-orders:
+        - currency
+      required:
+        - currency
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    BalanceQueryResp:
+      type: object
+      properties:
+        total:
+          type: string
+        availiable:
+          type: string
+        payinDisputed:
+          type: string
+        payinToBeSettled:
+          type: string
+        payoutPending:
+          type: string
+      x-apifox-orders:
+        - total
+        - availiable
+        - payinDisputed
+        - payinToBeSettled
+        - payoutPending
+      required:
+        - total
+        - availiable
+        - payinDisputed
+        - payinToBeSettled
+        - payoutPending
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Payin Query
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /payin/query:
+    post:
+      summary: Payin Query
+      deprecated: false
+      description: ''
+      tags:
+        - Query
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                merchantId:
+                  type: string
+                bizContent:
+                  description: PayinOrderQueryReq Convert To JSON String
+                  $ref: '#/components/schemas/PayinOrderQueryReq'
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: test
+              merchantId: test
+              bizContent: '{"mchOrderNo":"IN202502110002"}'
+              sign: >-
+                MIWCEl773/7Mni9q4+hKLxIxo1Wvdbbrl2UWTKewtRv1R5SlTUFjGLdAmWqj99qKgjmpFsMxxfCj4zGXAEnDtFE/Oh79jpNGiBi6JoVJqpLp5cP/9MVE1ED4kw0VuHHsxhpYCLwwbxevwEUbwxF1KpSvVMahtrn1WzT0w5GHXXBludMOAAOIiM7mKbOEaRhcJr7TxOouwWMR6JXKVdvuGWA5m9o5CG6wJGybW0g2xjx5CRJQgCHeIfXh3Yy5GcwcoacgVPFjIuNki4RXwmW8jeJ5KdyqfvvZlTtQr7rT6KldVpijhJ/Q9DaGQXpppvaYVRc0j8/hltm16cujshBYvQ==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  sign:
+                    type: string
+                  bizContent:
+                    $ref: '#/components/schemas/PayinOrderQueryResp'
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212165242422'
+                sign: null
+                bizContent: >-
+                  {"actualAmount":"5000.00","amount":"5000.00","currency":"INR","customerEmail":"123@gmail.com","customerName":"test","customerPhone":"123456789","feeAmount":"500.00","mchOrderNo":"IN202502110002","methodCode":"PM88286686118396","notifyUrl":"http://www.f2pay.com","platNo":"A05491055805152","returnUrl":"www.google.com","state":"Paid","trxId":"503928172213"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Query
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-252903043-run
+components:
+  schemas:
+    PayinOrderQueryReq:
+      type: object
+      properties:
+        platNo:
+          type: string
+          description: At least one of platNo and mchOrderNo must be filled in
+        mchOrderNo:
+          type: string
+          description: At least one of platNo and mchOrderNo must be filled in
+      x-apifox-orders:
+        - platNo
+        - mchOrderNo
+      required:
+        - platNo
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    PayinOrderQueryResp:
+      type: object
+      properties:
+        mchOrderNo:
+          type: string
+        platNo:
+          type: string
+        state:
+          type: string
+        currency:
+          type: string
+        amount:
+          type: string
+        actualAmount:
+          type: string
+        feeAmount:
+          type: string
+        customerEmail:
+          type: string
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        methodCode:
+          type: string
+        notifyUrl:
+          type: string
+        returnUrl:
+          type: string
+        trxId:
+          type: string
+          description: UTR
+      required:
+        - mchOrderNo
+        - platNo
+        - state
+        - currency
+        - amount
+        - actualAmount
+        - feeAmount
+        - customerEmail
+        - customerName
+        - customerPhone
+        - methodCode
+        - notifyUrl
+        - returnUrl
+        - trxId
+      x-apifox-orders:
+        - mchOrderNo
+        - platNo
+        - state
+        - currency
+        - amount
+        - actualAmount
+        - feeAmount
+        - customerEmail
+        - customerName
+        - customerPhone
+        - methodCode
+        - notifyUrl
+        - returnUrl
+        - trxId
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Payout Query
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /payout/query:
+    post:
+      summary: Payout Query
+      deprecated: false
+      description: ''
+      tags:
+        - Query
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                merchantId:
+                  type: string
+                bizContent:
+                  description: PayoutOrderQueryReq Convert To JSON String
+                  $ref: '#/components/schemas/PayoutOrderQueryReq'
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: test
+              merchantId: test
+              bizContent: '{"mchOrderNo":"OUT202502110078"}'
+              sign: >-
+                MIWCEl773/7Mni9q4+hKLxIxo1Wvdbbrl2UWTKewtRv1R5SlTUFjGLdAmWqj99qKgjmpFsMxxfCj4zGXAEnDtFE/Oh79jpNGiBi6JoVJqpLp5cP/9MVE1ED4kw0VuHHsxhpYCLwwbxevwEUbwxF1KpSvVMahtrn1WzT0w5GHXXBludMOAAOIiM7mKbOEaRhcJr7TxOouwWMR6JXKVdvuGWA5m9o5CG6wJGybW0g2xjx5CRJQgCHeIfXh3Yy5GcwcoacgVPFjIuNki4RXwmW8jeJ5KdyqfvvZlTtQr7rT6KldVpijhJ/Q9DaGQXpppvaYVRc0j8/hltm16cujshBYvQ==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  sign:
+                    type: string
+                  bizContent:
+                    $ref: '#/components/schemas/PayoutOrderQueryResp'
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212164701969'
+                sign: null
+                bizContent: >-
+                  {"amount":"100.00","currency":"INR","feeAmount":"9.00","mchOrderNo":"OUT202502110078","merchantId":"test","methodCode":"PM88286686119002","payeeAccountNo":"1234567890","payeeEmail":"1234567890@gmail.com","payeeMobile":"8274612393","payeeName":"test","platNo":"A05491055805564","state":"Failed","trxId":"503837263413"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Query
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-252903044-run
+components:
+  schemas:
+    PayoutOrderQueryReq:
+      type: object
+      properties:
+        platNo:
+          type: string
+          description: At least one of platNo and mchOrderNo must be filled in
+        mchOrderNo:
+          type: string
+          description: At least one of platNo and mchOrderNo must be filled in
+      x-apifox-orders:
+        - platNo
+        - mchOrderNo
+      required:
+        - platNo
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    PayoutOrderQueryResp:
+      type: object
+      properties:
+        state:
+          type: string
+        platNo:
+          type: string
+        mchOrderNo:
+          type: string
+        amount:
+          type: string
+        feeAmount:
+          type: string
+        currency:
+          type: string
+        methodCode:
+          type: string
+        payeeAccountNo:
+          type: string
+        payeeEmail:
+          type: string
+        payeeMobile:
+          type: string
+        payeeName:
+          type: string
+        trxId:
+          type: string
+          description: UTR
+      required:
+        - state
+        - platNo
+        - mchOrderNo
+        - amount
+        - feeAmount
+        - currency
+        - methodCode
+        - payeeAccountNo
+        - payeeEmail
+        - payeeMobile
+        - payeeName
+        - trxId
+      x-apifox-orders:
+        - state
+        - platNo
+        - mchOrderNo
+        - amount
+        - feeAmount
+        - currency
+        - methodCode
+        - payeeAccountNo
+        - payeeEmail
+        - payeeMobile
+        - payeeName
+        - trxId
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Payout Query
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /payout/query:
+    post:
+      summary: Payout Query
+      deprecated: false
+      description: ''
+      tags:
+        - Query
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                merchantId:
+                  type: string
+                bizContent:
+                  description: PayoutOrderQueryReq Convert To JSON String
+                  $ref: '#/components/schemas/PayoutOrderQueryReq'
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: test
+              merchantId: test
+              bizContent: '{"mchOrderNo":"OUT202502110078"}'
+              sign: >-
+                MIWCEl773/7Mni9q4+hKLxIxo1Wvdbbrl2UWTKewtRv1R5SlTUFjGLdAmWqj99qKgjmpFsMxxfCj4zGXAEnDtFE/Oh79jpNGiBi6JoVJqpLp5cP/9MVE1ED4kw0VuHHsxhpYCLwwbxevwEUbwxF1KpSvVMahtrn1WzT0w5GHXXBludMOAAOIiM7mKbOEaRhcJr7TxOouwWMR6JXKVdvuGWA5m9o5CG6wJGybW0g2xjx5CRJQgCHeIfXh3Yy5GcwcoacgVPFjIuNki4RXwmW8jeJ5KdyqfvvZlTtQr7rT6KldVpijhJ/Q9DaGQXpppvaYVRc0j8/hltm16cujshBYvQ==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  sign:
+                    type: string
+                  bizContent:
+                    $ref: '#/components/schemas/PayoutOrderQueryResp'
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212164701969'
+                sign: null
+                bizContent: >-
+                  {"amount":"100.00","currency":"INR","feeAmount":"9.00","mchOrderNo":"OUT202502110078","merchantId":"test","methodCode":"PM88286686119002","payeeAccountNo":"1234567890","payeeEmail":"1234567890@gmail.com","payeeMobile":"8274612393","payeeName":"test","platNo":"A05491055805564","state":"Failed","trxId":"503837263413"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Query
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-252903044-run
+components:
+  schemas:
+    PayoutOrderQueryReq:
+      type: object
+      properties:
+        platNo:
+          type: string
+          description: At least one of platNo and mchOrderNo must be filled in
+        mchOrderNo:
+          type: string
+          description: At least one of platNo and mchOrderNo must be filled in
+      x-apifox-orders:
+        - platNo
+        - mchOrderNo
+      required:
+        - platNo
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    PayoutOrderQueryResp:
+      type: object
+      properties:
+        state:
+          type: string
+        platNo:
+          type: string
+        mchOrderNo:
+          type: string
+        amount:
+          type: string
+        feeAmount:
+          type: string
+        currency:
+          type: string
+        methodCode:
+          type: string
+        payeeAccountNo:
+          type: string
+        payeeEmail:
+          type: string
+        payeeMobile:
+          type: string
+        payeeName:
+          type: string
+        trxId:
+          type: string
+          description: UTR
+      required:
+        - state
+        - platNo
+        - mchOrderNo
+        - amount
+        - feeAmount
+        - currency
+        - methodCode
+        - payeeAccountNo
+        - payeeEmail
+        - payeeMobile
+        - payeeName
+        - trxId
+      x-apifox-orders:
+        - state
+        - platNo
+        - mchOrderNo
+        - amount
+        - feeAmount
+        - currency
+        - methodCode
+        - payeeAccountNo
+        - payeeEmail
+        - payeeMobile
+        - payeeName
+        - trxId
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Order Resubmit
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /payin/inr/order/resubmit:
+    post:
+      summary: Order Resubmit
+      deprecated: false
+      description: ''
+      tags:
+        - Order Resubmit/India
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                merchantId:
+                  type: string
+                bizContent:
+                  $ref: '#/components/schemas/IndiaUtrSupplementReq'
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: '123'
+              merchantId: test
+              bizContent: '{"trxId":"473928332123","mchOrderNo":"IN202502110001"}'
+              sign: >-
+                RaltoAExzZH/H5MeEi9pBeX+ougrtUUO4+e539NDo5WwP1FzUvF4ADMupqAlQRkYSplD6XRVaAC9Dk83YORGC5ta3a8e2JiMewoO/EKYdxp0QOYaC0mv34cOlulbbfeAkuDnl7EjciEt/wH+VniSF0TbuetJJsNlVs9DfC6onWokmh+6c8S1v20fV1gV299cDPn4/4gqPVl3CL2SLtVYyTrEexD3zEtbbaMnS/f3AuWVk1376DrDTy2FYTqNfq0vh10p/xanTqNF73IxoDMUVmLcRSMSfAjTST5Tb7v2i76n2EaupU5IUfAgqfClutlCnfhexdugiLlZfyDo3b+nYQ==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  sign:
+                    type: string
+                  bizContent:
+                    $ref: '#/components/schemas/IndiaUtrSupplementResp'
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - sign
+                  - bizContent
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212163657358'
+                sign: >-
+                  UH6DuO8s8pctoufRfEWEIWvB++XNuWKenEfS+671T2SXgI5B1vFQc43xk432uZVaDHM01MSx4qrekSdi+s4AHEVvva8KykgsQPhUG1T/Ft6gCscbtFY+gfUNpDwW5KZRb5+yo+pIEiFmHBY9xY+Pxz3iNVBa1DovLHYXYLvKk9EOgvB6fgI5uviepdiuPkGgWwxgNB9cHoo8ZS5snnVWUyJPPsTUh9saO4ThVxzWmXqrTWLtfuSm12hWPnCMABlt7R1ITLgGzMf3paWd//iAdsFjRjBwCjuVNeYVpyJPpU1Cili0skg6DhDv9tyMkhTyjd0IcFlhzjWxfA/1jA9Iiw==
+                bizContent: '{"status":"Success"}'
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Order Resubmit/India
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-253167887-run
+components:
+  schemas:
+    IndiaUtrSupplementReq:
+      type: object
+      properties:
+        mchOrderNo:
+          type: string
+        trxId:
+          type: string
+          description: trxId fill in the UTR number
+      x-apifox-orders:
+        - mchOrderNo
+        - trxId
+      required:
+        - mchOrderNo
+        - trxId
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    IndiaUtrSupplementResp:
+      type: object
+      properties:
+        status:
+          type: string
+          examples:
+            - SUCCESS
+            - FAILED
+          description: Success,Failed
+      required:
+        - status
+      x-apifox-orders:
+        - status
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Payin Created
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /payin/inr/order/create:
+    post:
+      summary: Payin Created
+      deprecated: false
+      description: ''
+      tags:
+        - Payin/India
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: false
+          example: application/json
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                traceId:
+                  type: string
+                  description: random characters or order number Example:IN202503010001
+                merchantId:
+                  type: string
+                  description: Example:F2PAY_TEST
+                bizContent:
+                  description: IndiaPayinOrderCreateReq Convert To JSON String
+                  type: object
+                  x-apifox-refs:
+                    01JSY10REH07GDCYP1VJNQK0BJ:
+                      $ref: '#/components/schemas/IndiaPayinOrderCreateReq'
+                      x-apifox-overrides:
+                        body: null
+                        subject: null
+                  x-apifox-orders:
+                    - 01JSY10REH07GDCYP1VJNQK0BJ
+                  properties:
+                    amount:
+                      type: string
+                      description: Example:100.00
+                    customerEmail:
+                      type: string
+                      description: Example:test@gmail.com
+                    customerIpAddress:
+                      type: string
+                      description: Example:127.0.0.1
+                    customerName:
+                      type: string
+                      description: Example:test
+                    customerPhone:
+                      type: string
+                      description: Example:8740293123
+                    mchOrderNo:
+                      type: string
+                      description: Example:IN202503010001
+                    methodCode:
+                      type: string
+                      description: Example:UpiMixed
+                    notifyUrl:
+                      type: string
+                      description: Example:https://www.google.com
+                    returnUrl:
+                      type: string
+                      description: Example:https://www.google.com
+                  required:
+                    - amount
+                    - customerEmail
+                    - customerIpAddress
+                    - customerName
+                    - customerPhone
+                    - mchOrderNo
+                    - methodCode
+                    - notifyUrl
+                    - returnUrl
+                  x-apifox-ignore-properties:
+                    - amount
+                    - customerEmail
+                    - customerIpAddress
+                    - customerName
+                    - customerPhone
+                    - mchOrderNo
+                    - methodCode
+                    - notifyUrl
+                    - returnUrl
+                signType:
+                  type: string
+                sign:
+                  type: string
+              required:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-orders:
+                - traceId
+                - merchantId
+                - bizContent
+                - signType
+                - sign
+              x-apifox-ignore-properties: []
+            example:
+              traceId: IN202502100006
+              merchantId: test
+              bizContent: >-
+                {"amount":"300.01","customerPhone":"123456789","mchOrderNo":"IN202502100006","subject":"test","customerEmail":"test@gmail.com","notifyUrl":"www.google.com","customerIpAddress":"172.0.0.1","body":"test","returnUrl":"www.google.com","customerName":"test","methodCode":"UpiMixed"}
+              sign: >-
+                jZxKfLaS35bt7Uw4bnYK/1kJzTbVyFXkuJL8VWMM2y9L8c+Bwhv+8PwN8mOOY06G3zKgSmmkRiQSHlc+QnEFUE4G8i9Ottsy0IeVp4AaNv/iqXig8ThvW5stF/Kz1VvMe364p0a7zpr3rXjQcYKkmu7ZxR0sCpj5rZOHtpF6qk5nQ6nnH+NFutHMXuikWg11UojmjgQU9CjxOp8cajjdFSeIvMclr7AVM5iitdObQwlrRVKFTIhNlDo+RtAmhXaQgNiSqNsZ/Nl8ISrGR1uCSPZHgsz8ZVrFdkCRKIU3UHHvdxcmzYzcdI4sNifKo6+qOuE0HZ8N9Hsw2dNri7IUAA==
+              signType: RSA
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  bizContent:
+                    type: object
+                    x-apifox-refs:
+                      01JWNPDV0FK1NABT5CVTZVGR27:
+                        $ref: '#/components/schemas/IndiaPayinOrderCreateResp'
+                        x-apifox-overrides:
+                          accountInfo: null
+                    x-apifox-orders:
+                      - 01JWNPDV0FK1NABT5CVTZVGR27
+                    properties:
+                      mchOrderNo:
+                        type: string
+                      platNo:
+                        type: string
+                      payUrl:
+                        type: string
+                    required:
+                      - mchOrderNo
+                      - platNo
+                      - payUrl
+                    x-apifox-ignore-properties:
+                      - mchOrderNo
+                      - platNo
+                      - payUrl
+                  sign:
+                    type: string
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - bizContent
+                  - sign
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - bizContent
+                  - sign
+                x-apifox-ignore-properties: []
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250212163657358'
+                sign: >-
+                  UH6DuO8s8pctoufRfEWEIWvB++XNuWKenEfS+671T2SXgI5B1vFQc43xk432uZVaDHM01MSx4qrekSdi+s4AHEVvva8KykgsQPhUG1T/Ft6gCscbtFY+gfUNpDwW5KZRb5+yo+pIEiFmHBY9xY+Pxz3iNVBa1DovLHYXYLvKk9EOgvB6fgI5uviepdiuPkGgWwxgNB9cHoo8ZS5snnVWUyJPPsTUh9saO4ThVxzWmXqrTWLtfuSm12hWPnCMABlt7R1ITLgGzMf3paWd//iAdsFjRjBwCjuVNeYVpyJPpU1Cili0skg6DhDv9tyMkhTyjd0IcFlhzjWxfA/1jA9Iiw==
+                bizContent: >-
+                  {"mchOrderNo":"test","payUrl":"http://dev.f2pay.com/pay/cashier/inr?platNo=A05491055805626","platNo":"A05491055805626"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: Payin/India
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/5741218/apis/api-252903041-run
+components:
+  schemas:
+    IndiaPayinOrderCreateReq:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Example:100.00
+        body:
+          type: string
+          description: Custom Parameters,Example:body
+        customerEmail:
+          type: string
+          description: Example:test@gmail.com
+        customerIpAddress:
+          type: string
+          description: Example:127.0.0.1
+        customerName:
+          type: string
+          description: Example:test
+        customerPhone:
+          type: string
+          description: Example:8740293123
+        mchOrderNo:
+          type: string
+          description: Example:IN202503010001
+        methodCode:
+          type: string
+          description: Example:UpiMixed
+        notifyUrl:
+          type: string
+          description: Example:https://www.google.com
+        returnUrl:
+          type: string
+          description: Example:https://www.google.com
+        subject:
+          type: string
+          description: Custom Parameters,Example:subject
+      required:
+        - amount
+        - body
+        - customerEmail
+        - customerIpAddress
+        - customerName
+        - customerPhone
+        - mchOrderNo
+        - methodCode
+        - notifyUrl
+        - returnUrl
+        - subject
+      x-apifox-orders:
+        - amount
+        - body
+        - customerEmail
+        - customerIpAddress
+        - customerName
+        - customerPhone
+        - mchOrderNo
+        - methodCode
+        - notifyUrl
+        - returnUrl
+        - subject
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+    IndiaPayinOrderCreateResp:
+      type: object
+      properties:
+        mchOrderNo:
+          type: string
+        platNo:
+          type: string
+        payUrl:
+          type: string
+      x-apifox-orders:
+        - mchOrderNo
+        - platNo
+        - payUrl
+      required:
+        - mchOrderNo
+        - platNo
+        - payUrl
+      x-apifox-ignore-properties: []
+      x-apifox-folder: ''
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# /payin/inr/order/createV2
+
+
+## OpenAPI Specification
+
+
+```yaml
+openapi: 3.0.1
+info:
+  title: ''
+  description: ''
+  version: 1.0.0
+paths:
+  /payin/inr/order/createV2:
+    post:
+      summary: /payin/inr/order/createV2
+      deprecated: false
+      description: >-
+        This V2 API is fully consistent with the /payin/inr/order/create API in
+        the main documentation regarding request parameters and signature
+        methods.
+      tags:
+        - H2H
+      parameters: []
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  msg:
+                    type: string
+                  sysTime:
+                    type: string
+                  bizContent:
+                    type: object
+                    properties:
+                      mchOrderNo:
+                        type: string
+                      platNo:
+                        type: string
+                      payUrl:
+                        type: string
+                      accountInfo:
+                        type: object
+                        properties:
+                          upi:
+                            type: string
+                          upiScan:
+                            type: string
+                          upiPhonepe:
+                            type: string
+                          upiIntent:
+                            type: string
+                        x-apifox-orders:
+                          - upi
+                          - upiIntent
+                          - upiScan
+                          - upiPhonepe
+                        description: JSONString
+                        required:
+                          - upi
+                          - upiScan
+                          - upiPhonepe
+                          - upiIntent
+                    x-apifox-orders:
+                      - mchOrderNo
+                      - platNo
+                      - payUrl
+                      - accountInfo
+                    required:
+                      - mchOrderNo
+                      - platNo
+                      - payUrl
+                      - accountInfo
+                    description: JSONString
+                  sign:
+                    type: string
+                x-apifox-orders:
+                  - code
+                  - msg
+                  - sysTime
+                  - bizContent
+                  - sign
+                required:
+                  - code
+                  - msg
+                  - sysTime
+                  - bizContent
+                  - sign
+              example:
+                code: '0000'
+                msg: success
+                sysTime: '20250927003247324'
+                sign: ''
+                bizContent: >-
+                  {"accountInfo":"{\"upi\":\"test123456@upi\",\"upiIntent\":\"pa=test123456@upi&tn=IN3b0e&am=500.00&cu=INR&pn=AM\",\"upiScan\":\"pa=test123456@upi&tn=IN3b0e&am=500.00&cu=INR&pn=AM\",\"upiPhonepe\":\"phonepe://native?data=eyJjb250YWN0Ijp7ImNic05hbWUiOiIiLCJuaWNrTmFtZSI6IiIsInZwYSI6InRlc3QxMjM0NTZAdXBpIiwidHlwZSI6IlZQQSJ9LCJwMnBQYXltZW50Q2hlY2tvdXRQYXJhbXMiOnsibm90ZSI6IklOM2IwZSIsImlzQnlEZWZhdWx0S25vd25Db250YWN0Ijp0cnVlLCJlbmFibGVTcGVlY2hUb1RleHQiOmZhbHNlLCJhbGxvd0Ftb3VudEVkaXQiOmZhbHNlLCJzaG93UXJDb2RlT3B0aW9uIjpmYWxzZSwiZGlzYWJsZVZpZXdIaXN0b3J5Ijp0cnVlLCJzaG91bGRTaG93VW5zYXZlZENvbnRhY3RCYW5uZXIiOmZhbHNlLCJpc1JlY3VycmluZyI6ZmFsc2UsImNoZWNrb3V0VHlwZSI6IkRFRkFVTFQiLCJ0cmFuc2FjdGlvbkNvbnRleHQiOiJwMnAiLCJpbml0aWFsQW1vdW50Ijo1MDAwMCwiZGlzYWJsZU5vdGVzRWRpdCI6dHJ1ZSwic2hvd0tleWJvYXJkIjpmYWxzZSwiY3VycmVuY3kiOiJJTlIiLCJzaG91bGRTaG93TWFza2VkTnVtYmVyIjp0cnVlfX0=&id=p2ppayment\"}","mchOrderNo":"TEST29942689619","payUrl":"http://dev.f2pay.com/pay/cashier/inr?platNo=PI6522522928172470","platNo":"PI6522522928172470"}
+                success: true
+          headers: {}
+          x-apifox-name: OK
+      security: []
+      x-apifox-folder: H2H
+      x-apifox-status: released
+      x-run-in-apifox: https://app.apifox.com/web/project/6644646/apis/api-356220475-run
+components:
+  schemas: {}
+  securitySchemes: {}
+servers: []
+security: []
+
+
+```
+# Test Environment Parameters
+
+- **Gateway URL**: `https://api.dev.f2pay.com`
+- **Merchant ID**: `F2PAY_TEST`
+---
+- **INR Payin Method**: `UpiMixed`
+- **INR Payout Method**: `BANK_INR`
+
+---
+- **Note**: `No IP verification in the test environment`
+- **Platform Public Key**:  `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2YC5ccCiPGsAWpn4d1lCCl/sGzZkZ56zLJOFgKQmYagdZK6Oe3UErWc2C6pe71sIkd6i0tHnEeA0wch5wg0c4j7dYhZ0e/Pb4usMjr8oBVsSmpXH9Gf2/+YPoVHvyAdxnvL3n//MpPmSaG9qXE7/OjofIcxmK58mjrvyWcwIyqS6sXKA9O+8plK2nALJ+XXD1VX1bg2D0tNnym3yE7lEFUZ0ShDWsxBIR8nwtXhFNKRQBYUfPFa6nc7YiHu80TW9WnFEIx2b31XsV0jRkhPwcqxyW7h6yY2UnzNqEfTIUeZNDgnMotuL0EFFpIU2jikm1KGFeNG2b6dZlsgiHu6roQIDAQAB`
+- **Merchant Private Key**: 
+`MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCLGvNP9Z8FhyRZRaklASJiwKW21fMXhhnuFeBZhbveWtmcSHpxaL2UJ6z57Id+1azCJKSOs9kQJOHEmQTi7hrEWNgNJrKwKudHL0pwTmC5lroK/tVHHcIWslaukkwSNW1ArBk7rBdoaiwnlMKB6HwyAfwh0Xm1a1Vomhw4/ww+GVu1V1g/gHq5Dep57PE5VkaNhX7f8gJE/CJ1PmKmfN0MWVVsu+13RgpzgcfHg/2LSmGsqB9fBK0SmbGHIFOcST4PXuNwFIGbd5LqSBaK2w9bTaVCalymeDbp4+kx8vsg3er+0IZ7hPNp9ItvY/uFKHBe433MZ0WjAVkXlmvuysGHAgMBAAECggEAdscUa3o3xuiWSQQKYeaODfShi3U0lSmUio9zef2PZVX96kyZAK2G8zLNqLonGE4rrbrMKG25MufLP6vJWFwnzvBtywz4FyULRuVCkpLaVJ43TZw7UPY//FFbYsTY39Nu7oIFKcbQVgASo9mKHJL/OVQojlfnrNlxnFe7MY/WTE7gVvC8Xm9CMEZPrPd5hJQLf9uaw+MJEgRo9lqQav5ZIg48XIKGlvLPcwZtQ2ZgqWtgcG8DwAV9j69nRikf6uNCes6PgsJlMF4GBZe3uv1mU5j0eB+lSC6O5ldwmAlc8OfWyx7FzQaxvJcyygCVPqtm9YdYs1Kj+EqqZ6Wg3Z2uAQKBgQDsdg8wYUl2uqsNa+SfQ/Pku5ZfdvOEou8HXx42wdTLNt6dsmHQnwmc6+LYuA5oUBmVSupTaCWoWBHC+Ece+yIF3If+4g18x63H0XZzQyGLYcGT6uAcFobr7jtrXJlj4VkvzTz+WeGxxlMu1o9hSqD23wQG1uuTgmjkaP6OePkb4QKBgQCWmX1tOWZCnUECzvqQ/2L3ofVxK+LfnkGu0XPW0KSvDiKic8KoYmwMckHwJmOrC1bQkrYg8sQ9d8EaHsjtr2AH72wEbNx+Irbql0YagK8BiVefhMF9Y2K/483cznXuYGXYIPjdwJjU7etKqKANQhoYZuJv64Nrz1rsRbRV7LHKZwKBgFr3YAiApL5kOYHETANpJN6Nu9+l5zDTbZksYnc2QiKbTTDlevPC+vO/W1l8FS7UAcOJOnQz0KjemJak5NdqTUBsAnVviTjDqHsCfcsBvFnelZXN+cFUeTsyPvGigfAGtUTKc/h1o3m8jiuqpyYKi7ntOaNX8vCgbrHQIn201ECBAoGAOy27jOUmWvziZBEjg0DoCfk5sqwVLdxJYUHrLDm2zRdX4tBsaLCsVsO7R3w+ZCNDjRhpu07KcIETf4kjWcs1iEi8AI0qo+JOUKb7JET3ADqRFR0cz4HzdwY0ihUTYIW+34wtXy5koB+R+zeCFVOpX3dmeaZpcT79MqU9dRpazvcCgYBYszR3YNDqYsEquhsFyI+xiwek/Tk22M8ewUG7ddTS2xeAuhwvtqRgUETmu8cWjObIdrnTsFLFinTvpkmRl4XDaNFhGXIvUckA1EwuOj26I+9fG0BQKT1VQnZBsWGTpKTKdQyJjCI6C0HrWF1vj0DRhOk450ylbuBhBOpA7L5a2A==`
