@@ -189,14 +189,14 @@ async function createPayinV2(data, config = {}) {
                     payOrderId: bizContentResp.platNo,
                     paymentUrl: bizContentResp.payUrl,
                     mchOrderNo: bizContentResp.mchOrderNo,
-                    // Map F2PAY deep links to our format
+                    // Map F2PAY deep links with strict protocol transformation
                     deepLink: {
-                        upi_scan: accountInfo?.upiScan || '',
+                        upi_scan: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : '',
                         upi_phonepe: accountInfo?.upiPhonepe || '',
-                        upi_gpay: '', // F2PAY doesn't provide GPay directly, will generate
-                        upi_paytm: '', // Not provided
+                        upi_gpay: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : '',
+                        upi_paytm: (accountInfo?.upiIntent) ? `paytmmp://cash_wallet?${accountInfo.upiIntent}&featuretype=money_transfer` : '',
                         upi: accountInfo?.upi || '',
-                        upi_intent: accountInfo?.upiIntent || ''
+                        upi_intent: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : ''
                     },
                     accountInfo: accountInfo
                 }
