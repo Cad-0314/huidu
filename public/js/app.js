@@ -1644,6 +1644,15 @@ async function showEditUserModal(userId) {
                 <label data-i18n="label_callback_url">${t('label_callback_url')}</label>
                 <input type="url" id="editUserCallback" value="${user.callbackUrl || ''}" placeholder="${t('placeholder_callback_url')}">
             </div>
+            
+            <div class="form-group">
+                <label data-i18n="label_channel">Channel</label>
+                <select id="editUserChannel" class="form-control">
+                    <option value="silkpay" ${user.channel === 'silkpay' || !user.channel ? 'selected' : ''}>Payable (Silkpay)</option>
+                    <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>F2PAY (Channel 2)</option>
+                </select>
+            </div>
+
              <div class="d-flex gap-2">
                 <div class="form-group" style="flex:1">
                     <label data-i18n="label_payin_rate">${t('label_payin_rate')}</label>
@@ -1682,12 +1691,13 @@ async function updateUser(userId) {
     const name = document.getElementById('editUserName').value;
     const status = document.getElementById('editUserStatus').value;
     const callbackUrl = document.getElementById('editUserCallback').value;
+    const channel = document.getElementById('editUserChannel').value;
     const payinRate = document.getElementById('editUserPayinRate').value;
     const payoutRate = document.getElementById('editUserPayoutRate').value;
 
     try {
         const data = await API.put(`/admin/users/${userId}`, {
-            name, status, callbackUrl,
+            name, status, callbackUrl, channel,
             payinRate: parseFloat(payinRate),
             payoutRate: parseFloat(payoutRate)
         });
