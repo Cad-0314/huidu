@@ -1351,6 +1351,7 @@ async function loadAdminUserDetail(userId) {
         // Overview
         document.getElementById('detailName').value = u.name;
         document.getElementById('detailStatus').value = u.status;
+        document.getElementById('detailChannel').value = u.channel || 'silkpay';
         document.getElementById('detailKey').value = u.merchantKey;
 
         // Financials
@@ -1388,6 +1389,7 @@ async function saveDetailOverview() {
     try {
         const name = document.getElementById('detailName').value;
         const status = document.getElementById('detailStatus').value;
+        const channel = document.getElementById('detailChannel').value;
         // Check current values to not overwrite others? 
         // We reuse the basic PUT /users/:id which updates mostly everything.
         // We need to fetch current values for what we don't change? 
@@ -1401,7 +1403,7 @@ async function saveDetailOverview() {
         const usdtRate = document.getElementById('detailUsdtRate').value;
 
         const data = await API.put(`/admin/users/${currentDetailUserId}`, {
-            name, status, callbackUrl,
+            name, status, channel, callbackUrl,
             payinRate: parseFloat(payinRate),
             payoutRate: parseFloat(payoutRate),
             usdtRate: parseFloat(usdtRate)
