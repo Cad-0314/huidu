@@ -228,7 +228,7 @@ router.get('/payouts/export', authenticate, async (req, res) => {
             else if (p.status === 'processing') statusCn = '处理中';
 
             const account = p.payout_type === 'usdt' ? p.wallet_address : p.account_number;
-            const date = new Date(p.created_at).toLocaleString('zh-CN');
+            const date = new Date(p.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
 
             csv += `${p.order_id},${p.amount},${p.fee},${account || ''},${statusCn},${p.utr || ''},${date}\n`;
         });
@@ -459,7 +459,7 @@ router.get('/stats/chart', authenticate, async (req, res) => {
         for (let i = days - 1; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
             labels.push(dateStr);
             dateMap[dateStr] = { payin: 0, payout: 0 };
         }
@@ -467,13 +467,13 @@ router.get('/stats/chart', authenticate, async (req, res) => {
         // 2. Fetch Aggregated Data
         const stats = await db.prepare(`
             SELECT 
-                date(created_at) as date, 
+                date(created_at, '+05:30') as date, 
                 type, 
                 SUM(amount) as total 
             FROM transactions 
             WHERE user_id = ? 
             AND status = 'success' 
-            AND created_at >= date('now', '-' || ? || ' days')
+            AND date(created_at, '+05:30') >= date('now', '+05:30', '-' || ? || ' days')
             GROUP BY date, type
         `).all(userId, days);
 
@@ -518,8 +518,8 @@ router.get('/stats/chart', authenticate, async (req, res) => {
         // Volume Today/Yesterday
         const volume = await db.prepare(`
             SELECT 
-                SUM(CASE WHEN date(created_at) = date('now') THEN amount ELSE 0 END) as today,
-                SUM(CASE WHEN date(created_at) = date('now', '-1 day') THEN amount ELSE 0 END) as yesterday
+                SUM(CASE WHEN date(created_at, '+05:30') = date('now', '+05:30') THEN amount ELSE 0 END) as today,
+                SUM(CASE WHEN date(created_at, '+05:30') = date('now', '+05:30', '-1 day') THEN amount ELSE 0 END) as yesterday
             FROM transactions 
             WHERE user_id = ? AND type = 'payin' AND status = 'success'
         `).get(userId);
