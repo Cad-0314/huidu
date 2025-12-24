@@ -1262,7 +1262,7 @@ async function loadUsersData(page = 1) {
                     </td>
                     <td>
                         <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : 'success'}">
-                            ${u.channel === 'f2pay' ? 'F2PAY' : 'Payable'}
+                            ${u.channel === 'f2pay' ? 'X2 System' : 'Payable'}
                         </span>
                     </td>
                     <td>
@@ -1525,7 +1525,7 @@ function showCreateUserModal() {
                 <label data-i18n="label_channel">Channel</label>
                 <select id="newUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
                     <option value="silkpay" selected>Payable (5.0% / 3.0% + 6 INR)</option>
-                    <option value="f2pay">F2PAY (5.0% / 3.0% + 6 INR)</option>
+                    <option value="f2pay">X2 System (5.0% / 3.0% + 6 INR)</option>
                 </select>
                 <small class="text-muted">Select the payment channel for this merchant.</small>
             </div>
@@ -1649,7 +1649,7 @@ async function showEditUserModal(userId) {
                 <label data-i18n="label_channel">Channel</label>
                 <select id="editUserChannel" class="form-control">
                     <option value="silkpay" ${user.channel === 'silkpay' || !user.channel ? 'selected' : ''}>Payable (Silkpay)</option>
-                    <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>F2PAY (Channel 2)</option>
+                    <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>X2 System (Channel 2)</option>
                 </select>
             </div>
 
