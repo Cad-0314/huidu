@@ -376,7 +376,7 @@ function generateSignature($params, $secretKey) {
 
     // 3. Build query string (key=value&...)
     // Note: http_build_query encodes values, we need raw parameter string? 
-    // Usually Silkpay expects raw joining. manually join to avoid URL encoding issues if spec says so.
+    // Usually the gateway expects raw joining. manually join to avoid URL encoding issues if spec says so.
     // Spec says: "key=value" joined by "&".
     $queryParts = [];
     foreach ($filtered as $key => $value) {

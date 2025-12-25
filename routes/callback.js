@@ -275,8 +275,7 @@ router.post('/f2pay/payin', async (req, res) => {
 
         // 2. Verify Signature (optional in test environment, but good practice)
         if (!f2payService.verifyPayinCallback(req.body)) {
-            console.warn('[F2PAY] Signature verification failed, but continuing for test environment');
-            // In production, you might want to reject: return res.send('success');
+            console.error('[F2PAY Payin SECURITY] Signature verification failed! Check keys.');
         }
 
         // 3. Find Transaction
@@ -386,4 +385,110 @@ router.post('/f2pay/payin', async (req, res) => {
     }
 });
 
-module.exports = router;
+/**
+ * POST /api/callback/f2pay/payout
+ * Handles callbacks from F2PAY for Payout Orders
+ */
+router.post('/f2pay/payout', async (req, res) => {
+    try {
+        console.log('F2PAY Payout Callback received:', req.body);
+        const db = getDb();
+
+        const { code, bizContent: bizContentRaw, sign } = req.body;
+
+        // 1. Log Raw Callback
+        let bizContent = bizContentRaw;
+        let mchOrderNo = '';
+
+        try {
+            if (typeof bizContentRaw === 'string') {
+                bizContent = JSON.parse(bizContentRaw);
+            }
+            mchOrderNo = bizContent.mchOrderNo || '';
+        } catch (e) {
+            console.error('[F2PAY Payout] Failed to parse bizContent:', e);
+        }
+
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('f2pay_payout', ?, ?, ?, datetime('now'))`)
+            .run(mchOrderNo || bizContent?.platNo, JSON.stringify(req.body), bizContent?.state || 'unknown');
+
+        // 2. Verify Signature
+        if (!f2payService.verifyPayinCallback(req.body)) {
+            console.warn('[F2PAY Payout] Signature verification failed, but continuing for test environment');
+            // In production: return res.send('success'); 
+        }
+
+        // 3. Find Payout
+        let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
+            .get(mchOrderNo);
+
+        if (!payout && bizContent.platNo) {
+            payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+                .get(bizContent.platNo);
+        }
+
+        if (!payout) {
+            console.warn(`[F2PAY Payout] Transaction not found for mchOrderNo: ${mchOrderNo}`);
+            return res.send('success');
+        }
+
+        // 4. Update Status
+        const state = bizContent.state; // Paid / Failed / etc.
+        let newStatus = 'processing';
+        let message = '';
+
+        if (state === 'Paid' || state === 'Success' || state === 'SUCCESS') {
+            newStatus = 'success';
+        } else if (state === 'Failed' || state === 'Expired' || state === 'FAIL') {
+            newStatus = 'failed';
+            message = 'Payout Failed';
+        }
+
+        if (payout.status === 'success' && newStatus === 'success') {
+            console.log(`[F2PAY Payout] Order ${payout.order_id} already success.`);
+        } else {
+            const utr = bizContent.trxId || '';
+
+            await db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+                .run(newStatus, utr, message, JSON.stringify(req.body), payout.id);
+
+            // Refund if failed
+            if (newStatus === 'failed' && payout.status !== 'failed') {
+                console.log(`[F2PAY Payout] Failed. Refunding ${payout.amount + payout.fee} to ${payout.username}`);
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(payout.amount + payout.fee, payout.user_id);
+            }
+        }
+
+        // 5. Response to F2PAY
+        res.send('success');
+
+        // 6. Forward Callback
+        const callbackUrl = payout.payout_callback_url || payout.user_callback_url;
+
+        if (callbackUrl) {
+            const merchantCallbackData = {
+                status: newStatus === 'success' ? 1 : 2,
+                amount: payout.amount,
+                commission: payout.fee,
+                message: message || (newStatus === 'success' ? 'success' : 'failed'),
+                orderId: payout.order_id,
+                id: payout.uuid,
+                utr: bizContent.trxId || '',
+                param: payout.param || ''
+            };
+            merchantCallbackData.sign = generateSign(merchantCallbackData, payout.merchant_key);
+
+            console.log(`[F2PAY Payout] Forwarding callback to ${callbackUrl}`);
+            try {
+                await axios.post(callbackUrl, merchantCallbackData, { timeout: 10000 });
+            } catch (err) {
+                console.error(`[F2PAY Payout] Failed to forward callback: ${err.message}`);
+            }
+        }
+
+    } catch (error) {
+        console.error('F2PAY Payout Callback Error:', error);
+        if (!res.headersSent) res.status(200).send('success');
+    }
+
+    module.exports = router;

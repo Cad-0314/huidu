@@ -141,13 +141,16 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 const f2payService = require('../services/f2pay');
                 console.log(`[PAYOUT] Using F2PAY for merchant ${merchant.username} (Channel: ${channel})`);
 
+                // Use F2PAY specific callback URL
+                const f2payCallbackUrl = `${appUrl}/api/callback/f2pay/payout`;
+
                 apiResponse = await f2payService.createPayout({
                     orderId: orderId,
                     amount: amount,
                     name: personName,
                     bankNo: account,
                     ifsc: ifsc,
-                    notifyUrl: ourCallbackUrl
+                    notifyUrl: f2payCallbackUrl
                 });
 
                 if (apiResponse.code !== 1) { // F2PAY uses code: 1 for success in our wrapper

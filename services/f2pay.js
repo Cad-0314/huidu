@@ -9,10 +9,10 @@ const path = require('path');
 const fs = require('fs');
 
 // Configuration from environment
-const BASE_URL = process.env.F2PAY_BASE_URL || 'https://api.dev.f2pay.com';
-const MERCHANT_ID = process.env.F2PAY_MERCHANT_ID || 'F2PAY_TEST';
-const PLATFORM_PUBLIC_KEY = process.env.F2PAY_PLATFORM_PUBLIC_KEY || '';
-const MERCHANT_PRIVATE_KEY = process.env.F2PAY_MERCHANT_PRIVATE_KEY || '';
+const BASE_URL = process.env.F2PAY_BASE_URL || 'https://api.f2pay.com';
+const MERCHANT_ID = process.env.F2PAY_MERCHANT_ID;
+const PLATFORM_PUBLIC_KEY = process.env.F2PAY_PLATFORM_PUBLIC_KEY;
+const MERCHANT_PRIVATE_KEY = process.env.F2PAY_MERCHANT_PRIVATE_KEY;
 
 const ERROR_LOG_FILE = path.join(__dirname, '..', 'f2pay_error.txt');
 const REQUEST_LOG_FILE = path.join(__dirname, '..', 'f2pay_requests.log');
