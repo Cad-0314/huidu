@@ -163,10 +163,10 @@ app.get('/pay/:orderId', async (req, res) => {
         let html = fs.readFileSync(path.join(__dirname, 'public', templateFile), 'utf8');
 
         html = html.replace(/\{\{AMOUNT\}\}/g, parseFloat(tx.amount).toFixed(2));
-        html = html.replace('{{ORDER_ID}}', tx.order_id);
-        html = html.replace('{{UUID}}', tx.uuid);
-        html = html.replace('{{DATE}}', new Date(tx.created_at).toLocaleDateString());
-        html = html.replace('{{PAYMENT_URL}}', tx.payment_url);
+        html = html.replace(/\{\{ORDER_ID\}\}/g, tx.order_id);
+        html = html.replace(/\{\{UUID\}\}/g, tx.uuid);
+        html = html.replace(/\{\{DATE\}\}/g, new Date(tx.created_at).toLocaleDateString());
+        html = html.replace(/\{\{PAYMENT_URL\}\}/g, tx.payment_url);
 
         html = html.replace('{{DEEPLINK_PHONEPE}}', deepLinks.upi_phonepe || '');
         html = html.replace('{{DEEPLINK_PAYTM}}', deepLinks.upi_paytm || '');
