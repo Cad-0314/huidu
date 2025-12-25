@@ -181,6 +181,20 @@ async function createPayinV2(data, config = {}) {
                 accountInfo = JSON.parse(accountInfo);
             }
 
+            // Map F2PAY deep links with strict protocol transformation
+            const uScan = accountInfo?.upiScan || '';
+            const uIntent = accountInfo?.upiIntent || '';
+            const uPhonePe = accountInfo?.upiPhonepe || '';
+
+            let phonePeLink = '';
+            if (uPhonePe) {
+                if (uPhonePe.startsWith('phonepe://')) {
+                    phonePeLink = uPhonePe;
+                } else {
+                    phonePeLink = `phonepe://native?${uPhonePe}`;
+                }
+            }
+
             return {
                 status: '200',
                 code: 1,
@@ -189,14 +203,13 @@ async function createPayinV2(data, config = {}) {
                     payOrderId: bizContentResp.platNo,
                     paymentUrl: bizContentResp.payUrl,
                     mchOrderNo: bizContentResp.mchOrderNo,
-                    // Map F2PAY deep links with strict protocol transformation
                     deepLink: {
-                        upi_scan: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : '',
-                        upi_phonepe: accountInfo?.upiPhonepe || '',
-                        upi_gpay: (accountInfo?.upiScan) ? `tez://upi/pay?${accountInfo.upiScan}` : '',
-                        upi_paytm: (accountInfo?.upiIntent) ? `paytmmp://cash_wallet?${accountInfo.upiIntent}&featuretype=money_transfer` : '',
+                        upi_scan: uScan ? `upi://pay?${uScan}` : '',
+                        upi_phonepe: phonePeLink,
+                        upi_gpay: uScan ? `tez://upi/pay?${uScan}` : '',
+                        upi_paytm: uIntent ? `paytmmp://cash_wallet?${uIntent}&featuretype=money_transfer` : '',
                         upi: accountInfo?.upi || '',
-                        upi_intent: (accountInfo?.upiScan) ? `upi://pay?${accountInfo.upiScan}` : ''
+                        upi_intent: uScan ? `upi://pay?${uScan}` : ''
                     },
                     accountInfo: accountInfo
                 }
