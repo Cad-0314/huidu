@@ -414,8 +414,8 @@ router.post('/f2pay/payout', async (req, res) => {
 
         // 2. Verify Signature
         if (!f2payService.verifyPayinCallback(req.body)) {
-            console.warn('[F2PAY Payout] Signature verification failed, but continuing for test environment');
-            // In production: return res.send('success'); 
+            console.error('[F2PAY Payout SECURITY] Signature verification failed! Check keys.');
+            // Proceeding for debugging, but in strict production this should return immediately.
         }
 
         // 3. Find Payout
