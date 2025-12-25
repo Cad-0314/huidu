@@ -156,7 +156,11 @@ app.get('/pay/:orderId', async (req, res) => {
              `);
         }
 
-        let html = fs.readFileSync(path.join(__dirname, 'public', 'pay.html'), 'utf8');
+        // --- Select Template based on Channel ---
+        const isF2Pay = (tx.channel === 'f2pay');
+        const templateFile = isF2Pay ? 'pay2.html' : 'pay.html';
+
+        let html = fs.readFileSync(path.join(__dirname, 'public', templateFile), 'utf8');
 
         html = html.replace(/\{\{AMOUNT\}\}/g, parseFloat(tx.amount).toFixed(2));
         html = html.replace('{{ORDER_ID}}', tx.order_id);

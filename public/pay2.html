@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast Payment | VSPAY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .payment-container {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 10px 60px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 440px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .payment-header {
+            background: linear-gradient(135deg, #1a365d 0%, #2a4365 100%);
+            padding: 32px 24px;
+            color: white;
+            text-align: center;
+        }
+
+        .amount-wrapper {
+            margin-bottom: 8px;
+        }
+
+        .amount-label {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .amount-display {
+            font-size: 42px;
+            font-weight: 700;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .amount-display .currency {
+            font-size: 24px;
+            margin-top: 6px;
+            margin-right: 4px;
+            opacity: 0.9;
+        }
+
+        .header-notice {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            display: inline-block;
+            margin-top: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .payment-body {
+            padding: 24px;
+            background: #f8fafc;
+        }
+
+        .section-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Grid Layout for Apps - 2 per row */
+        .apps-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .app-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            height: 110px;
+        }
+
+        .app-card:hover {
+            border-color: #cbd5e0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .app-card.active {
+            border-color: #3182ce;
+            background: #ebf8ff;
+            box-shadow: 0 0 0 1px #3182ce;
+        }
+
+        .app-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f7fafc;
+        }
+
+        .app-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .app-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        /* Prominent UTR Section */
+        .utr-section {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border: 1px solid #edf2f7;
+        }
+
+        .utr-header {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .utr-header svg {
+            width: 18px;
+            height: 18px;
+            color: #3182ce;
+        }
+
+        .utr-input-group {
+            position: relative;
+            display: flex;
+            gap: 8px;
+        }
+
+        .utr-input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .utr-input:focus {
+            border-color: #3182ce;
+        }
+
+        .submit-btn {
+            padding: 0 24px;
+            background: #2b6cb0;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #2c5282;
+        }
+
+        .submit-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        .utr-helper {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 8px;
+            background: #fffbef;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #fefcbf;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Order Details */
+        .order-meta {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px dashed #cbd5e0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        .copy-id {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #718096;
+        }
+
+        /* Status Toast */
+        .toast {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: #48bb78;
+        }
+
+        .toast.error {
+            background: #e53e3e;
+        }
+
+
+        @media (max-width: 400px) {
+            .amount-display {
+                font-size: 36px;
+            }
+
+            .app-card {
+                height: 100px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="payment-container">
+        <!-- Header -->
+        <div class="payment-header">
+            <div class="amount-wrapper">
+                <div class="amount-label">Total Payable</div>
+                <div class="amount-display">
+                    <span class="currency">₹</span>{{AMOUNT}}
+                </div>
+            </div>
+            <div class="header-notice">
+                Pay exactly this amount to avoid failure
+            </div>
+        </div>
+
+        <div class="payment-body">
+            <!-- App Grid -->
+            <div class="section-label">
+                <span>Select Payment App</span>
+                <span style="font-size: 11px; color: #a0aec0; font-weight: 500;">INSTANT</span>
+            </div>
+
+            <div class="apps-grid">
+                <div class="app-card" onclick="openApp('{{DEEPLINK_PAYTM}}', this)">
+                    <div class="app-icon">
+                        <img src="/images/paytm.png" alt="Paytm"
+                            onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
+                    </div>
+                    <span class="app-name">Paytm</span>
+                </div>
+
+                <div class="app-card" onclick="openApp('{{DEEPLINK_PHONEPE}}', this)">
+                    <div class="app-icon">
+                        <img src="/images/phonepe.png" alt="PhonePe"
+                            onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
+                    </div>
+                    <span class="app-name">PhonePe</span>
+                </div>
+
+                <div class="app-card" onclick="openApp('{{DEEPLINK_GPAY}}', this)">
+                    <div class="app-icon">
+                        <img src="/images/gpay.png" alt="GPay"
+                            onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
+                    </div>
+                    <span class="app-name">Google Pay</span>
+                </div>
+
+                <div class="app-card" onclick="openApp('{{DEEPLINK_UPI}}', this)">
+                    <div class="app-icon">
+                        <img src="/images/upi.png" alt="UPI"
+                            onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
+                    </div>
+                    <span class="app-name">Other UPI</span>
+                </div>
+            </div>
+
+            <!-- UTR Section -->
+            <div class="utr-section">
+                <div class="utr-header">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Submit UTR / Ref No.</span>
+                </div>
+
+                <div class="utr-input-group">
+                    <input type="text" id="utrInput" class="utr-input" placeholder="Enter 12-digit UTR" maxlength="12">
+                    <button class="submit-btn" id="submitBtn">Submit</button>
+                </div>
+
+                <div class="utr-helper">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Submit UTR immediately after payment for instant success.
+                </div>
+            </div>
+
+            <!-- Meta -->
+            <div class="order-meta">
+                <div class="copy-id"
+                    onclick="navigator.clipboard.writeText('{{ORDER_ID}}'); showToast('Order ID Copied')">
+                    Order: {{ORDER_ID}}
+                    <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="margin-left:2px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                        </path>
+                    </svg>
+                </div>
+                <div>{{DATE}}</div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast">Message</div>
+    </div>
+
+    <!-- Hidden Data -->
+    <input type="hidden" id="skipUrlData" value="{{SKIP_URL}}">
+    <input type="hidden" id="txUuid" value="{{UUID}}">
+
+    <script>
+        const txUuid = document.getElementById('txUuid').value;
+        const skipUrlData = document.getElementById('skipUrlData').value;
+        const submitBtn = document.getElementById('submitBtn');
+        const utrInput = document.getElementById('utrInput');
+        const toast = document.getElementById('toast');
+
+        let isPolling = true;
+
+        // Open App Logic
+        function openApp(url, el) {
+            if (!url || url.startsWith('{{')) {
+                showToast('App not available', 'error');
+                return;
+            }
+
+            // Visual Feedback
+            document.querySelectorAll('.app-card').forEach(c => c.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            window.location.href = url;
+
+            // Focus UTR after clicking pay
+            setTimeout(() => {
+                utrInput.focus();
+                showToast('Please enter UTR after payment');
+            }, 2000);
+        }
+
+        // Toast Helper
+        function showToast(msg, type = 'default') {
+            toast.textContent = msg;
+            toast.className = `toast show ${type}`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Submit UTR Logic
+        submitBtn.addEventListener('click', async () => {
+            const utr = utrInput.value.trim();
+            if (utr.length < 12) {
+                showToast('Invalid UTR (Must be 12 digits)', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '...';
+
+            try {
+                const res = await fetch('/api/payin/submit-utr-public', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uuid: txUuid, utr: utr })
+                });
+                const data = await res.json();
+
+                if (data.code === 1) {
+                    showToast('UTR Submitted! Verifying...', 'success');
+                    utrInput.value = '';
+                    checkStatusOnce(); // Force check
+                } else {
+                    showToast(data.msg || 'Failed to submit', 'error');
+                }
+            } catch (e) {
+                showToast('Network Error', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+
+        // Polling Logic
+        async function pollStatus() {
+            if (!isPolling) return;
+
+            try {
+                const res = await fetch(`/api/payin/status/${txUuid}`);
+                const data = await res.json();
+
+                if (data.code === 1 && (data.data.status === 'success' || data.data.status === 1)) {
+                    isPolling = false;
+                    handleSuccess();
+                }
+            } catch (e) { console.log('Poll error'); }
+
+            if (isPolling) setTimeout(pollStatus, 2000);
+        }
+
+        // Force immediate check
+        async function checkStatusOnce() {
+            try {
+                const res = await fetch(`/api/payin/status/${txUuid}`);
+                const data = await res.json();
+                if (data.code === 1 && (data.data.status === 'success' || data.data.status === 1)) {
+                    isPolling = false;
+                    handleSuccess();
+                }
+            } catch (e) { }
+        }
+
+        function handleSuccess() {
+            document.querySelector('.payment-container').innerHTML = `
+                <div style="padding: 60px 20px; text-align: center;">
+                    <div style="width: 80px; height: 80px; background: #c6f6d5; color: #276749; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <h2 style="color: #2d3748; margin-bottom: 8px;">Payment Successful</h2>
+                    <p style="color: #718096; margin-bottom: 24px;">Redirecting you back...</p>
+                    <div class="loader" style="width: 20px; height: 20px; border: 2px solid #cbd5e0; border-top-color: #3182ce; border-radius: 50%; animation: spin 1s infinite linear; margin: 0 auto;"></div>
+                </div>
+                <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+            `;
+
+            if (skipUrlData) {
+                setTimeout(() => window.location.href = skipUrlData, 1500);
+            }
+        }
+
+        // Start
+        setTimeout(pollStatus, 1000);
+    </script>
+</body>
+
+</html>
