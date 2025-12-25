@@ -490,5 +490,6 @@ router.post('/f2pay/payout', async (req, res) => {
         console.error('F2PAY Payout Callback Error:', error);
         if (!res.headersSent) res.status(200).send('success');
     }
+});
 
-    module.exports = router;
+module.exports = router;
