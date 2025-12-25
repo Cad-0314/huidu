@@ -434,25 +434,68 @@
                 payBtn.textContent = 'Pay Now';
             }
 
-            // Auto-polling for status
+            // Auto-polling for status with adaptive interval
             const txUuid = document.getElementById('txUuid').value;
+            // Get skip URL explicitly
+            const skipUrlData = document.getElementById('skipUrlData').value;
+
             if (txUuid) {
-                const pollInterval = setInterval(() => {
+                let checkCount = 0;
+                let currentInterval = 1500; // Start fast (1.5s)
+
+                function poll() {
                     fetch(`/api/payin/status/${txUuid}`)
                         .then(res => res.json())
                         .then(data => {
-                            if (data.code === 1 && data.data.status === 'success') {
-                                clearInterval(pollInterval);
-                                // Success - Redirect
-                                if (skipUrlData && skipUrlData !== '') {
-                                    window.location.href = skipUrlData;
-                                } else {
-                                    document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:sans-serif;"><h2 style="color:green;">Payment Successful</h2><p>You can close this window.</p></div>';
-                                }
+                            // Check for 'success' string or 1 (if used)
+                            if (data.code === 1 && (data.data.status === 'success' || data.data.status === 1)) {
+                                handlePaymentSuccess();
+                            } else {
+                                // Continue polling
+                                checkCount++;
+                                // After ~15 seconds (10 checks), slow down to 3s to save resources
+                                if (checkCount > 10) currentInterval = 3000;
+                                setTimeout(poll, currentInterval);
                             }
                         })
-                        .catch(err => console.error('Polling error:', err));
-                }, 3000); // Check every 3 seconds
+                        .catch(err => {
+                            console.error('Polling error:', err);
+                            setTimeout(poll, 3000); // Retry slowly on error
+                        });
+                }
+
+                function handlePaymentSuccess() {
+                    // Update UI immediately (No refresh needed)
+                    const container = document.querySelector('.payment-container');
+                    if (container) {
+                        container.innerHTML = `
+                            <div style="padding: 40px 24px; text-align: center; animation: fadeIn 0.5s ease;">
+                                <div style="display: inline-flex; justify-content: center; align-items: center; width: 80px; height: 80px; background: #def7ec; border-radius: 50%; margin-bottom: 24px;">
+                                    <svg style="width: 40px; height: 40px; color: #48bb78;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <h2 style="color: #1a365d; margin-bottom: 12px; font-size: 24px; font-weight: 700;">Payment Successful!</h2>
+                                <p style="color: #718096; margin-bottom: 24px; line-height: 1.5;">Your transaction has been verified securely.</p>
+                                ${skipUrlData ? '<div style="font-size: 13px; color: #a0aec0; display: flex; align-items: center; justify-content: center; gap: 8px;"><div style="width: 14px; height: 14px; border: 2px solid #cbd5e0; border-top-color: #4299e1; border-radius: 50%; animation: spin 1s linear infinite;"></div> Redirecting you back...</div>' : '<button onclick="window.close()" style="background: #4299e1; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Close Window</button>'}
+                            </div>
+                            <style>
+                                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                                @keyframes spin { to { transform: rotate(360deg); } }
+                            </style>
+                        `;
+                    }
+
+                    // Redirect if URL exists
+                    if (skipUrlData && skipUrlData !== '') {
+                        setTimeout(() => {
+                            window.location.href = skipUrlData;
+                        }, 2000); // 2s delay to let user see the success message
+                    }
+                }
+
+                // Start the polling loop
+                setTimeout(poll, 1000);
             }
         });
     </script>

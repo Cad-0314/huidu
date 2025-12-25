@@ -319,11 +319,12 @@ async function createPayout(data, config = {}) {
     const bizContent = {
         mchOrderNo: data.orderId,
         amount: parseFloat(data.amount).toFixed(2),
-        methodCode: 'BANK_INR', // From Test Params
+        methodCode: 'BANK_INR',
         payeeName: data.name,
         payeeAccountNo: data.bankNo,
-        payeeIfsc: data.ifsc, // Guessing field name (payeeIfsc vs ifsc)
-        ifsc: data.ifsc,      // Sending both to be safe
+        payeeIfsc: data.ifsc,
+        payeeMobile: '9999999999', // Required by Risk Control, not collected by frontend
+        payeeEmail: 'payout@customer.com', // Required by Risk Control, not collected by frontend
         notifyUrl: data.notifyUrl
     };
 
