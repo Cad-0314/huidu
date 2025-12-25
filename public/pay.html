@@ -310,21 +310,26 @@
 
         // --- QR Code Generation ---
         const qrcodeElement = document.getElementById('qrcode');
-        if (accountInfo && accountInfo.upiScan) {
+        if (accountInfo && (accountInfo.upiScan || accountInfo.upi)) {
+            let qrText = accountInfo.upiScan || accountInfo.upi;
+
+            // If it looks like query params without scheme, prepending upi://pay?
+            if (qrText && !qrText.startsWith('upi://') && !qrText.startsWith('http')) {
+                if (qrText.startsWith('pa=') || qrText.includes('&am=')) {
+                    qrText = 'upi://pay?' + qrText;
+                } else if (qrText.includes('@')) {
+                    // It's likely just a VPA address
+                    qrText = `upi://pay?pa=${qrText}&pn=Merchant&am=${document.getElementById('amount').value}&cu=INR`;
+                }
+            }
+
             new QRCode(qrcodeElement, {
-                text: accountInfo.upiScan,
+                text: qrText,
                 width: 180,
                 height: 180,
                 colorDark: "#000000",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
-            });
-        } else if (accountInfo && accountInfo.upi) {
-            // Fallback to upi string if upiScan missing
-            new QRCode(qrcodeElement, {
-                text: `upi://pay?pa=${accountInfo.upi}&pn=Merchant&am=${document.getElementById('amount').value}&cu=INR`, // Simple construction if raw VPA
-                width: 180,
-                height: 180
             });
         } else {
             qrcodeElement.innerHTML = '<span class="text-danger">QR Code Unavailable</span>';
