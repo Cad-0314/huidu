@@ -343,7 +343,8 @@
             </button>
 
             <!-- Iframe Container for F2PAY/Inline Channels -->
-            <div id="paymentIframeContainer" style="display: none; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            <div id="paymentIframeContainer"
+                style="display: none; margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
                 <iframe id="paymentIframe" src="" style="width: 100%; height: 600px; border: none;"></iframe>
             </div>
 
@@ -391,7 +392,7 @@
             }
 
             const channel = document.getElementById('channel').value;
-             const paymentUrl = document.getElementById('fallbackUrl').value;
+            const paymentUrl = document.getElementById('fallbackUrl').value;
             const iframeContainer = document.getElementById('paymentIframeContainer');
             const iframe = document.getElementById('paymentIframe');
 
@@ -400,17 +401,21 @@
                 // Hide UPI Options
                 const optionsContainer = document.querySelector('.payment-options');
                 if (optionsContainer) optionsContainer.style.display = 'none';
-                
+
                 // Hide Section Title
-                 const sectionTitle = document.querySelector('.section-title');
+                const sectionTitle = document.querySelector('.section-title');
                 if (sectionTitle) sectionTitle.style.display = 'none';
+
+                // Hide Payment Header (Amount) as per request
+                const paymentHeader = document.querySelector('.payment-header');
+                if (paymentHeader) paymentHeader.style.display = 'none';
 
                 // Enable Pay Button immediately
                 payBtn.disabled = false;
                 payBtn.textContent = 'Proceed to Payment';
 
                 // Change Pay Button behavior to open Iframe
-                payBtn.addEventListener('click', function() {
+                payBtn.addEventListener('click', function () {
                     this.style.display = 'none'; // Hide button after click
                     iframeContainer.style.display = 'block';
                     iframe.src = paymentUrl;
@@ -419,7 +424,7 @@
                 // Optional: Auto-click if desired? User usually prefers explicit action.
                 // For now, adhere to explicit click.
             } else {
-                 // --- Standard Logic (Silkpay / Others) ---
+                // --- Standard Logic (Silkpay / Others) ---
                 // Check each option for valid deeplink
                 options.forEach(option => {
                     const deeplink = option.getAttribute('data-deeplink');
@@ -460,7 +465,7 @@
                     }
                 });
 
-                 // Auto-select first valid option
+                // Auto-select first valid option
                 const validOptions = document.querySelectorAll('.payment-option:not(.disabled)');
                 if (validOptions.length > 0) {
                     validOptions[0].click();
