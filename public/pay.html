@@ -301,21 +301,21 @@
             <div class="section-title">Select an option to pay (UPI)</div>
 
             <div class="payment-options">
-                <div class="payment-option" data-method="phonepe" data-deeplink="{{DEEPLINK_PHONEPE}}">
-                    <div class="option-icon">
-                        <img src="/images/phonepe.png" alt="PhonePe"
-                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#5f259f\'><circle cx=\'12\' cy=\'12\' r=\'12\'/><text x=\'12\' y=\'16\' text-anchor=\'middle\' fill=\'white\' font-size=\'10\' font-weight=\'bold\'>P</text></svg>'">
-                    </div>
-                    <span class="option-text">PhonePe</span>
-                    <div class="option-radio"></div>
-                </div>
-
                 <div class="payment-option" data-method="paytm" data-deeplink="{{DEEPLINK_PAYTM}}">
                     <div class="option-icon">
                         <img src="/images/paytm.png" alt="Paytm"
                             onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#002970\'><rect width=\'24\' height=\'24\' rx=\'4\'/><text x=\'12\' y=\'15\' text-anchor=\'middle\' fill=\'white\' font-size=\'7\' font-weight=\'bold\'>Paytm</text></svg>'">
                     </div>
                     <span class="option-text">Paytm</span>
+                    <div class="option-radio"></div>
+                </div>
+
+                <div class="payment-option" data-method="phonepe" data-deeplink="{{DEEPLINK_PHONEPE}}">
+                    <div class="option-icon">
+                        <img src="/images/phonepe.png" alt="PhonePe"
+                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#5f259f\'><circle cx=\'12\' cy=\'12\' r=\'12\'/><text x=\'12\' y=\'16\' text-anchor=\'middle\' fill=\'white\' font-size=\'10\' font-weight=\'bold\'>P</text></svg>'">
+                    </div>
+                    <span class="option-text">PhonePe</span>
                     <div class="option-radio"></div>
                 </div>
 
@@ -378,23 +378,10 @@
             const fallbackUrl = document.getElementById('fallbackUrl').value;
             let selectedDeeplink = null;
 
-            // Helper to open payment in iframe
+            // Helper to open payment in iframe (Kept for reference but unused for fallback)
             function openInIframe() {
-                // Create full-screen iframe
-                const iframe = document.createElement('iframe');
-                iframe.src = fallbackUrl;
-                iframe.style.position = 'fixed';
-                iframe.style.top = '0';
-                iframe.style.left = '0';
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-                iframe.style.border = 'none';
-                iframe.style.zIndex = '9999';
-                iframe.allow = "payment";
-
-                // Clear body and append iframe
-                document.body.innerHTML = '';
-                document.body.appendChild(iframe);
+                // Disabled fallback per request
+                console.log('Fallback disabled');
             }
 
             // Check each option for valid deeplink
@@ -427,31 +414,13 @@
 
             // Pay button click handler
             payBtn.addEventListener('click', function () {
-                // Detect Desktop
-                const isDesktop = /Windows|Macintosh|Linux/i.test(navigator.userAgent) && !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-                if (isDesktop) {
-                    // Desktop: Always open iframe directly
-                    openInIframe();
-                    return;
-                }
-
-                // Mobile Logic
+                // Strictly use Intent / App Links (Deep Links)
                 if (selectedDeeplink && selectedDeeplink !== '' && !selectedDeeplink.startsWith('{{')) {
                     // Open deeplink
                     window.location.href = selectedDeeplink;
-
-                    // Fallback logic for failures
-                    setTimeout(() => {
-                        if (document.hidden !== true) {
-                            if (confirm('Unable to open UPI app. Open payment page instead?')) {
-                                openInIframe();
-                            }
-                        }
-                    }, 2500);
                 } else {
-                    // No valid deeplink selected, use fallback
-                    openInIframe();
+                    // No valid deeplink - Do nothing or alert
+                    alert('No installed app found for this option.');
                 }
             });
 
