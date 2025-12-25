@@ -100,8 +100,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         p: param,
         s: skipUrl, // Store skipUrl for expiration return
         deepLinks: deepLinks,
-        channel: merchantChannel,
-        accountInfo: channelResponse.data ? channelResponse.data.accountInfo : null
+        channel: merchantChannel
     });
 
     // Insert into DB

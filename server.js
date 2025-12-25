@@ -163,21 +163,6 @@ app.get('/pay/:orderId', async (req, res) => {
         html = html.replace('{{UUID}}', tx.uuid);
         html = html.replace('{{DATE}}', new Date(tx.created_at).toLocaleDateString());
         html = html.replace('{{PAYMENT_URL}}', tx.payment_url);
-        html = html.replace('{{CHANNEL}}', tx.channel || 'silkpay');
-
-        // Extract and inject accountInfo for F2Pay custom page
-        let accountInfo = null;
-        try {
-            if (tx.param) {
-                const params = JSON.parse(tx.param);
-                if (params.accountInfo) {
-                    accountInfo = params.accountInfo;
-                }
-            }
-        } catch (e) {
-            console.error('Error parsing tx.param for accountInfo', e);
-        }
-        html = html.replace('{{ACCOUNT_INFO}}', accountInfo ? JSON.stringify(accountInfo).replace(/"/g, '&quot;') : 'null');
 
         html = html.replace('{{DEEPLINK_PHONEPE}}', deepLinks.upi_phonepe || '');
         html = html.replace('{{DEEPLINK_PAYTM}}', deepLinks.upi_paytm || '');

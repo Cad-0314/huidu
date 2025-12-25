@@ -1,430 +1,568 @@
 <!DOCTYPE html>
-<html lang="en" style="--primary-color: #ed7238;">
+<html lang="en">
 
 <head>
-    <style>
-        body {
-            transition: opacity ease-in 0.2s;
-        }
-
-        body[unresolved] {
-            opacity: 0;
-            display: block;
-            overflow: hidden;
-            position: relative;
-        }
-    </style>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/svg+xml" href="/icon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-    <title>Payment</title>
-    <!-- Bootstrap CSS (Inferred from class names in user snippet) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+    <title>Payment | VSPAY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom Styles from inspiration */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f8f9fa;
-        }
-
-        .head {
-            background-color: #ed7238;
-            padding: 10px 0;
-        }
-
-        .f2pay_logo {
-            height: 30px;
-        }
-
-        .order_amount {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        .step_font {
-            font-weight: bold;
-            color: #ed7238;
-            font-size: 16px;
-        }
-
-        .method-title {
-            font-weight: 500;
-            margin-bottom: 10px;
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .active_payment {
-            border: 1px solid #ed7238;
-            background-color: #fff5f2;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .active_payment:active {
-            transform: scale(0.98);
-        }
-
-        .app_logo {
-            width: 30px;
-            height: 30px;
-            border-radius: 5px;
-        }
-
-        .app_logo_phonepe {
-            width: 30px;
-            height: 30px;
-            border-radius: 5px;
-        }
-
-        .payment_name {
-            font-weight: 600;
-            line-height: 30px;
-        }
-
-        .paytm-btn-wrap {
-            align-items: center;
-        }
-
-        .utr_input {
+        .payment-container {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 10px 60px rgba(0, 0, 0, 0.1);
             width: 100%;
-            border: none;
-            outline: none;
-            padding: 10px;
-            font-size: 16px;
+            max-width: 420px;
+            overflow: hidden;
         }
 
-        .input-wrapper {
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            overflow: hidden;
+        .logo-header {
+            background: linear-gradient(135deg, #1a365d 0%, #2d4a77 100%);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-header img {
+            height: 50px;
+        }
+
+        .payment-header {
+            padding: 28px 24px 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .amount-display {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a365d;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .amount-display .currency {
+            font-size: 20px;
+            margin-right: 2px;
+        }
+
+        .amount-subtitle {
+            color: #718096;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .payment-body {
+            padding: 20px 24px 24px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .payment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .payment-option {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
             background: #fff;
         }
 
-        .label-tag {
-            background: #eee;
-            padding: 5px 10px;
-            font-size: 12px;
-            color: #666;
-            width: 100%;
-            border-bottom: 1px solid #ddd;
+        .payment-option:hover {
+            border-color: #cbd5e0;
+            background: #f7fafc;
         }
 
-        .scanTitle2 {
-            font-size: 14px;
-            color: #dc3545;
-            margin-bottom: 10px;
-            font-weight: bold;
+        .payment-option.selected {
+            border-color: #4299e1;
+            background: linear-gradient(135deg, #ebf8ff 0%, #e6f3ff 100%);
         }
 
-        #qrcode {
+        .payment-option.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .payment-option.disabled:hover {
+            border-color: #e2e8f0;
+            background: #fff;
+        }
+
+        .option-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
             display: flex;
+            align-items: center;
             justify-content: center;
-            margin: 20px 0;
+            margin-right: 14px;
+            overflow: hidden;
         }
 
-        #qrcode img {
-            display: block;
-            max-width: 100%;
-            height: auto;
-            margin: 0 auto;
+        .option-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
-        .btn-primary {
-            background-color: #ed7238;
-            border-color: #ed7238;
+        .option-text {
+            flex: 1;
+            font-size: 15px;
+            font-weight: 500;
+            color: #2d3748;
         }
 
-        .btn-primary:hover {
-            background-color: #d65f2a;
-            border-color: #d65f2a;
+        .option-radio {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #cbd5e0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
         }
 
-        .btn-primary:disabled {
-            background-color: #fab696;
-            border-color: #fab696;
+        .payment-option.selected .option-radio {
+            border-color: #4299e1;
+            background: #4299e1;
         }
 
-        /* Spinner */
-        .spinner-border-sm {
-            width: 1rem;
-            height: 1rem;
-            border-width: 0.15em;
+        .option-radio::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .payment-option.selected .option-radio::after {
+            opacity: 1;
+        }
+
+        .pay-button {
+            width: 100%;
+            margin-top: 24px;
+            padding: 16px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .pay-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(66, 153, 225, 0.4);
+        }
+
+        .pay-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .pay-button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .paid-button {
+            width: 100%;
+            margin-top: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .paid-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+        }
+
+        .paid-button:active {
+            transform: translateY(0);
+        }
+
+        .order-info {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 6px;
+        }
+
+        .order-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .order-value {
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .secure-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 20px;
+            color: #718096;
+            font-size: 12px;
+        }
+
+        .lock-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .payment-container {
+                border-radius: 16px;
+            }
+
+            .amount-display {
+                font-size: 28px;
+            }
+
+            .payment-option {
+                padding: 12px 14px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <!-- Hidden Inputs -->
-    <input type="hidden" id="accountInfoData" value="{{ACCOUNT_INFO}}">
-    <input type="hidden" id="orderId" value="{{ORDER_ID}}">
-    <input type="hidden" id="amount" value="{{AMOUNT}}">
-    <input type="hidden" id="channel" value="{{CHANNEL}}">
+    <div class="payment-container">
+        <div class="logo-header">
 
-    <div id="app" data-v-app="">
-        <div id="appPage"
-            style="max-width: 400px; margin: 0px auto; min-height: 100vh; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+        </div>
+        <div class="payment-header">
+            <div class="amount-display">
+                <span class="currency">₹</span>{{AMOUNT}}
+            </div>
+            <div class="amount-subtitle">The amount you need to pay</div>
+            <div class="amount-notice" style="font-size: 13px; color: #e53e3e; margin-top: 5px; font-weight: 500;">
+                Note: Amount might be slightly different (e.g. ₹1 less) for faster verification.
+            </div>
+        </div>
 
-            <div class="head">
-                <nav class="navbar navbar-expand-lg">
-                    <div class="container-md">
-                        <a class="navbar-brand page_back" href="#"></a>
-                        <div class="me-1">
-                            <!-- Logo Placeholder, using text if image fails -->
-                            <span style="color: white; font-weight: bold; font-size: 18px;">Payment</span>
-                        </div>
+        <div class="payment-body">
+            <div class="section-title">Select an option to pay (UPI)</div>
+
+            <div class="payment-options">
+                <div class="payment-option" data-method="paytm" data-deeplink="{{DEEPLINK_PAYTM}}">
+                    <div class="option-icon">
+                        <img src="/images/paytm.png" alt="Paytm"
+                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#002970\'><rect width=\'24\' height=\'24\' rx=\'4\'/><text x=\'12\' y=\'15\' text-anchor=\'middle\' fill=\'white\' font-size=\'7\' font-weight=\'bold\'>Paytm</text></svg>'">
                     </div>
-                </nav>
+                    <span class="option-text">Paytm</span>
+                    <div class="option-radio"></div>
+                </div>
+
+                <div class="payment-option" data-method="phonepe" data-deeplink="{{DEEPLINK_PHONEPE}}">
+                    <div class="option-icon">
+                        <img src="/images/phonepe.png" alt="PhonePe"
+                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#5f259f\'><circle cx=\'12\' cy=\'12\' r=\'12\'/><text x=\'12\' y=\'16\' text-anchor=\'middle\' fill=\'white\' font-size=\'10\' font-weight=\'bold\'>P</text></svg>'">
+                    </div>
+                    <span class="option-text">PhonePe</span>
+                    <div class="option-radio"></div>
+                </div>
+
+                <div class="payment-option" data-method="gpay" data-deeplink="{{DEEPLINK_GPAY}}">
+                    <div class="option-icon">
+                        <img src="/images/gpay.png" alt="Google Pay"
+                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#3c4043\'><rect width=\'24\' height=\'24\' rx=\'4\' fill=\'white\'/><path d=\'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4-3h-2V8h2v6z\' fill=\'#3c4043\'/></svg>'">
+                    </div>
+                    <span class="option-text">Google Pay</span>
+                    <div class="option-radio"></div>
+                </div>
+
+                <div class="payment-option" data-method="upi" data-deeplink="{{DEEPLINK_UPI}}">
+                    <div class="option-icon">
+                        <img src="/images/upi.png" alt="UPI"
+                            onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'#097939\'><rect width=\'24\' height=\'24\' rx=\'4\'/><text x=\'12\' y=\'15\' text-anchor=\'middle\' fill=\'white\' font-size=\'7\' font-weight=\'bold\'>UPI</text></svg>'">
+                    </div>
+                    <span class="option-text">Other UPI Apps</span>
+                    <div class="option-radio"></div>
+                </div>
             </div>
 
-            <div class="body p-3">
+            <button class="pay-button" id="payBtn" disabled>
+                Pay <span class="currency">₹</span> {{AMOUNT}}
+            </button>
 
-                <!-- Amount and Timer -->
-                <div class="my-3">
-                    <div style="display: flex; align-items: center;">
-                        <p class="order_amount">₹{{AMOUNT}}</p>
-                        <span id="timer"
-                            style="display: inline-block; margin-left: auto; text-align: right; color: rgb(245, 63, 63); font-weight: 500;">05:00</span>
-                    </div>
+
+
+            <div class="order-info">
+                <div class="order-row">
+                    <span>Order ID</span>
+                    <span class="order-value">{{ORDER_ID}}</span>
                 </div>
-
-                <!-- Step 1: Transfer -->
-                <div class="my-2">
-                    <div class="step_font"> Step1 Transfer </div>
+                <div class="order-row">
+                    <span>Date</span>
+                    <span class="order-value">{{DATE}}</span>
                 </div>
+            </div>
 
-                <!-- Payment Methods (PhonePe/Paytm Intent) -->
-                <div id="intent-methods">
-                    <div class="method-title">
-                        <span>Use Payment App</span>
-                        <span style="font-size: 20px;">一</span>
-                    </div>
+            <div class="secure-badge">
+                <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd"
+                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                        clip-rule="evenodd" />
+                </svg>
+                Secured by UPI
+            </div>
 
-                    <div class="row g-2">
-                        <!-- PhonePe -->
-                        <div class="col-12" id="btn-phonepe" style="display: none;">
-                            <div class="card py-3 active_payment">
-                                <div class="d-flex ms-3 paytm-btn-wrap">
-                                    <i class="fas fa-mobile-alt fa-lg text-primary me-2"></i>
-                                    <span class="payment_name">PhonePe</span>
-                                    <div class="ms-auto me-3 payment_name text-primary">Click To Pay</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Paytm -->
-                        <div class="col-12" id="btn-paytm" style="display: none;">
-                            <div class="card py-3 active_payment">
-                                <div class="d-flex ms-3 paytm-btn-wrap">
-                                    <i class="fas fa-wallet fa-lg text-info me-2"></i>
-                                    <span class="payment_name">Paytm</span>
-                                    <div class="ms-auto me-3 payment_name text-primary">Click To Pay</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Generic UPI -->
-                        <div class="col-12" id="btn-upi" style="display: none;">
-                            <div class="card py-3 active_payment">
-                                <div class="d-flex ms-3 paytm-btn-wrap">
-                                    <i class="fas fa-university fa-lg text-success me-2"></i>
-                                    <span class="payment_name">UPI App</span>
-                                    <div class="ms-auto me-3 payment_name text-primary">Click To Pay</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="height: 16px;"></div>
-                <div style="height: 4px; background-color: #f1f2f3;"></div>
-
-                <!-- QR Code Section -->
-                <div class="method-title" style="margin-top: 16px;">
-                    <span>Scan QR Code</span>
-                    <span style="font-size: 20px;">一</span>
-                </div>
-
-                <div class="text-center mt-3">
-                    <div class="scanTitle2">Don't use same QR code to pay multiple times</div>
-                    <div id="qrcode"></div>
-                    <div class="step_font_subtitle mt-1" style="color: #666; font-size: 14px;"> Scan using any UPI App
-                    </div>
-                </div>
-
-                <div style="height: 16px; width: 100%; border-bottom: 2px dashed #ccc;"></div>
-
-                <!-- Step 2: UTR Submission -->
-                <div class="my-3">
-                    <div class="step_font my-3"> Step 2 - Submit UTR </div>
-                    <div class="mt-2">
-                        <div class="input-wrapper">
-                            <div class="label-tag">UTR / Reference No (12 Digits)</div>
-                            <div class="input-border">
-                                <input type="number" id="utrInput" placeholder="Enter 12-digit UTR" class="utr_input"
-                                    maxlength="12" pattern="\d*">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2 pb-1">
-                    <button id="submitUtrBtn" class="btn btn-primary btn-lg" disabled>
-                        <small>Submit UTR</small>
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed #e2e8f0;">
+                <div class="section-title" style="margin-bottom: 12px;">Already paid? Submit UTR</div>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="utrInput" placeholder="Enter 12-digit UTR/Ref No."
+                        style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; transition: all 0.2s;"
+                        onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'">
+                    <button id="submitUtrBtn"
+                        style="padding: 12px 16px; background: #2d3748; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px; white-space: nowrap;">
+                        Submit
                     </button>
                 </div>
-
-                <div class="mb-5 mt-3">
-                    <div class="d-flex" style="color: rgb(110, 129, 153); font-size: 13px; line-height: 1.5;">
-                        <div class="me-2"><i class="fas fa-info-circle"></i></div>
-                        <div>
-                            1. Please ensure you enter the correct 12-digit UTR.<br>
-                            2. Do not make a second payment via QR code for the same order.<br>
-                            3. If payment is successful but order pending, submit UTR manually.<br>
-                        </div>
-                    </div>
-                </div>
-
+                <div id="utrMessage" style="font-size: 12px; margin-top: 8px; font-weight: 500; display: none;"></div>
             </div>
         </div>
     </div>
 
+    <!-- Fallback Payment URL -->
+    <input type="hidden" id="fallbackUrl" value="{{PAYMENT_URL}}">
+    <input type="hidden" id="skipUrlData" value="{{SKIP_URL}}">
+    <input type="hidden" id="txUuid" value="{{UUID}}">
+
     <script>
-        const orderId = document.getElementById('orderId').value;
-        const accountInfoJson = document.getElementById('accountInfoData').value;
-        let accountInfo = null;
+        document.addEventListener('DOMContentLoaded', function () {
+            const options = document.querySelectorAll('.payment-option');
+            const payBtn = document.getElementById('payBtn');
+            const fallbackUrl = document.getElementById('fallbackUrl').value;
+            let selectedDeeplink = null;
 
-        try {
-            accountInfo = JSON.parse(accountInfoJson);
-        } catch (e) {
-            console.error('Failed to parse account info', e);
-        }
+            // Helper to open payment in iframe (Kept for reference but unused for fallback)
+            function openInIframe() {
+                // Disabled fallback per request
+                console.log('Fallback disabled');
+            }
 
-        // --- QR Code Generation ---
-        const qrcodeElement = document.getElementById('qrcode');
-        if (accountInfo && (accountInfo.upiScan || accountInfo.upi)) {
-            let qrText = accountInfo.upiScan || accountInfo.upi;
+            // Check each option for valid deeplink
+            options.forEach(option => {
+                const deeplink = option.getAttribute('data-deeplink');
 
-            // If it looks like query params without scheme, prepending upi://pay?
-            if (qrText && !qrText.startsWith('upi://') && !qrText.startsWith('http')) {
-                if (qrText.startsWith('pa=') || qrText.includes('&am=')) {
-                    qrText = 'upi://pay?' + qrText;
-                } else if (qrText.includes('@')) {
-                    // It's likely just a VPA address
-                    qrText = `upi://pay?pa=${qrText}&pn=Merchant&am=${document.getElementById('amount').value}&cu=INR`;
+                // Disable option if no valid deeplink
+                if (!deeplink || deeplink === '' || deeplink === 'undefined' || deeplink === 'null' || deeplink.startsWith('{{')) {
+                    option.classList.add('disabled');
+                    option.style.opacity = '0.5';
+                    option.style.cursor = 'not-allowed';
                 }
-            }
 
-            new QRCode(qrcodeElement, {
-                text: qrText,
-                width: 180,
-                height: 180,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-        } else {
-            qrcodeElement.innerHTML = '<span class="text-danger">QR Code Unavailable</span>';
-        }
+                option.addEventListener('click', function () {
+                    if (this.classList.contains('disabled')) return;
 
-        // --- Intent Links ---
-        if (accountInfo) {
-            // PhonePe
-            const btnPhonePe = document.getElementById('btn-phonepe');
-            if (accountInfo.upiPhonepe) {
-                btnPhonePe.style.display = 'block';
-                btnPhonePe.onclick = () => window.location.href = accountInfo.upiPhonepe;
-            }
+                    // Remove selected from all
+                    options.forEach(o => o.classList.remove('selected'));
 
-            // Generic / Other
-            const btnUpi = document.getElementById('btn-upi');
-            // If we have generic intent or just a scan string we can try to use as generic intent
-            const genericUrl = accountInfo.upiIntent || accountInfo.upiScan;
-            if (genericUrl) {
-                btnUpi.style.display = 'block';
-                btnUpi.onclick = () => window.location.href = genericUrl;
-            }
-        }
+                    // Add selected to clicked
+                    this.classList.add('selected');
 
-        // --- UTR Submission ---
-        const utrInput = document.getElementById('utrInput');
-        const submitBtn = document.getElementById('submitUtrBtn');
+                    // Store deeplink
+                    selectedDeeplink = this.getAttribute('data-deeplink');
 
-        utrInput.addEventListener('input', function () {
-            if (this.value.length === 12) {
-                submitBtn.disabled = false;
-            } else {
-                submitBtn.disabled = true;
-            }
-        });
-
-        submitBtn.addEventListener('click', async function () {
-            const utr = utrInput.value;
-            if (utr.length !== 12) return alert('Please enter valid 12 digit UTR');
-
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
-            submitBtn.disabled = true;
-
-            try {
-                const response = await fetch('/api/payin/submit-utr', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ orderId: orderId, utr: utr })
+                    // Enable pay button
+                    payBtn.disabled = false;
                 });
-                const result = await response.json();
+            });
 
-                if (result.code === 1) {
-                    alert('UTR Submitted Successfully! Please wait for confirmation.');
-                    window.location.reload();
+            // Pay button click handler
+            payBtn.addEventListener('click', function () {
+                // Strictly use Intent / App Links (Deep Links)
+                if (selectedDeeplink && selectedDeeplink !== '' && !selectedDeeplink.startsWith('{{')) {
+                    // Open deeplink
+                    window.location.href = selectedDeeplink;
                 } else {
-                    alert(result.msg || 'Submission failed');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<small>Submit UTR</small>';
+                    // No valid deeplink - Do nothing or alert
+                    alert('No installed app found for this option.');
                 }
-            } catch (err) {
-                console.error(err);
-                alert('Network error');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<small>Submit UTR</small>';
+            });
+
+            // Auto-select first valid option
+            const validOptions = document.querySelectorAll('.payment-option:not(.disabled)');
+            if (validOptions.length > 0) {
+                validOptions[0].click();
+            } else {
+                // All options disabled, enable button for fallback
+                payBtn.disabled = false;
+                payBtn.textContent = 'Pay Now';
+            }
+
+            // Auto-polling for status with adaptive interval
+            const txUuid = document.getElementById('txUuid').value;
+            // Get skip URL explicitly
+            const skipUrlData = document.getElementById('skipUrlData').value;
+
+            if (txUuid) {
+                let checkCount = 0;
+                let currentInterval = 1500; // Start fast (1.5s)
+
+                // UTR Submission Handling
+                const submitUtrBtn = document.getElementById('submitUtrBtn');
+                const utrInput = document.getElementById('utrInput');
+                const utrMessage = document.getElementById('utrMessage');
+
+                submitUtrBtn.addEventListener('click', function () {
+                    const utr = utrInput.value.trim();
+                    if (!utr || utr.length < 5) { // Simple validation
+                        showMessage('Please enter a valid UTR', 'error');
+                        return;
+                    }
+
+                    submitUtrBtn.disabled = true;
+                    submitUtrBtn.textContent = '...';
+
+                    fetch('/api/payin/submit-utr-public', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uuid: txUuid, utr: utr })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            submitUtrBtn.disabled = false;
+                            submitUtrBtn.textContent = 'Submit';
+
+                            if (data.code === 1) {
+                                showMessage('UTR Submitted! Verifying...', 'success');
+                                utrInput.value = '';
+                                // Speed up polling immediately
+                                checkCount = 0;
+                                currentInterval = 1000;
+                                poll();
+                            } else {
+                                showMessage(data.msg || 'Submission failed', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('UTR Submit Error:', err);
+                            submitUtrBtn.disabled = false;
+                            submitUtrBtn.textContent = 'Submit';
+                            showMessage('Network error, please try again', 'error');
+                        });
+                });
+
+                function showMessage(msg, type) {
+                    utrMessage.textContent = msg;
+                    utrMessage.style.display = 'block';
+                    utrMessage.style.color = type === 'success' ? '#48bb78' : '#e53e3e';
+                    setTimeout(() => { utrMessage.style.display = 'none'; }, 5000);
+                }
+
+                function poll() {
+                    fetch(`/api/payin/status/${txUuid}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            // Check for 'success' string or 1 (if used)
+                            if (data.code === 1 && (data.data.status === 'success' || data.data.status === 1)) {
+                                handlePaymentSuccess();
+                            } else {
+                                // Continue polling
+                                checkCount++;
+                                // After ~15 seconds (10 checks), slow down to 3s to save resources
+                                if (checkCount > 10) currentInterval = 3000;
+                                setTimeout(poll, currentInterval);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Polling error:', err);
+                            setTimeout(poll, 3000); // Retry slowly on error
+                        });
+                }
+
+                function handlePaymentSuccess() {
+                    // Update UI immediately (No refresh needed)
+                    const container = document.querySelector('.payment-container');
+                    if (container) {
+                        container.innerHTML = `
+                            <div style="padding: 40px 24px; text-align: center; animation: fadeIn 0.5s ease;">
+                                <div style="display: inline-flex; justify-content: center; align-items: center; width: 80px; height: 80px; background: #def7ec; border-radius: 50%; margin-bottom: 24px;">
+                                    <svg style="width: 40px; height: 40px; color: #48bb78;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <h2 style="color: #1a365d; margin-bottom: 12px; font-size: 24px; font-weight: 700;">Payment Successful!</h2>
+                                <p style="color: #718096; margin-bottom: 24px; line-height: 1.5;">Your transaction has been verified securely.</p>
+                                ${skipUrlData ? '<div style="font-size: 13px; color: #a0aec0; display: flex; align-items: center; justify-content: center; gap: 8px;"><div style="width: 14px; height: 14px; border: 2px solid #cbd5e0; border-top-color: #4299e1; border-radius: 50%; animation: spin 1s linear infinite;"></div> Redirecting you back...</div>' : '<button onclick="window.close()" style="background: #4299e1; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Close Window</button>'}
+                            </div>
+                            <style>
+                                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                                @keyframes spin { to { transform: rotate(360deg); } }
+                            </style>
+                        `;
+                    }
+
+                    // Redirect if URL exists
+                    if (skipUrlData && skipUrlData !== '') {
+                        setTimeout(() => {
+                            window.location.href = skipUrlData;
+                        }, 2000); // 2s delay to let user see the success message
+                    }
+                }
+
+                // Start the polling loop
+                setTimeout(poll, 1000);
             }
         });
-
-        // --- Timer ---
-        let timeLeft = 300; // 5 minutes
-        const timerElem = document.getElementById('timer');
-        const timerInterval = setInterval(() => {
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                timerElem.innerText = "Expired";
-                return;
-            }
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
-            timerElem.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            timeLeft--;
-        }, 1000);
-
-        // --- Polling for Success ---
-        setInterval(async () => {
-            try {
-                const uuid = '{{UUID}}';
-                const res = await fetch(`/api/payin/status/${uuid}`);
-                const data = await res.json();
-                if (data.code === 1 && data.data.status === 'success') {
-                    alert('Payment Successful!');
-                    window.location.href = '/payment/success'; // Or skipUrl
-                }
-            } catch (e) { }
-        }, 5000);
-
     </script>
 </body>
 

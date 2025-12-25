@@ -349,4 +349,75 @@ router.get('/status/:id', async (req, res) => {
     }
 });
 
+router.post('/submit-utr-public', async (req, res) => {
+    try {
+        const { uuid, utr } = req.body;
+        const db = getDb();
+
+        if (!uuid || !utr) {
+            return res.status(400).json({ code: 0, msg: 'uuid and utr are required' });
+        }
+
+        // Find transaction by uuid (no merchant auth needed, uuid is the secret)
+        const tx = await db.prepare('SELECT * FROM transactions WHERE uuid = ?').get(uuid);
+
+        if (!tx) {
+            return res.status(404).json({ code: 0, msg: 'Transaction not found' });
+        }
+
+        if (tx.status === 'success') {
+            return res.status(400).json({ code: 0, msg: 'Order already successful' });
+        }
+
+        if (tx.utr === utr) {
+            return res.json({ code: 1, msg: 'UTR already submitted', data: { status: 'processing' } });
+        }
+
+        // Check routing
+        const channel = tx.channel || 'silkpay';
+        let isSuccess = false;
+        let resultMsg = '';
+
+        try {
+            let result;
+            if (channel === 'f2pay') {
+                result = await f2payService.submitUtr(tx.order_id, utr);
+                isSuccess = (result.code === 1);
+                resultMsg = result.message;
+            } else {
+                result = await silkpayService.submitUtr(tx.order_id, utr);
+                isSuccess = (result.status === '200' && result.data && result.data.code === 1);
+                resultMsg = result.message || (result.data ? result.data.msg : '');
+            }
+
+            if (isSuccess) {
+                // Success upstream
+                await db.prepare('UPDATE transactions SET utr = ? WHERE id = ?').run(utr, tx.id);
+
+                return res.json({
+                    code: 1,
+                    msg: 'UTR Submitted successfully',
+                    data: {
+                        orderId: tx.order_id,
+                        utr: utr,
+                        status: 'processing'
+                    }
+                });
+            } else {
+                return res.json({ // Return 200 even on logical failure so UI can show specific msg
+                    code: 0,
+                    msg: resultMsg || 'Upstream rejected UTR'
+                });
+            }
+        } catch (upstreamError) {
+            console.error('Submit UTR Error:', upstreamError);
+            return res.status(502).json({ code: 0, msg: 'Failed to communicate with payment provider' });
+        }
+
+    } catch (error) {
+        console.error('Submit Public UTR error:', error);
+        res.status(500).json({ code: 0, msg: 'Server error' });
+    }
+});
+
 module.exports = router;
