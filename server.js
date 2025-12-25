@@ -163,6 +163,7 @@ app.get('/pay/:orderId', async (req, res) => {
         html = html.replace('{{UUID}}', tx.uuid);
         html = html.replace('{{DATE}}', new Date(tx.created_at).toLocaleDateString());
         html = html.replace('{{PAYMENT_URL}}', tx.payment_url);
+        html = html.replace('{{CHANNEL}}', tx.channel || 'silkpay');
 
         html = html.replace('{{DEEPLINK_PHONEPE}}', deepLinks.upi_phonepe || '');
         html = html.replace('{{DEEPLINK_PAYTM}}', deepLinks.upi_paytm || '');
