@@ -7,6 +7,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const { getDb } = require('../config/database');
 
 // Configuration
 const BASE_URL = process.env.GTPAY_BASE_URL || 'https://interface.payp.vip';
@@ -19,18 +20,47 @@ const REQUEST_LOG_FILE = path.join(__dirname, '..', 'gtpay_requests.log');
 
 // Helper to log errors
 function logError(endpoint, error, requestData) {
-    const entry = `[${new Date().toISOString()}] ${endpoint}\nRequest: ${JSON.stringify(requestData)}\nError: ${error.message || error}\n\n`;
+    const timestamp = new Date().toISOString();
+    const entry = `[${timestamp}] GTPAY ERROR ${endpoint}\nRequest: ${JSON.stringify(requestData)}\nError: ${error.message || JSON.stringify(error)}`;
+    console.error('[GTPAY ERROR]', entry);
     try {
-        fs.appendFileSync(ERROR_LOG_FILE, entry);
+        fs.appendFileSync(ERROR_LOG_FILE, entry + '\n\n');
     } catch (e) { }
+
+    // Log to database
+    logToDatabase(endpoint, requestData, { error: error.message || error }, 0, 'error');
 }
 
 // Helper to log requests
 function logRequest(endpoint, requestData, response, duration) {
-    const entry = `[${new Date().toISOString()}] ${endpoint} (${duration}ms)\nRequest: ${JSON.stringify(requestData)}\nResponse: ${JSON.stringify(response)}\n\n`;
+    const timestamp = new Date().toISOString();
+    const entry = `[${timestamp}] GTPAY ${endpoint} (${duration}ms)\nRequest: ${JSON.stringify(requestData, null, 2)}\nResponse: ${JSON.stringify(response, null, 2)}`;
+    console.log('[GTPAY REQUEST]', entry);
     try {
-        fs.appendFileSync(REQUEST_LOG_FILE, entry);
+        fs.appendFileSync(REQUEST_LOG_FILE, entry + '\n\n');
     } catch (e) { }
+
+    // Log to database
+    logToDatabase(endpoint, requestData, response, duration, 'success');
+}
+
+// Helper to log to database
+async function logToDatabase(endpoint, request, response, duration, status) {
+    try {
+        const db = getDb();
+        await db.prepare(`
+            INSERT INTO api_logs (endpoint, request, response, duration, status)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(
+            'GTPAY:' + endpoint,
+            JSON.stringify(request),
+            JSON.stringify(response),
+            duration,
+            status
+        );
+    } catch (e) {
+        console.error('[GTPAY] Failed to log to database:', e.message);
+    }
 }
 
 const api = axios.create({
@@ -107,6 +137,15 @@ function md5(text) {
  */
 async function createPayin(data) {
     const startTime = Date.now();
+
+    // Log incoming request with config
+    console.log('[GTPAY] ========== PAYIN REQUEST ==========');
+    console.log('[GTPAY] Input Data:', JSON.stringify(data, null, 2));
+    console.log('[GTPAY] Config:', {
+        baseUrl: BASE_URL,
+        platformNo: PLATFORM_NO ? 'SET' : 'NOT SET',
+        payinKey: PAYIN_KEY ? `SET (${PAYIN_KEY.substring(0, 8)}...)` : 'NOT SET'
+    });
 
     // Parameter parameters
     const paramMap = {
