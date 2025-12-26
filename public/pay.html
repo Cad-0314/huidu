@@ -443,7 +443,14 @@
             if (validOptions.length > 0) {
                 validOptions[0].click();
             } else {
-                // All options disabled, enable button for fallback
+                // All options disabled - check if we have a fallback payment URL (for HDPay, GTPAY, etc.)
+                if (fallbackUrl && fallbackUrl !== '' && !fallbackUrl.startsWith('{{')) {
+                    // Redirect to upstream payment page immediately
+                    console.log('No deeplinks available, redirecting to payment URL:', fallbackUrl);
+                    window.location.href = fallbackUrl;
+                    return;
+                }
+                // No fallback either - enable button but it won't do anything
                 payBtn.disabled = false;
                 payBtn.textContent = 'Pay Now';
             }
