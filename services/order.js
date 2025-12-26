@@ -150,6 +150,12 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     if (merchantChannel === 'gtpay') {
         platformOrderId = channelResponse.orderId || channelResponse.data?.sysNo || finalOrderId;
         paymentUrl = channelResponse.paymentUrl || channelResponse.data?.payUrl;
+    } else if (merchantChannel === 'hdpay') {
+        // HDPay: Use their payUrl directly (no deeplinks, forward to their payment page)
+        platformOrderId = channelResponse.data?.payOrderId || finalOrderId;
+        paymentUrl = channelResponse.data?.paymentUrl;
+        // Don't use deeplinks for HDPay - clear them so our pay.html redirects to payUrl
+        deepLinks = {};
     } else {
         platformOrderId = channelResponse.data?.payOrderId || finalOrderId;
         paymentUrl = channelResponse.data?.paymentUrl;
