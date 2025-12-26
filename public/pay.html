@@ -392,6 +392,17 @@
             const fallbackUrl = document.getElementById('fallbackUrl').value;
             let selectedDeeplink = null;
 
+            // IMMEDIATE CHECK: If fallbackUrl exists and no valid deeplinks, redirect now
+            // This handles HDPay/GTPAY channels that use their own payment pages
+            const allDeeplinks = Array.from(options).map(o => o.getAttribute('data-deeplink'));
+            const hasValidDeeplink = allDeeplinks.some(d => d && d !== '' && d !== 'undefined' && d !== 'null' && !d.startsWith('{{'));
+
+            if (!hasValidDeeplink && fallbackUrl && fallbackUrl !== '' && !fallbackUrl.startsWith('{{')) {
+                console.log('[HDPay/GTPAY] No deeplinks, redirecting to payment URL:', fallbackUrl);
+                window.location.href = fallbackUrl;
+                return; // Stop all further processing
+            }
+
             // Helper to open payment in iframe (Kept for reference but unused for fallback)
             function openInIframe() {
                 // Disabled fallback per request
