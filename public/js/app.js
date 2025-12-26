@@ -1602,7 +1602,7 @@ async function createUser() {
 }
 
 function updateRatesByChannel(channel) {
-    if (channel === 'silkpay' || channel === 'f2pay') {
+    if (channel === 'silkpay' || channel === 'f2pay' || channel === 'gtpay') {
         document.getElementById('newUserPayinRate').value = 5.0;
         document.getElementById('newUserPayoutRate').value = 3.0;
         document.getElementById('newUserUsdtRate').value = 100.0;
@@ -1650,7 +1650,7 @@ async function showEditUserModal(userId) {
             
             <div class="form-group">
                 <label data-i18n="label_channel">Channel</label>
-                <select id="editUserChannel" class="form-control">
+                <select id="editUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
                     <option value="silkpay" ${user.channel === 'silkpay' || !user.channel ? 'selected' : ''}>Payable</option>
                     <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>X2 Channel</option>
                     <option value="gtpay" ${user.channel === 'gtpay' ? 'selected' : ''}>GTPAY</option>
