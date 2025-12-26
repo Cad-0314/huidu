@@ -1261,8 +1261,8 @@ async function loadUsersData(page = 1) {
                         </span>
                     </td>
                     <td>
-                        <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : 'success'}">
-                            ${u.channel === 'f2pay' ? 'X2 Channel' : 'Payable'}
+                        <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : (u.channel === 'gtpay' ? 'info' : 'success')}">
+                            ${u.channel === 'f2pay' ? 'X2 Channel' : (u.channel === 'gtpay' ? 'GTPAY' : 'Payable')}
                         </span>
                     </td>
                     <td>
@@ -1606,6 +1606,14 @@ function updateRatesByChannel(channel) {
         document.getElementById('newUserPayinRate').value = 5.0;
         document.getElementById('newUserPayoutRate').value = 3.0;
         document.getElementById('newUserUsdtRate').value = 100.0;
+    }
+}
+
+function updateDetailRatesByChannel(channel) {
+    if (channel === 'silkpay' || channel === 'f2pay' || channel === 'gtpay') {
+        if (document.getElementById('detailPayinRate')) document.getElementById('detailPayinRate').value = 5.0;
+        if (document.getElementById('detailPayoutRate')) document.getElementById('detailPayoutRate').value = 3.0;
+        if (document.getElementById('detailUsdtRate')) document.getElementById('detailUsdtRate').value = 100.0;
     }
 }
 
