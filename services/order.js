@@ -3,6 +3,7 @@ const { getDb } = require('../config/database');
 const silkpayService = require('./silkpay');
 const f2payService = require('./f2pay');
 const gtpayService = require('./gtpay');
+const hdpayService = require('./hdpay');
 const { calculatePayinFee, getUserRates } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
 
@@ -82,6 +83,26 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         }
 
         deepLinks = {};
+
+    } else if (merchantChannel === 'hdpay') {
+        // Use HDPay (Channel 4)
+        ourCallbackUrl = `${appUrl}/api/callback/hdpay/payin`;
+
+        channelResponse = await hdpayService.createPayin({
+            amount: numericAmount,
+            orderId: finalOrderId,
+            notifyUrl: ourCallbackUrl,
+            customerName: 'Customer',
+            customerPhone: '9999999999',
+            customerEmail: 'customer@example.com'
+        });
+
+        if (channelResponse.code !== 1) {
+            throw new Error(channelResponse.message || 'Failed to create order via HDPay');
+        }
+
+        // HDPay returns deeplink in data.deepLink.upi_scan
+        deepLinks = channelResponse.data?.deepLink || {};
 
     } else {
         // Use Silkpay (Channel 1 - Default)

@@ -8,6 +8,7 @@ const { apiAuthenticate } = require('../middleware/apiAuth');
 const { authenticate } = require('../middleware/auth'); // Import JWT auth
 const silkpayService = require('../services/silkpay');
 const gtpayService = require('../services/gtpay');
+const hdpayService = require('../services/hdpay');
 const { calculatePayoutFee, getUserRates } = require('../utils/rates');
 const { generateOrderId, generateSign } = require('../utils/signature');
 const speakeasy = require('speakeasy');
@@ -178,6 +179,25 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 }
 
                 platformOrderId = apiResponse.payOrderId || orderId; // GTPAY returns outTradeNo (platform id?)
+
+            } else if (channel === 'hdpay') {
+                console.log(`[PAYOUT] Using HDPay for merchant ${merchant.username} (Channel: ${channel})`);
+                const hdpayCallbackUrl = `${appUrl}/api/callback/hdpay/payout`;
+
+                apiResponse = await hdpayService.createPayout({
+                    orderId: orderId,
+                    amount: amount,
+                    name: personName,
+                    bankNo: account,
+                    ifsc: ifsc,
+                    notifyUrl: hdpayCallbackUrl
+                });
+
+                if (apiResponse.code !== 1) {
+                    throw new Error(apiResponse.message || 'HDPay API error');
+                }
+
+                platformOrderId = apiResponse.payOrderId || orderId;
 
             } else {
                 // Default: Silkpay

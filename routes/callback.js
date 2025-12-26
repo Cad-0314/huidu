@@ -6,6 +6,7 @@ const { getDb } = require('../config/database');
 const silkpayService = require('../services/silkpay');
 const f2payService = require('../services/f2pay');
 const gtpayService = require('../services/gtpay');
+const hdpayService = require('../services/hdpay');
 const { calculatePayinFee, calculatePayoutFee } = require('../utils/rates');
 const { generateSign } = require('../utils/signature');
 
@@ -563,14 +564,25 @@ router.get('/gtpay/payin', async (req, res) => {
         } catch (e) { }
 
         if (callbackUrl) {
+            // Safe param extraction with try-catch
+            let originalParam = '';
+            try {
+                if (tx.param) {
+                    const parsed = JSON.parse(tx.param);
+                    originalParam = parsed.p || '';
+                }
+            } catch (e) {
+                console.warn('[GTPAY Payin] Failed to parse param:', e.message);
+            }
+
             const data = {
                 status: newStatus === 'success' ? 1 : 0,
                 amount: calculatePayinFee(actualAmount, tx.payin_rate || 0.05).netAmount, // Send Net Amount
                 orderAmount: actualAmount,
                 orderId: tx.order_id,
                 id: tx.uuid,
-                utr: '', // GTPAY doesn't seem to send UTR in Payin Callback?
-                param: tx.param ? (JSON.parse(tx.param).p || '') : ''
+                utr: '', // GTPAY doesn't seem to send UTR in Payin Callback
+                param: originalParam
             };
             data.sign = generateSign(data, tx.merchant_key);
             try {
@@ -688,5 +700,202 @@ async function handleGtpayPayoutCallback(data, res, db) {
         }
     }
 }
+
+/**
+ * POST /api/callback/hdpay/payin
+ * Handles callbacks from HDPay for Payin Orders
+ * HDPay sends: merchantId, merchantOrderId, amount, payAmount, orderId, status, msg, payTime, sign
+ */
+router.post('/hdpay/payin', async (req, res) => {
+    try {
+        console.log('HDPay Payin Callback received:', req.body);
+        const db = getDb();
+        const { merchantId, merchantOrderId, amount, payAmount, orderId, status, msg, payTime, sign } = req.body;
+
+        // 1. Log Raw Callback
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('hdpay_payin', ?, ?, ?, datetime('now'))`)
+            .run(merchantOrderId || orderId, JSON.stringify(req.body), status);
+
+        // 2. Verify Signature
+        if (!hdpayService.verifyPayinCallback(req.body)) {
+            console.error('[HDPay Payin SECURITY] Signature verification failed!');
+            // Continue processing for now but log the issue
+        }
+
+        // 3. Find Transaction
+        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
+            .get(merchantOrderId);
+
+        if (!tx && orderId) {
+            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+                .get(orderId);
+        }
+
+        if (!tx) {
+            console.warn(`[HDPay Payin] Transaction not found for merchantOrderId: ${merchantOrderId}, orderId: ${orderId}`);
+            return res.send('success');
+        }
+
+        // 4. Determine Status
+        // HDPay status: 0=waiting, 1=success, 2=failed
+        const newStatus = (status === '1' || status === 1) ? 'success' : 'failed';
+        const actualAmount = parseFloat(payAmount || amount);
+
+        if (tx.status === 'success' && newStatus === 'success') {
+            console.log(`[HDPay Payin] Order ${tx.order_id} already success. Ignoring duplicate.`);
+        } else {
+            const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
+            const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
+
+            await db.prepare(`
+                UPDATE transactions 
+                SET status = ?, amount = ?, fee = ?, net_amount = ?, platform_order_id = ?, callback_data = ?, updated_at = datetime('now') 
+                WHERE id = ?
+            `).run(newStatus, actualAmount, fee, netAmount, orderId, JSON.stringify(req.body), tx.id);
+
+            if (newStatus === 'success') {
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
+                console.log(`[HDPay Payin] Credited ₹${netAmount} to ${tx.username}`);
+
+                // Credit Admin Profit
+                try {
+                    const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
+                    const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
+                    const profit = fee - (actualAmount * adminCostRate);
+                    if (profit !== 0) await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
+                } catch (e) { }
+            }
+        }
+
+        // 5. Response to HDPay
+        res.send('success');
+
+        // 6. Forward to Merchant
+        let callbackUrl = tx.callback_url;
+        let originalParam = '';
+        try {
+            if (tx.param) {
+                const parsed = JSON.parse(tx.param);
+                if (parsed.c) callbackUrl = parsed.c;
+                originalParam = parsed.p || '';
+            }
+        } catch (e) { }
+
+        if (callbackUrl) {
+            const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
+            const { netAmount } = calculatePayinFee(actualAmount, merchantRate);
+
+            const data = {
+                status: newStatus === 'success' ? 1 : 0,
+                amount: netAmount,
+                orderAmount: actualAmount,
+                orderId: tx.order_id,
+                id: tx.uuid,
+                utr: '', // HDPay doesn't send UTR in callback
+                param: originalParam
+            };
+            data.sign = generateSign(data, tx.merchant_key);
+            try {
+                await axios.post(callbackUrl, data, { timeout: 10000 });
+            } catch (e) {
+                console.error('[HDPay Payin] Forward failed:', e.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('HDPay Payin Callback Error:', error);
+        if (!res.headersSent) res.send('success');
+    }
+});
+
+/**
+ * POST /api/callback/hdpay/payout
+ * Handles callbacks from HDPay for Payout Orders
+ * HDPay sends: merchantId, merchantPayoutId, amount, payoutId, status, msg, fee, singleFee, utr, sign
+ */
+router.post('/hdpay/payout', async (req, res) => {
+    try {
+        console.log('HDPay Payout Callback received:', req.body);
+        const db = getDb();
+        const { merchantId, merchantPayoutId, amount, payoutId, status, msg, fee, utr, sign } = req.body;
+
+        // 1. Log Raw Callback
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('hdpay_payout', ?, ?, ?, datetime('now'))`)
+            .run(merchantPayoutId || payoutId, JSON.stringify(req.body), status);
+
+        // 2. Verify Signature
+        if (!hdpayService.verifyPayoutCallback(req.body)) {
+            console.error('[HDPay Payout SECURITY] Signature verification failed!');
+        }
+
+        // 3. Find Payout
+        let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
+            .get(merchantPayoutId);
+
+        if (!payout && payoutId) {
+            payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+                .get(payoutId);
+        }
+
+        if (!payout) {
+            console.warn(`[HDPay Payout] Payout not found for merchantPayoutId: ${merchantPayoutId}`);
+            return res.send('success');
+        }
+
+        // 4. Update Status
+        // HDPay payout status: 1=success, 2=failed
+        let newStatus = 'processing';
+        if (status === '1' || status === 1) newStatus = 'success';
+        else if (status === '2' || status === 2) newStatus = 'failed';
+
+        if (payout.status === 'success' && newStatus === 'success') {
+            console.log(`[HDPay Payout] Order ${payout.order_id} already success.`);
+        } else {
+            await db.prepare(`UPDATE payouts SET status = ?, utr = ?, platform_order_id = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+                .run(newStatus, utr || null, payoutId, msg, JSON.stringify(req.body), payout.id);
+
+            if (newStatus === 'failed' && payout.status !== 'failed') {
+                const refundAmount = payout.amount + payout.fee;
+                console.log(`[HDPay Payout] Failed. Refunding ${refundAmount} to ${payout.username}`);
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(refundAmount, payout.user_id);
+            }
+
+            if (newStatus === 'success' && payout.status !== 'success') {
+                if (payout.fee > 0) {
+                    await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(payout.fee);
+                }
+            }
+        }
+
+        // 5. Response to HDPay
+        res.send('success');
+
+        // 6. Forward Callback
+        const callbackUrl = payout.payout_callback_url || payout.user_callback_url;
+
+        if (callbackUrl) {
+            const cbData = {
+                status: newStatus === 'success' ? 1 : 2,
+                amount: payout.amount,
+                commission: payout.fee,
+                message: msg || (newStatus === 'success' ? 'success' : 'failed'),
+                orderId: payout.order_id,
+                id: payout.uuid,
+                utr: utr || '',
+                param: payout.param || ''
+            };
+            cbData.sign = generateSign(cbData, payout.merchant_key);
+            try {
+                await axios.post(callbackUrl, cbData, { timeout: 10000 });
+            } catch (e) {
+                console.error('[HDPay Payout] Forward failed:', e.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('HDPay Payout Callback Error:', error);
+        if (!res.headersSent) res.send('success');
+    }
+});
 
 module.exports = router;

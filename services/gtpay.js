@@ -401,9 +401,208 @@ function verifyPayoutCallback(query) {
     }
 }
 
+/**
+ * Query Payin Order Status
+ * POST /api/guest/pay/commercialInfo with type=1
+ */
+async function queryPayin(orderId) {
+    const startTime = Date.now();
+    const key = process.env.GTPAY_PAYIN_KEY;
+
+    if (!key) {
+        return { code: 0, msg: 'GTPAY_PAYIN_KEY not configured' };
+    }
+
+    const paramMap = {
+        commercialOrderNo: orderId,
+        type: '1' // Order query
+    };
+
+    const jsonStr = JSON.stringify(paramMap);
+    const parameter = encryptAes(jsonStr, key);
+    const sign = md5(jsonStr);
+
+    if (!parameter) {
+        return { code: 0, msg: 'Encryption failed' };
+    }
+
+    try {
+        const fd = new URLSearchParams();
+        fd.append('platformno', process.env.GTPAY_PLATFORM_NO);
+        fd.append('parameter', parameter);
+        fd.append('sign', sign);
+
+        const response = await api.post('/api/guest/pay/commercialInfo', fd, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        const duration = Date.now() - startTime;
+        logRequest('/api/guest/pay/commercialInfo (payin)', paramMap, response.data, duration);
+
+        const data = response.data;
+        if (data.result === 'success') {
+            // Map status to standardized format
+            let status = 'pending';
+            if (data.status === '支付成功') status = 'success';
+            else if (data.status === '未支付' || data.status === '未出码') status = 'failed';
+
+            return {
+                code: 1,
+                data: {
+                    orderId: data.commercialOrderNo,
+                    platformOrderId: data.orderNo,
+                    amount: data.orderAmount,
+                    status: status,
+                    createdAt: data.createDate,
+                    successAt: data.successDate
+                }
+            };
+        } else {
+            return { code: 0, msg: data.msg || 'Query failed' };
+        }
+    } catch (e) {
+        logError('/api/guest/pay/commercialInfo (payin)', e, paramMap);
+        return { code: 0, msg: e.message };
+    }
+}
+
+/**
+ * Query Payout Order Status
+ * POST /api/guest/pay/commercialInfo with type=3
+ */
+async function queryPayout(orderId) {
+    const startTime = Date.now();
+    const key = process.env.GTPAY_PAYOUT_KEY;
+
+    if (!key) {
+        return { code: 0, msg: 'GTPAY_PAYOUT_KEY not configured' };
+    }
+
+    const paramMap = {
+        commercialOrderNo: orderId,
+        type: '3' // Payout order query
+    };
+
+    const jsonStr = JSON.stringify(paramMap);
+    const parameter = encryptAes(jsonStr, key);
+    const sign = md5(jsonStr);
+
+    if (!parameter) {
+        return { code: 0, msg: 'Encryption failed' };
+    }
+
+    try {
+        const fd = new URLSearchParams();
+        fd.append('platformno', process.env.GTPAY_PLATFORM_NO);
+        fd.append('parameter', parameter);
+        fd.append('sign', sign);
+
+        const response = await api.post('/api/guest/pay/commercialInfo', fd, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        const duration = Date.now() - startTime;
+        logRequest('/api/guest/pay/commercialInfo (payout)', paramMap, response.data, duration);
+
+        const data = response.data;
+        if (data.result === 'success') {
+            let status = 'processing';
+            if (data.status === '代付成功') status = 'success';
+            else if (data.status === '代付失败') status = 'failed';
+
+            return {
+                code: 1,
+                data: {
+                    orderId: data.commercialOrderNo,
+                    platformOrderId: data.orderNo,
+                    amount: data.orderAmount,
+                    status: status,
+                    message: data.errorMsg,
+                    createdAt: data.createDate,
+                    successAt: data.successDate
+                }
+            };
+        } else {
+            return { code: 0, msg: data.msg || 'Query failed' };
+        }
+    } catch (e) {
+        logError('/api/guest/pay/commercialInfo (payout)', e, paramMap);
+        return { code: 0, msg: e.message };
+    }
+}
+
+/**
+ * Get Balance
+ * POST /api/guest/pay/commercialInfo with type=2 (payin) or type=4 (payout)
+ */
+async function getBalance(type = 'payout') {
+    const startTime = Date.now();
+    const key = type === 'payout' ? process.env.GTPAY_PAYOUT_KEY : process.env.GTPAY_PAYIN_KEY;
+
+    if (!key) {
+        return { code: 0, msg: 'GTPAY key not configured' };
+    }
+
+    const paramMap = {
+        type: type === 'payout' ? '4' : '2' // 2=payin balance, 4=payout balance
+    };
+
+    const jsonStr = JSON.stringify(paramMap);
+    const parameter = encryptAes(jsonStr, key);
+    const sign = md5(jsonStr);
+
+    if (!parameter) {
+        return { code: 0, msg: 'Encryption failed' };
+    }
+
+    try {
+        const fd = new URLSearchParams();
+        fd.append('platformno', process.env.GTPAY_PLATFORM_NO);
+        fd.append('parameter', parameter);
+        fd.append('sign', sign);
+
+        const response = await api.post('/api/guest/pay/commercialInfo', fd, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        const duration = Date.now() - startTime;
+        logRequest('/api/guest/pay/commercialInfo (balance)', paramMap, response.data, duration);
+
+        const data = response.data;
+        if (data.result === 'success') {
+            return {
+                code: 1,
+                data: {
+                    balance: parseFloat(data.balance) || 0,
+                    platformNo: data.platformNo
+                }
+            };
+        } else {
+            return { code: 0, msg: data.msg || 'Balance query failed' };
+        }
+    } catch (e) {
+        logError('/api/guest/pay/commercialInfo (balance)', e, paramMap);
+        return { code: 0, msg: e.message };
+    }
+}
+
+/**
+ * Submit UTR for Order
+ * Note: GTPAY docs don't specify a UTR submission endpoint.
+ * This is a placeholder that returns not supported.
+ */
+async function submitUtr(orderId, utr) {
+    console.warn('[GTPAY] submitUtr not supported by GTPAY API');
+    return { code: 0, msg: 'UTR submission not supported by GTPAY' };
+}
+
 module.exports = {
     createPayin,
     createPayout,
+    queryPayin,
+    queryPayout,
+    getBalance,
+    submitUtr,
     verifyPayinCallback,
     verifyPayoutCallback
 };

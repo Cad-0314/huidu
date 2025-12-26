@@ -1,0 +1,1206 @@
+
+Version	Update Time	Status	Author	Description
+V1.0
+
+2022/08/24
+
+create
+
+hdpay
+
+API documentation
+
+0. Introduction
+0.1. Purpose of Writing
+
+
+1. The purpose of this document is to provide developers with the interface specifications required for development.
+
+2. This document can be used as a reference for developers and testers.
+
+0.2. Instructions for use
+
+
+1. HTTPS is used for data transmission.
+
+2. The character encoding is uniformly application/json UTF-8.
+
+3. A response status code of 200 indicates a successful request and does not indicate the order status.
+
+4. The unit of measurement is rupees (yuan).
+
+
+0.3. Signature Instructions
+
+
+The data to be signed is signed as follows:
+
+1. Sort the parameter key values ​​in ascending ASCII order
+
+. 2. Concatenate the parameter values ​​into a string stringA in the format key=value&key=value... (empty values ​​are not included in the signature concatenation).
+
+3. Encrypt the above string using the platform's key using MD5: MD5(stringA&key=key).
+
+4. Finally, convert the MD5-encrypted string to lowercase.
+
+
+1. Receiving payment
+1.1. Placing an order
+URL:https://dd1688.cc/api/payin/submit
+
+Type:POST
+
+Content-Type:application/json
+
+Description: Placing an order
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+merchantOrderId
+
+string
+
+Merchant orders
+
+true
+
+-
+
+amount
+
+string
+
+Amount
+
+true
+
+-
+
+notifyUrl
+
+string
+
+Notification address
+
+false
+
+-
+
+name
+
+string
+
+User Name
+
+false
+
+-
+
+mobile
+
+string
+
+User phone
+
+false
+
+-
+
+email
+
+string
+
+Mail
+
+false
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+deep link
+
+boolean
+
+Should we return UPI deeplink?
+
+false
+
+-
+
+mode
+
+string
+
+UPI channel mode fz|ptm
+
+false
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+object
+
+data
+
+-
+
+└─payUrl
+
+string
+
+Payment Link
+
+-
+
+└─orderId
+
+string
+
+Platform order number
+
+-
+
+└─message
+
+string
+
+information
+
+-
+
+└─status
+
+string
+
+Order status:
+0 Waiting, 1 Successful, 2 Failed
+
+-
+
+└─channelId
+
+int32
+
+aisle
+
+-
+
+└─deeplink
+
+string
+
+UPI deeplink
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "data": {
+    "payUrl": "https://payment.link/xxxxx",
+    "orderId": "168111122223333",
+    "message": "success",
+    "status": "1",
+    "channelId": 988,
+    "deeplink": "upi://pay?pa=xxx@upi&....."
+  },
+  "msg": "Success"
+}
+1.2. Query
+URL:https://dd1688.cc/api/payin/status
+
+Type:POST
+
+Content-Type:application/json
+
+Description: Query
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+merchantOrderId
+
+string
+
+Merchant orders
+
+true
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+object
+
+data
+
+-
+
+└─orderId
+
+string
+
+Platform order number
+
+-
+
+└─merchantOrderId
+
+string
+
+Merchant order number
+
+-
+
+└─message
+
+string
+
+information
+
+-
+
+└─status
+
+string
+
+Order status:
+0 (Pending payment), 1 (Paid), 2 (Expired)
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "data": {
+    "orderId": "168111122223333",
+    "merchantOrderId": "MN168111122223333",
+    "message": "success",
+    "status": "1"
+  },
+  "msg": "Success"
+}
+1.3. Callback
+URL: https://dd1688.cc/api/payin/merchant-set callback address
+
+Type:POST
+
+Content-Type:application/json
+
+Description: After successful payment, the following content will be POSTed to the callback URL set when placing the order. A successful notification is considered successful if the merchant returns "success".
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchants
+
+true
+
+-
+
+merchantOrderId
+
+string
+
+Merchant order number
+
+true
+
+-
+
+amount
+
+string
+
+Order amount
+
+true
+
+-
+
+payAmount
+
+string
+
+Actual amount paid
+
+false
+
+-
+
+orderId
+
+string
+
+Platform orders
+
+true
+
+-
+
+status
+
+string
+
+Order status:
+0 Waiting, 1 Successful, 2 Failed
+
+true
+
+-
+
+msg
+
+string
+
+Error message
+
+false
+
+-
+
+payTime
+
+string
+
+Payment time
+
+false
+
+-
+
+sign
+
+string
+
+sign
+
+true
+
+-
+
+Response-example:
+
+string
+1.4. Order Inquiry
+URL:https://dd1688.cc/api/payin/utr/check
+
+Type:POST
+
+Content-Type:application/json
+
+Description: UPI channel UTR order lookup
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+utr
+
+string
+
+utr
+
+true
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+object
+
+data
+
+-
+
+└─utr
+
+string
+
+utr
+
+-
+
+└─amount
+
+number
+
+Amount
+
+-
+
+└─status
+
+string
+
+0 Pending Claim 1 Claimed 2 Not Found
+
+-
+
+└─matchOrderId
+
+string
+
+Merchant order number
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "data": {
+    "utr": "6ckj2u",
+    "amount": 674,
+    "status": "uca4a6",
+    "matchOrderId": "176"
+  },
+  "msg": "Success"
+}
+1.5. Order Replacement
+URL:https://dd1688.cc/api/payin/utr/fix
+
+Type:POST
+
+Content-Type:application/json
+
+Description: UPI channel UTR order replenishment
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+merchantOrderId
+
+string
+
+Merchant orders
+
+true
+
+-
+
+utr
+
+string
+
+utr
+
+true
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+object
+
+data
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "msg": "Success"
+}
+2. Withdrawal
+2.1. Placing an order
+URL:https://dd1688.cc/api/payout/submit
+
+Type:POST
+
+Content-Type:application/json
+
+Description: Placing an order
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+merchantPayoutId
+
+string
+
+Merchant order number
+
+true
+
+-
+
+amount
+
+string
+
+Amount
+
+true
+
+-
+
+notifyUrl
+
+string
+
+Notification address
+
+false
+
+-
+
+name
+
+string
+
+Name
+
+true
+
+-
+
+type
+
+string
+
+Withdrawal type
+: 0; Bank card: 1; UPI
+
+true
+
+-
+
+account
+
+string
+
+Card number
+type=0 (Required)
+
+false
+
+-
+
+ifsc
+
+string
+
+ifsc
+type=0 (Required)
+
+false
+
+-
+
+upi
+
+string
+
+upi
+type=1 Required
+
+false
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+object
+
+data
+
+-
+
+└─payoutId
+
+string
+
+Platform order number
+
+-
+
+└─merchantPayoutId
+
+string
+
+Merchant order number
+
+-
+
+└─type
+
+string
+
+User withdrawal type
+
+-
+
+└─status
+
+string
+
+Withdrawal status:
+0 (waiting), 1 (successful), 2 (failed)
+
+-
+
+└─msg
+
+string
+
+Error message
+
+-
+
+└─amount
+
+string
+
+Order amount
+
+-
+
+└─utr
+
+string
+
+utr
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "data": {
+    "payoutId": "1780909111111",
+    "merchantPayoutId": "MN1780909111111",
+    "type": "1",
+    "status": "1",
+    "msg": "success",
+    "amount": "100.00",
+    "utr": "300011112222"
+  },
+  "msg": "Success"
+}
+2.2. Query
+URL:https://dd1688.cc/api/payout/query
+
+Type:POST
+
+Content-Type:application/json
+
+Description: Query
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+merchantPayoutId
+
+string
+
+Merchant order ID
+
+true
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+object
+
+data
+
+-
+
+└─payoutId
+
+string
+
+Platform order number
+
+-
+
+└─merchantPayoutId
+
+string
+
+Merchant order number
+
+-
+
+└─type
+
+string
+
+User withdrawal type
+
+-
+
+└─status
+
+string
+
+Withdrawal status:
+0 (waiting), 1 (successful), 2 (failed)
+
+-
+
+└─msg
+
+string
+
+Error message
+
+-
+
+└─amount
+
+string
+
+Order amount
+
+-
+
+└─utr
+
+string
+
+utr
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "data": {
+    "payoutId": "1780909111111",
+    "merchantPayoutId": "MN1780909111111",
+    "type": "1",
+    "status": "1",
+    "msg": "success",
+    "amount": "100.00",
+    "utr": "300011112222"
+  },
+  "msg": "Success"
+}
+2.3. Balance
+URL:https://dd1688.cc/api/payout/balance
+
+Type:POST
+
+Content-Type:application/json
+
+Description: Balance
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchant ID
+
+true
+
+-
+
+sign
+
+string
+
+Request Signature
+
+true
+
+-
+
+Response-fields:
+
+Field	Type	Description	Since
+code
+
+int32
+
+status codes
+
+-
+
+data
+
+number
+
+data
+
+-
+
+msg
+
+string
+
+Return message
+
+-
+
+Response-example:
+
+{
+  "code": 200,
+  "data": 833,
+  "msg": "Success"
+}
+2.4. Callback
+URL: https://dd1688.cc/api/payout/merchant-set callback address
+
+Type:POST
+
+Content-Type:application/json
+
+Description: After the order is completed, the following content will be posted to the callback address set when placing the order. The merchant will then return "success" to confirm receipt.
+
+Body-parameters:
+
+Parameter	Type	Description	Required	Since
+merchantId
+
+int32
+
+Merchants
+
+true
+
+-
+
+merchantPayoutId
+
+string
+
+Merchant orders
+
+true
+
+-
+
+amount
+
+string
+
+Amount
+
+true
+
+-
+
+payoutId
+
+string
+
+Platform order number
+
+true
+
+-
+
+status
+
+string
+
+Order status
+1 Success 2 Failure
+
+true
+
+-
+
+msg
+
+string
+
+Error message
+
+false
+
+-
+
+fee
+
+string
+
+handling fee
+
+true
+
+-
+
+singleFee
+
+string
+
+single transaction
+
+true
+
+-
+
+utr
+
+string
+
+utr
+
+false
+
+-
+
+sign
+
+string
+
+sign
+
+true
+
+-
+
+Response-example:
+
+string
