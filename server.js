@@ -158,6 +158,30 @@ app.get('/pay/:orderId', async (req, res) => {
 
         // --- Select Template based on Channel ---
         const isF2Pay = (tx.channel === 'f2pay');
+        const isGtpay = (tx.channel === 'gtpay');
+
+        // GTPAY: Redirect directly to payment URL in full-page iframe
+        if (isGtpay && tx.payment_url) {
+            return res.send(`
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Payment | VSPAY</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body, html { width: 100%; height: 100%; overflow: hidden; }
+                        iframe { width: 100%; height: 100%; border: none; }
+                    </style>
+                </head>
+                <body>
+                    <iframe src="${tx.payment_url}" allow="payment"></iframe>
+                </body>
+                </html>
+            `);
+        }
+
         const templateFile = isF2Pay ? 'pay2.html' : 'pay.html';
 
         let html = fs.readFileSync(path.join(__dirname, 'public', templateFile), 'utf8');

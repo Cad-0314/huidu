@@ -124,8 +124,15 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     });
 
     // Insert into DB
-    const platformOrderId = channelResponse.data.payOrderId || finalOrderId;
-    const paymentUrl = channelResponse.data.paymentUrl;
+    // Handle different response formats per channel
+    let platformOrderId, paymentUrl;
+    if (merchantChannel === 'gtpay') {
+        platformOrderId = channelResponse.orderId || channelResponse.data?.sysNo || finalOrderId;
+        paymentUrl = channelResponse.paymentUrl || channelResponse.data?.payUrl;
+    } else {
+        platformOrderId = channelResponse.data?.payOrderId || finalOrderId;
+        paymentUrl = channelResponse.data?.paymentUrl;
+    }
 
     // --- UPI ID Extraction Logic ---
     try {
