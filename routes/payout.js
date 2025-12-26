@@ -7,6 +7,7 @@ const { getDb } = require('../config/database');
 const { apiAuthenticate } = require('../middleware/apiAuth');
 const { authenticate } = require('../middleware/auth'); // Import JWT auth
 const silkpayService = require('../services/silkpay');
+const gtpayService = require('../services/gtpay');
 const { calculatePayoutFee, getUserRates } = require('../utils/rates');
 const { generateOrderId, generateSign } = require('../utils/signature');
 const speakeasy = require('speakeasy');
@@ -158,6 +159,25 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 }
 
                 platformOrderId = apiResponse.data.payOrderId || orderId; // F2PAY returns platNo
+
+            } else if (channel === 'gtpay') {
+                console.log(`[PAYOUT] Using GTPAY for merchant ${merchant.username} (Channel: ${channel})`);
+                const gtpayCallbackUrl = `${appUrl}/api/callback/gtpay/payout`;
+
+                apiResponse = await gtpayService.createPayout({
+                    orderId: orderId,
+                    amount: amount,
+                    name: personName,
+                    bankNo: account,
+                    ifsc: ifsc,
+                    notifyUrl: gtpayCallbackUrl
+                });
+
+                if (apiResponse.code !== 1) {
+                    throw new Error(apiResponse.message || 'GTPAY API error');
+                }
+
+                platformOrderId = apiResponse.payOrderId || orderId; // GTPAY returns outTradeNo (platform id?)
 
             } else {
                 // Default: Silkpay

@@ -1,0 +1,937 @@
+﻿GTPAY  对接文档
+
+
+概述
+
+
+GTPAY  是印度市场最专业的三方支付平台，与时俱进的集成印度市场上所有流行的支付方式，包括但不限于卡转卡、PayTM 等支付方式。 
+
+
+目前开放的支付方式如下，其它支付方式敬请期待：
+
+
+* 5
+* 6
+* 7
+* 8
+* 9
+
+
+
+
+修改记录
+
+
+日期
+	修改人
+	涉及接口
+	修改内容
+	2021/01/12
+	Sheen
+	代付请求接口
+代付回调接口
+	
+
+	2021/03/02
+	Sheen
+	代付请求接口
+	添加代付银行
+	2021/03/08
+	Sheen
+	下单请求接口
+	添加商户用户唯一标识参数
+	2021/03/28
+	Sheen
+	代付请求接口
+	添加代付银行(PAYTMBK)
+PAYTM PAYMENTS BANK LTD 
+	2021/06/29
+	Sheen
+	代付请求接口
+	新增一些可代付银行
+	2021/10/09
+	Sheen
+	下单请求接口
+	添加充值卡支付类型
+	2021/10/09
+	Sheen
+	查询充值卡面值接口
+	添加查询充值卡可用面值接口
+	2021/12/08
+	Sheen
+	支付请求接口
+	添加支付类型
+	2022/02/19
+	Sheen
+	支付请求接口
+	添加支付类型
+	2025/11/18
+	Ben
+	支付请求接口
+	添加支付类型
+	
+
+接口文档
+
+
+接口规范
+
+
+* 请求方法: post
+* 请求类型: form-data
+* 加密方式: AES
+* 接口域名 (api_host):  https://interface.payp.vip
+* 回调ip: xxxxx
+账户信息
+
+
+请联系管理员获取商户后台的账号密码，以及对接用到的私钥。
+
+
+* 商户后台: https://commercial-admin.payp.vip/  
+
+
+下单请求接口
+接口描述
+
+
+请求此接口来进行下单操作，gtpay 会返回支付链接。
+注意：如果商户在订单还是待支付情况下，相同用户请求相同金额，会返回之前的订单支付链接，所以这一点希望技术对接时，将返回的系统订单号查询商户平台是否存在重复的平台订单号并做处理
+{api_host}/api/pay/apply
+
+
+接口请求参数
+参数名
+	必选
+	类型
+	说明
+	platformno
+	是
+	string
+	商户号，由gtpay提供
+	parameter
+	是
+	string
+	加密参数（见下方加密说明）
+	sign
+	是
+	string
+	签名（见下方加密说明）
+	decryptType
+	否
+	string
+	parameter加密方式：AES（ 默认 ）、RSA
+	payType
+	是
+	string
+	可选值: [5]
+5
+6
+7
+8
+9
+	
+
+
+
+
+
+parameter 加密参数
+参数名
+	必选
+	类型
+	说明
+	payAmount
+	是
+	string
+	订单金额，以“元”为单位，仅允许两位小数，必须大于零
+	commercialOrderNo
+	是
+	string
+	商户的唯一订单号
+	callBackUrl
+	是
+	string
+	异步通知回调URL地址
+	notifyUrl
+	是
+	string
+	支付完成后的跳转URL地址
+	userId
+	是
+	string
+	商户平台请求用户的唯一标识
+	ipCustomer
+	是
+	string
+	用户的ip地址
+	
+
+参数加密步骤
+1. parameter 的生成方法:  将 parameter 加密参数组装成 json 字符串，用生成的 json字符串进行 AES 加密, 使用商户密钥作为 Key 。
+2. sign 的生成方法: 将 parameter 加密参数组装成 json 字符串，对生成的json字符串md5加密并转小写。
+代码示例：
+/**
+* JsonUtil 类、 EncryptUtil 类 为JavaDemo
+* 此Demo以及其它Demo可以在商户后台右上角进行获取
+*/
+//1.将parameter加密参数放到Map中
+Map<String, String> map = new LinkedHashMap<>();
+map.put("payAmount", payAmount);
+map.put("commercialOrderNo", commercialOrderNo);
+map.put("callBackUrl", callBackUrl);
+map.put("notifyUrl", notifyUrl);
+map.put("userId", userId); 
+map.put("ipCustomer", ipCustomer);
+
+
+//2.转换成JSON字符串
+String mapToJson = JsonUtil.toJson(map);
+
+
+//3.参数加密信息
+String parameter = EncryptUtil.aes(mapToJson, "你的商户密钥");
+
+
+//4.生成签名
+String sign = EncryptUtil.md5(mapToJson);
+
+
+// 5. 发起 http 请求
+....
+
+
+	
+
+接口返回参数
+
+
+参数说明：
+参数名
+	是否必填
+	类型
+	说明
+	result
+	是
+	string
+	请求结果 1.成功: success  2.失败：faild
+	sysNo
+	是
+	string
+	平台返回的订单号
+	payUrl
+	是
+	string
+	支付页面的URL（如果用该参数，请做重定向处理）
+	localtionView
+	是
+	string
+	支付页面HTML（如果用该参数，请直接输出为一个页面）
+	message
+	否
+	string
+	返回的消息
+	
+
+返回示例：
+
+
+  {
+   "result":"success"
+"payUrl":"http://interface.payp.vip/api/guest/pay/qrCodeSkip?orderNo=TV201811081953249840",
+   "sysNo":"TV201811081953249840",
+   "localtionView":'<!DOCTYPE html> <html lang="zh-CN"> <head> <meta charset="UTF-8"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"> <title>收银台</title> </head> <body class="login-wrap"> </body> <script type="text/javascript"> location.href = "http://interface.payp.vip/api/guest/pay/qrCodeSkip?orderNo=TV201811081953249840"; </script> </html>'
+ }
+	
+
+下单回调接口
+方式：GET
+接口描述
+
+
+在订单支付成功后，gtpay 会调用此接口，通报此次支付结果，此时平台这边的订单状态已经变为了成功，如果商户那边处理订单失败，造成两边订单状态不一致，请在客服对接群里反馈问题，平台这边进行手动补单。
+
+
+接口地址
+
+
+由商户在下单时候提供（参数 callBackUrl）
+
+
+接口请求参数
+
+
+参数名
+	必选
+	类型
+	说明
+	platformno
+	是
+	string
+	商户号，由支付平台提供
+	parameter
+	是
+	string
+	加密参数
+	sign
+	是
+	string
+	签名
+	commercialOrderNo
+	是
+	string
+	商户唯一订单号
+	
+
+parameter解密后的参数：
+
+
+参数名
+	必选
+	类型
+	说明
+	commercialOrderNo
+	是
+	string
+	商户唯一订单号
+	orderAmount
+	是
+	string
+	支付订单金额
+	orderNo
+	是
+	string
+	支付平台订单号
+	result
+	是
+	string
+	支付结果，返回success 或者 faild，默认返回 success
+	
+
+参数解密步骤
+1. 使用parameter + Key 进行AES解密，得到参数Json字符串
+2. 使用第一步得到的Json字符串Md5,然后和sign参数匹配
+3. 解析Json字符串获取业务参数
+
+
+接口返回参数
+
+
+
+
+参数名
+	必选
+	类型
+	说明
+	result
+	是
+	string
+	success: 成功; failed: 失败
+	message
+	否
+	string
+	描述信息
+	
+
+
+
+{
+   "result":"success",        
+    "message":"支付成功"
+}
+
+
+
+
+代付请求接口 
+接口描述
+
+
+请求此接口来进行代付操作。
+
+
+注：代付有专门的一个密钥,请在商户后台获取进行加密！
+
+
+接口地址
+
+
+{api_host}/api/guest/instead/insPay
+
+
+接口请求参数
+参数名
+	必选
+	类型
+	说明
+	platformNo
+	是
+	string
+	商户号，由gtpay提供
+	parameter
+	是
+	string
+	加密参数（见下方加密说明）
+	sign
+	是
+	string
+	签名（见下方加密说明）
+	decryptType
+	否
+	string
+	parameter加密方式：AES（ 默认 ）、RSA
+	
+
+parameter 加密参数
+参数名
+	必选
+	类型
+	说明
+	commercialPayNo
+	是
+	string
+	商户代付单号，请务必保证此订单号唯一
+	totalAmount
+	是
+	string
+	代付金额，以元为单位，例如：10元，金额格式为10.00
+	payeeBank
+	是
+	string
+	开户行        ，例如：UJJIVN，更多详细请查看银行编码文档（对应银行编码文档的编码）
+	payeeBankCode
+	是
+	String
+	IFSC CODE
+	payeeAcc
+	是
+	string
+	收款方账号，收款银行卡号
+	payeeName
+	是
+	string
+	收款方姓名
+	payeePhone
+	是
+	string
+	收款方手机号
+	currency
+	是
+	string
+	币种，默认请填写 INR
+	chargeType
+	是
+	string
+	手续费扣款类型，默认填写 1
+	notifyUrl
+	是
+	string
+	回调地址，需要是绝对地址，长度小于256，合法URL
+	参数加密步骤
+3. parameter 的生成方法:  将 parameter 加密参数组装成 json 字符串，用生成的 json字符串进行 AES 加密, 使用商户代付密钥作为 Key 。
+4. sign 的生成方法: 将 parameter 加密参数组装成 json 字符串，对生成的json字符串md5加密并转小写。
+代码示例：
+/**
+* JsonUtil 类、 EncryptUtil 类 为JavaDemo
+* 此Demo以及其它Demo可以在商户后台右上角进行获取
+*/
+//1.将parameter加密参数放到Map中
+Map<String,String> paramMap = new HashMap<>();
+paramMap.put("commercialPayNo",commercialPayNo);//商户代付单号
+paramMap.put("totalAmount",totalAmount);//代付金额
+paramMap.put("payeeBank",payeeBank);//开户行
+paramMap.put("payeeBankCode",payeeBankCode);//开户行
+paramMap.put("payeeAcc",payeeAcc);//收款方账号
+paramMap.put("payeeName",payeeName);//收款方姓名
+paramMap.put("payeePhone",payeePhone);//收款方手机号
+paramMap.put("privateFlag",privateFlag);//对公对私
+paramMap.put("currency",currency);//币种
+paramMap.put("chargeType",chargeType);//手续费扣款类型
+paramMap.put("notifyUrl",notifyUrl);//回调地址
+//2.转换成JSON字符串
+String json = JsonUtil.toJson(paramMap);
+//3.MD5得到sign
+String md5Sign = EncryptUtil.md5(json);//自行寻找加密方法
+//4.aes 加密得到 parameter
+String aesSign = EncryptUtil.aes(json, key);//自行寻找加密方法
+//5.包装参数
+Map<String, String> param = new HashMap<>();
+param.put("platformNo",AppId);
+param.put("parameter",aesSign);
+param.put("sign",md5Sign);
+//6发起post请求
+...
+	接口返回参数
+
+
+
+
+参数名
+	必选
+	类型
+	说明
+	result
+	是
+	string
+	processing: 成功; failed: 失败
+	msg
+	是
+	string
+	描述信息
+	outTradeNo
+	是
+	string
+	平台返回的代付订单号
+	commercialPayNo
+	是
+	string
+	商户申请代付的订单号
+	totalAmount
+	是
+	string
+	申请代付的金额
+	
+
+
+
+
+
+
+
+ {
+    "result":"processing"， // 请求结果 1.成功: processing 2.失败：error
+    "msg":"代付已受理,处理中", // 通知消息,错误会返回对应的错误消息
+    "outTradeNo":"DR63783769", // 平台返回的代付订单号
+    "commercialPayNo":'QRSX11122222', // 商户申请代付的订单号
+    "totalAmount":"500.00" // 申请代付的金额
+  }
+
+
+
+
+{
+    "result":"error"， // 请求结果 1.成功: processing 2.失败：error
+    "msg":"代付失败", // 通知消息,错误会返回对应的错误消息
+    "outTradeNo":"DR63783769", // 平台返回的代付订单号
+    "commercialPayNo":'QRSX11122222', // 商户申请代付的订单号
+    "totalAmount":"500.00" // 申请代付的金额
+  }
+
+
+
+
+
+
+
+
+代付回调接口 
+接口描述
+
+
+此接口由商户商户在代付请求时传给支付平台,平台处理完成代付后会异步回调到此接口，对应参数：callBackUrl
+如果贵方请求是RSA的方式，则全部回调方式都是以RSA的方式回调
+回调处理完成后请返回 success
+
+
+
+
+请求此接口来进行代付操作。
+
+
+注：如果我方提示返回错误,请一定要发我方返回的错误返回出来!
+代付有专门的一个密钥,请在商户后台获取进行加密！
+
+
+接口地址
+
+
+由商户在申请代付时候提供（参数 notifyUrl）
+
+
+接口请求参数
+
+
+参数名
+	必选
+	类型
+	说明
+	platformno
+	是
+	string
+	商户号，由支付平台提供
+	parameter
+	是
+	string
+	加密参数
+	sign
+	是
+	string
+	签名
+	
+
+Parameter解密后的参数：
+
+
+参数名
+	必选
+	类型
+	说明
+	outTradeNo
+	是
+	string
+	商户唯一订单号
+	tradeNo
+	是
+	string
+	代付订单号
+	totalAmount
+	是
+	string
+	代付交易金额
+	result
+	是
+	string
+	支付结果，返回success 或者 error，默认返回success
+	utr
+	是
+	string
+	utr
+	msg
+	是
+	string
+	支付结果说明
+	parameter加密参数解签说明：
+1. 使用parameter + Key 进行AES解密，得到参数Json字符串
+2. 将Json字符串进行转换成Map对象即可获得
+查询接口
+
+
+接口描述
+
+
+* 商户可以通过此接口查询订单、下发等信息
+* 注：我方会定时清理时间较久的订单,如果需要查询较久的订单请通过商户后台查询
+接口地址
+
+
+{api_host}/api/guest/pay/commercialInfo
+接口请求参数
+
+
+参数名
+	必选
+	类型
+	说明
+	platformno
+	是
+	string
+	商户号，由平台提供
+	parameter
+	是
+	string
+	加密参数（见下方加密说明）
+	sign
+	是
+	string
+	签名（见下方加密说明）
+	encryptType
+	否
+	string
+	parameter加密方式：AES（ 默认 ）、RSA
+	
+
+parameter加密参数
+参数名
+	必选
+	类型
+	说明
+	commercialOrderNo
+	否
+	string
+	订单查询请传递贵司订单号,代付订单查询请传递贵司代付订单号
+	type
+	是
+	string
+	查询类型:
+1：订单查询 
+2：可下发余额查询
+3：代付订单查询 
+4：可代付余额查询
+	
+
+参数加密步骤
+1. parameter 加密参数生成步骤如下
+-将parameter加密参数组装成JSON字符串。
+-对生成的Json字符串进行AES加密,使用商户密钥作为Key 。
+2. sign 签名生成的通用步骤如下
+-将parameter加密参数组装成JSON字符串。
+-对生成的json字符串md5加密并转小写。
+接口返回参数
+-- 可下发余额查询返回数据
+   {
+   "result":"success"， // 请求结果 1.成功: success 2.失败：faild
+   "msg":"成功", // 查询返回消息
+   "platformNo" : "TEST001", // 查询商户号
+   "balance":"1000.00", // 商户可下发余额
+   "sign":"" // 目前暂未添加,看上面生成规则
+   }
+-- 可代付余额查询返回数据
+   {
+   "result":"success"， // 请求结果 1.成功: success 2.失败：faild
+   "msg":"成功", // 查询返回消息
+   "platformNo" : "TEST001", // 查询商户号
+   "balance":"1000.00", // 商户可代付余额
+   "sign":"" // 目前暂未添加,看上面生成规则
+   }
+-- 支付订单信息查询返回数据
+   {
+   "result":"success"， // 请求结果 1.成功: success 2.失败：faild
+   "msg":"成功", // 查询返回消息
+   "platformNo":"TEST0001", // 商户号
+   "commercialOrderNo":"CC0009"， // 商户订单号
+   "orderNo":"HuiDing009", // 汇鼎订单号（订单备注）
+   "orderAmount":"5000.00", // 订单金额
+   "createDate":"2019-04-05 15:23:23", // 订单申请时间
+   "successDate":"2019-04-05 15:25:00", // 订单完成时间, 如果未完成支付此列为空
+   "status":"支付成功", // 订单状态：未出码、待支付、支付成功、未支付
+   "orderType":"alipay - 支付宝", // 订单详细类型
+   "sign":"" // 目前暂未添加,看上面生成规则
+   }
+-- 代付订单信息查询返回数据
+   {
+   "result":"success"， // 请求结果 1.成功: success 2.失败：faild
+   "msg":"成功", // 查询返回消息
+   "platformNo":"TEST0001", // 商户号
+   "commercialOrderNo":"ShangHu999"， // 商户代付订单号
+   "orderNo":"HuiDingDaiFu999", // 汇鼎代付订单号
+   "orderAmount":"4999.00", // 订单金额
+   "createDate":"2019-04-05 15:23:23", // 代付订单申请时间
+   "successDate":"2019-04-05 15:25:00", // 代付订单完成时间, 如果是未成功的代付订单,此列为空
+   "status":"代付成功", // 代付订单状态：处理中、代付成功、代付失败、支付公司确认中
+   "errorMsg":"代付失败详细原因", // 代付失败详细错误原因
+   "sign":"" // 目前暂未添加,看上面生成规则
+   }
+	
+
+
+
+
+
+
+
+查询充值卡可用面值
+接口描述
+
+
+   * 商户可以通过此接口查询充值卡可用面值
+   * 注：若无用户出售该面值充值卡，则会匹配失败
+接口地址
+
+
+{api_host}/api/guest/pay/queryRefillCardQuota
+接口请求参数
+
+
+参数名
+	必选
+	类型
+	说明
+	platformno
+	是
+	string
+	商户号，由平台提供
+	
+
+接口返回参数
+
+
+ {
+    "result": "success", // 请求结果 1.成功: success 2.失败：faild
+    "data": "[50.0,100.0]" //可用面值集合,
+    "msg": "成功"
+}
+
+
+银行编码文档
+
+
+编码
+	名称
+	UJJIVN
+	UJJIVAN BANK
+	IDBIBK
+	IDBI BANK
+	HDFCBK
+	HDFC BANK
+	ICICI
+	ICICI BANK
+	ICCCORP
+	ICCCORP
+	AXIS
+	AXIS BANK
+	PNB
+	PUNJAB NATIONAL BANK
+	CANARA
+	CANARA BANK
+	KOTAK
+	KOTAK MAHINDRA BANK
+	SBI
+	STATE BANK OF INDIA
+	INDIAN
+	INDIAN BANK
+	JKBK
+	JAMMU & KASHMIR BANK
+	INDUSIND
+	INDUSIND BANK
+	BANDHAN
+	BANDHAN BANK
+	IDFC
+	IDFC BANK
+	IOB
+	INDIAN OVERSEAS BANK
+	CITIBANK
+	CITIBANK INDIA
+	UCO
+	UCO BANK
+	MAHARASHTRA
+	BANK OF MAHARASHTRA
+	ANDHRA
+	ANDHRA BANK
+	SYNDICATE
+	SYNDICATE BANK
+	FEDERAL
+	FEDERAL BANK
+	UNION
+	UNION BANK OF INDIA
+	CENTRAL
+	CENTRAL BANK OF INDIA
+	YES
+	YES BANK
+	KARNATAKA
+	KARNATAKA BANK
+	STAN
+	STANDARD CHARTERED BANK
+	BOI
+	BANK OF INDIA
+	PAYTMBK
+	PAYTM PAYMENTS BANK LTD 
+	ESFB
+	EQUITAS SMALL FINANCE BANK
+	IPO
+	INDIAN POST PAYMENT BANK
+	DBS
+	DBS BANK
+	RATNAKAR
+	RATNAKAR BANK
+	CATHOLIC
+	CATHOLIC SYRIAN BANK
+	CUB
+	CUB BANK
+	DCB
+	DCB BANK
+	DHANLAXMI
+	DHANLAXMI BANK
+	KARUR
+	KARUR VYSYA BANK
+	BARODA
+	BANK OF BARODA
+	AIRTEL
+	AIRTEL BANK
+	SIB
+	SOUTH INDIAN BANK
+	SIDBI
+	SMALL INDUSTRIES DEVELOPEMENT BANK OF INDIA
+	KERALA
+	KERALA GRAMIN BANK
+	BHARAT
+	BHARAT BANK
+	MIZORAM
+	MIZORAM RURAL BANK
+	APGVB
+	ANDHARA PRADESH GRAMEENA VIKAS BANK
+	INDUSBK
+	INDUS BANK
+	BHARATPE
+	BHARATPE
+	SMBC
+	THE SUMITOMO BANK
+	STCB
+	STATE BANK OF MAURITIUS
+	SOGE
+	SOCIETE GENERALE
+	MSHQ
+	MASHREQ BANK
+	KRTH
+	KRUNG THAI BANK PUBLIC CO
+	INGBPHMM
+	ING BANK NV
+	HSBC
+	HSBC
+	CTBC
+	CHINA TRUST COMMERCIAL BANK
+	BNPA
+	BNP PARIBAS
+	BARC
+	BARCLAYS BANK PLC
+	BOTM
+	BANK OF TOKYO-MITSUBISH
+	NOSC
+	BANK OF NOVA SCOTIA
+	BCEY
+	BANK OF CEYLON
+	BBKM
+	BANK OF BAHRAIN KUWAIT BSC
+	ANZB
+	ANZ GRINDLAYS BANK
+	ADCB
+	ABU DHABI COMMERCIAL BANK
+	SCBL
+	AMERCIAN EXPRESS BANK
+	ABNA
+	ABN-AMRO BANK NV
+	TMBL
+	TAMILNADU MERCANTILE BANK
+	NTBL
+	NANITAL BANK
+	DBSS
+	LAKSHMI VILAS BANK
+	VYSA
+	ING VYSYA BANK LTD
+	CIUB
+	CITY UNION BANK
+	SBTR
+	STATE BANK OF TRAVANCORE
+	STBP
+	STATE BANK OF PATIALA
+	SBMY
+	STATE BANK OF MYSORE
+	FINO
+	FINO PAYMENTS BANK
+	SBHY
+	STATE BANK OF HYDERABAD
+	SBBJ
+	STATE BANK OF BIKANER JAIPUR
+	SBIN
+	STATE BANK OF INDIA
+	IBKL
+	IDBI BANK LIMITED
+	VIJB
+	VIJAYA BANK
+	UTBI
+	UNITED BANK OF INDIA (UBI)
+	PSIB
+	PUNJAB & SIND BANK
+	ORBC
+	ORIENTAL BANK OF COMMERCE
+	BKDN
+	DENA BANK
+	CORP
+	CORPORATION BANK
+	BKID
+	BANK OF INDIA
+	AIRP
+	AIRTEL PAYMENTS BANK
+	APGB
+	ANDHRA PRAGATHI GRAMEENA BANK
+	ALLA
+	ALLAHABAD BANK

@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../config/database');
 const silkpayService = require('./silkpay');
 const f2payService = require('./f2pay');
+const gtpayService = require('./gtpay');
 const { calculatePayinFee, getUserRates } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
 
@@ -62,6 +63,25 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         }
 
         deepLinks = channelResponse.data.deepLink || {};
+
+    } else if (merchantChannel === 'gtpay') {
+        // Use GTPAY (Channel 3)
+        ourCallbackUrl = `${appUrl}/api/callback/gtpay/payin`;
+
+        channelResponse = await gtpayService.createPayin({
+            amount: numericAmount,
+            orderId: finalOrderId,
+            notifyUrl: ourCallbackUrl,
+            returnUrl: ourSkipUrl,
+            userId: merchant.uuid,
+            ip: '127.0.0.1'
+        });
+
+        if (channelResponse.code !== 1) {
+            throw new Error(channelResponse.msg || 'Failed to create order via GTPAY');
+        }
+
+        deepLinks = {};
 
     } else {
         // Use Silkpay (Channel 1 - Default)

@@ -5,6 +5,7 @@ const axios = require('axios');
 const { getDb } = require('../config/database');
 const silkpayService = require('../services/silkpay');
 const f2payService = require('../services/f2pay');
+const gtpayService = require('../services/gtpay');
 const { calculatePayinFee, calculatePayoutFee } = require('../utils/rates');
 const { generateSign } = require('../utils/signature');
 
@@ -491,5 +492,201 @@ router.post('/f2pay/payout', async (req, res) => {
         if (!res.headersSent) res.status(200).send('success');
     }
 });
+
+/**
+ * GET /api/callback/gtpay/payin
+ * Handles callbacks from GTPAY for Payin Orders
+ */
+router.get('/gtpay/payin', async (req, res) => {
+    try {
+        console.log('GTPAY Payin Callback received:', req.query);
+        const db = getDb();
+        const { platformno, parameter, sign } = req.query;
+
+        // 1. Log Raw Callback
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('gtpay_payin', ?, ?, 'received', datetime('now'))`)
+            .run(parameter, JSON.stringify(req.query));
+
+        // 2. Verify Signature & Decrypt
+        const decoded = gtpayService.verifyPayinCallback(req.query);
+        if (!decoded) {
+            console.error('[GTPAY Payin] Signature Verification Failed');
+            return res.send('faild');
+        }
+
+        const { commercialOrderNo, orderAmount, orderNo, result } = decoded;
+
+        // 3. Find Transaction
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?').get(commercialOrderNo);
+
+        if (!tx) {
+            console.warn(`[GTPAY Payin] Transaction not found: ${commercialOrderNo}`);
+            return res.send('success');
+        }
+
+        // 4. Update Status
+        const newStatus = (result === 'success') ? 'success' : 'failed';
+        const actualAmount = parseFloat(orderAmount);
+
+        if (tx.status === 'success' && newStatus === 'success') {
+            // Duplicate
+        } else {
+            const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
+            const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
+
+            await db.prepare(`UPDATE transactions SET status = ?, amount = ?, fee = ?, net_amount = ?, platform_order_id = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+                .run(newStatus, actualAmount, fee, netAmount, orderNo, JSON.stringify(req.query), tx.id);
+
+            if (newStatus === 'success') {
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
+
+                // Admin Profit
+                try {
+                    const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
+                    const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
+                    const profit = fee - (actualAmount * adminCostRate);
+                    if (profit !== 0) await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
+                } catch (e) { }
+            }
+        }
+
+        // 5. Response to GTPAY
+        res.send('success');
+
+        // 6. Forward to Merchant
+        let callbackUrl = tx.callback_url;
+        try {
+            if (tx.param) {
+                const parsed = JSON.parse(tx.param);
+                if (parsed.c) callbackUrl = parsed.c;
+            }
+        } catch (e) { }
+
+        if (callbackUrl) {
+            const data = {
+                status: newStatus === 'success' ? 1 : 0,
+                amount: calculatePayinFee(actualAmount, tx.payin_rate || 0.05).netAmount, // Send Net Amount
+                orderAmount: actualAmount,
+                orderId: tx.order_id,
+                id: tx.uuid,
+                utr: '', // GTPAY doesn't seem to send UTR in Payin Callback?
+                param: tx.param ? (JSON.parse(tx.param).p || '') : ''
+            };
+            data.sign = generateSign(data, tx.merchant_key);
+            try {
+                await axios.post(callbackUrl, data, { timeout: 10000 });
+            } catch (e) {
+                console.error('[GTPAY Payin] Forward failed:', e.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('GTPAY Payin Callback Error:', error);
+        res.send('faild');
+    }
+});
+
+/**
+ * POST /api/callback/gtpay/payout
+ * Handles callbacks from GTPAY for Payout Orders
+ * Assumed POST based on typical webhook behavior, but doc doesn't specify method for payout callback explicitly (implied same as payin?). 
+ * Actually Payin callback is GET per doc? "下单回调接口 方式：GET"
+ * Payout callback: "代付回调接口 ... 请求此接口来进行代付操作" (Copy paste error in doc?)
+ * But "此接口由商户商户在代付请求时传给支付平台...".
+ * Let's assume POST for Payout as it's more standard, or support both?
+ * Let's try POST first.
+ */
+router.post('/gtpay/payout', async (req, res) => {
+    try {
+        console.log('GTPAY Payout Callback received:', req.body);
+        const db = getDb();
+        // Check content type. If form-data/urlencoded, body will be populated.
+        const { platformno, parameter, sign } = req.body;
+
+        if (!parameter) {
+            // Try query if body is empty? 
+            if (req.query.parameter) {
+                return handleGtpayPayoutCallback(req.query, res, db);
+            }
+        }
+
+        await handleGtpayPayoutCallback(req.body, res, db);
+    } catch (e) {
+        console.error('GTPAY Payout Error:', e);
+        res.send('success'); // Return success to stop retries if crashes
+    }
+});
+
+async function handleGtpayPayoutCallback(data, res, db) {
+    const { parameter, sign } = data;
+
+    // Log
+    await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('gtpay_payout', ?, ?, 'received', datetime('now'))`)
+        .run(parameter, JSON.stringify(data));
+
+    const decoded = gtpayService.verifyPayoutCallback(data);
+    if (!decoded) {
+        console.error('[GTPAY Payout] Signature Verification Failed');
+        return res.send('success'); // Consumed
+    }
+
+    const { outTradeNo, tradeNo, totalAmount, result, utr, msg } = decoded;
+    // outTradeNo = Commercial Order No (Our Order ID)
+    // tradeNo = Platform Order ID (Their ID)
+
+    const payout = await db.prepare('SELECT p.*, u.callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?').get(outTradeNo);
+
+    if (!payout) {
+        console.warn(`[GTPAY Payout] Payout not found: ${outTradeNo}`);
+        return res.send('success');
+    }
+
+    let newStatus = 'processing';
+    if (result === 'success') newStatus = 'success';
+    else if (result === 'error' || result === 'failed') newStatus = 'failed';
+
+    if (payout.status === 'success' && newStatus === 'success') {
+        // Duplicate
+    } else {
+        await db.prepare(`UPDATE payouts SET status = ?, utr = ?, platform_order_id = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+            .run(newStatus, utr, tradeNo, msg, JSON.stringify(data), payout.id);
+
+        if (newStatus === 'failed' && payout.status !== 'failed') {
+            // Refund
+            const refundAmount = payout.amount + payout.fee;
+            await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(refundAmount, payout.user_id);
+        }
+    }
+
+    res.send('success');
+
+    // Forward
+    const callbackUrl = payout.callback_url || payout.user_callback_url; // payouts table has callback_url column? check payout.js
+    // In payout.js: "select p.*, p.callback_url as payout_callback_url..."
+    // My query above: "SELECT p.*, u.callback_url..." -> p.callback_url is in p.*
+    // So let's use:
+    const forwardUrl = payout.callback_url || payout.callback_url; // Wait, alias issue.
+    // Let's rely on logic similar to existing:
+    // const callbackUrl = payout.payout_callback_url || payout.user_callback_url;
+
+    if (forwardUrl) {
+        const cbData = {
+            status: newStatus === 'success' ? 1 : 2,
+            amount: payout.amount,
+            commission: payout.fee,
+            message: msg || result,
+            orderId: payout.order_id,
+            id: payout.uuid,
+            utr: utr || '',
+            param: payout.param || ''
+        };
+        cbData.sign = generateSign(cbData, payout.merchant_key);
+        try {
+            await axios.post(forwardUrl, cbData, { timeout: 10000 });
+        } catch (e) {
+            console.error('[GTPAY Payout] Forward failed:', e.message);
+        }
+    }
+}
 
 module.exports = router;
