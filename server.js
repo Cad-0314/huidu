@@ -157,7 +157,6 @@ app.get('/pay/:orderId', async (req, res) => {
         }
 
         // --- Select Template based on Channel ---
-        const isF2Pay = (tx.channel === 'f2pay');
         const isGtpay = (tx.channel === 'gtpay');
 
         // GTPAY: Redirect directly to payment URL (no iframe)
@@ -165,7 +164,8 @@ app.get('/pay/:orderId', async (req, res) => {
             return res.redirect(tx.payment_url);
         }
 
-        const templateFile = isF2Pay ? 'pay2.html' : 'pay.html';
+        // All channels (Silkpay, F2PAY, HDPay) use the same pay.html with deeplinks
+        const templateFile = 'pay.html';
 
         let html = fs.readFileSync(path.join(__dirname, 'public', templateFile), 'utf8');
 
