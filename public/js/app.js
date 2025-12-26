@@ -1528,6 +1528,7 @@ function showCreateUserModal() {
                 <select id="newUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
                     <option value="silkpay" selected>Payable (5.0% / 3.0% + 6 INR)</option>
                     <option value="f2pay">X2 Channel (5.0% / 3.0% + 6 INR)</option>
+                    <option value="gtpay">GTPAY (Channel 3)</option>
                 </select>
                 <small class="text-muted">Select the payment channel for this merchant.</small>
             </div>
@@ -1652,6 +1653,7 @@ async function showEditUserModal(userId) {
                 <select id="editUserChannel" class="form-control">
                     <option value="silkpay" ${user.channel === 'silkpay' || !user.channel ? 'selected' : ''}>Payable</option>
                     <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>X2 Channel</option>
+                    <option value="gtpay" ${user.channel === 'gtpay' ? 'selected' : ''}>GTPAY</option>
                 </select>
             </div>
 
