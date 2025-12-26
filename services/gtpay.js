@@ -50,48 +50,48 @@ const api = axios.create({
 
 function encryptAes(text, key) {
     try {
-        // Java's "AES" usually means AES/ECB/PKCS5Padding when using raw SecretKeySpec
-        // But let's check key length.
-        // If key is 32 chars, use aes-256-ecb? Or it might be just key bytes.
-        // Let's assume AES-128-ECB if key is 16 chars, 256 for 32.
+        let keyBuffer = Buffer.from(key);
+        let algorithm = 'aes-128-ecb';
 
-        // However, many PHP/Java legacy integrations use ECB.
-        // Let's try standard ECB.
+        // Heuristic: If key is 32 chars and hex-like, assume it's a 16-byte key encoded in hex for AES-128
+        // Otherwise, if it's 32 chars and we treat as utf8, it fits AES-256.
+        // Most payment gateways with 32-char keys mean Hex encoded 16-byte key.
+        if (key.length === 32 && /^[0-9a-fA-F]+$/.test(key)) {
+            keyBuffer = Buffer.from(key, 'hex');
+            algorithm = 'aes-128-ecb';
+        } else if (key.length === 32) {
+            algorithm = 'aes-256-ecb';
+        }
 
-        const cipher = crypto.createCipheriv('aes-128-ecb', Buffer.from(key), null);
-        cipher.setAutoPadding(true); // PKCS5/7 padding
+        const cipher = crypto.createCipheriv(algorithm, keyBuffer, null);
+        cipher.setAutoPadding(true);
         let encrypted = cipher.update(text, 'utf8', 'base64');
         encrypted += cipher.final('base64');
         return encrypted;
     } catch (e) {
         console.error('GTPAY Encrypt Error:', e);
-        // Fallback: Check if key length requires different algo
-        if (key.length === 32) {
-            const cipher = crypto.createCipheriv('aes-256-ecb', Buffer.from(key), null);
-            cipher.setAutoPadding(true);
-            let encrypted = cipher.update(text, 'utf8', 'base64');
-            encrypted += cipher.final('base64');
-            return encrypted;
-        }
         return null;
     }
 }
 
 function decryptAes(text, key) {
     try {
-        const decipher = crypto.createDecipheriv('aes-128-ecb', Buffer.from(key), null);
+        let keyBuffer = Buffer.from(key);
+        let algorithm = 'aes-128-ecb';
+
+        if (key.length === 32 && /^[0-9a-fA-F]+$/.test(key)) {
+            keyBuffer = Buffer.from(key, 'hex');
+            algorithm = 'aes-128-ecb';
+        } else if (key.length === 32) {
+            algorithm = 'aes-256-ecb';
+        }
+
+        const decipher = crypto.createDecipheriv(algorithm, keyBuffer, null);
         decipher.setAutoPadding(true);
         let decrypted = decipher.update(text, 'base64', 'utf8');
         decrypted += decipher.final('utf8');
         return decrypted;
     } catch (e) {
-        if (key.length === 32) {
-            const decipher = crypto.createDecipheriv('aes-256-ecb', Buffer.from(key), null);
-            decipher.setAutoPadding(true);
-            let decrypted = decipher.update(text, 'base64', 'utf8');
-            decrypted += decipher.final('utf8');
-            return decrypted;
-        }
         console.error('GTPAY Decrypt Error:', e);
         return null;
     }
