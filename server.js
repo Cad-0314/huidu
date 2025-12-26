@@ -158,9 +158,15 @@ app.get('/pay/:orderId', async (req, res) => {
 
         // --- Select Template based on Channel ---
         const isGtpay = (tx.channel === 'gtpay');
+        const isHdpay = (tx.channel === 'hdpay');
 
         // GTPAY: Redirect directly to payment URL (no iframe)
         if (isGtpay && tx.payment_url) {
+            return res.redirect(tx.payment_url);
+        }
+
+        // HDPay: Redirect directly to their payment URL (skip our payment page)
+        if (isHdpay && tx.payment_url) {
             return res.redirect(tx.payment_url);
         }
 
