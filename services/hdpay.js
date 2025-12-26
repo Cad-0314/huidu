@@ -137,13 +137,15 @@ async function createPayin(data, config = {}) {
 
         const resData = response.data;
         if (resData.code === 200) {
+            // HDPay: Always use payUrl directly, ignore deeplinks
+            // Users will be redirected to HDPay's payment page
             return {
                 code: 1,
                 status: '200',
                 data: {
                     paymentUrl: resData.data?.payUrl,
-                    payOrderId: resData.data?.orderId,
-                    deepLink: resData.data?.deeplink ? { upi_scan: resData.data.deeplink } : {}
+                    payOrderId: resData.data?.orderId
+                    // No deepLink - HDPay uses their own payment page
                 },
                 message: resData.msg
             };
