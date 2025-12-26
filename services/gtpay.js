@@ -129,7 +129,7 @@ async function createPayin(data) {
     formData.append('platformno', process.env.GTPAY_PLATFORM_NO);
     formData.append('parameter', parameter);
     formData.append('sign', sign);
-    formData.append('payType', '5'); // Assuming 5 is UPI or default. User didn't specify, picking 5 from doc example list.
+    formData.append('payType', '8'); // User requested payType 8
 
     // Need to use axios with form-data
     // Since we are in node, FormData object from 'form-data' package or standard might be tricky with axios in some envs.
@@ -146,7 +146,7 @@ async function createPayin(data) {
         fd.append('platformno', process.env.GTPAY_PLATFORM_NO);
         fd.append('parameter', parameter);
         fd.append('sign', sign);
-        fd.append('payType', '5');
+        fd.append('payType', '8');
 
         // Note: URLSearchParams sends 'application/x-www-form-urlencoded'.
         // If they STRICTLY require 'multipart/form-data', we need 'form-data' lib.
