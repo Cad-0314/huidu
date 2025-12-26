@@ -1,6 +1,6 @@
 // ========================================
 // VSPAY - Main Application
-// Version: 2024-12-26-v3 (GTPAY Support)
+// Version: 2024-12-26-v4 (GTPAY Channel Display Fix)
 // ========================================
 
 
