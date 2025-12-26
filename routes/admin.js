@@ -128,7 +128,7 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
         const merchantKey = generateMerchantKey();
 
         // Validate channel
-        const validChannels = ['silkpay', 'f2pay', 'gtpay'];
+        const validChannels = ['silkpay', 'f2pay', 'gtpay', 'hdpay'];
         const userChannel = validChannels.includes(channel) ? channel : 'silkpay';
 
         const result = await db.prepare(`
@@ -201,7 +201,7 @@ router.put('/users/:id', authenticate, requireAdmin, async (req, res) => {
         const db = getDb();
 
         // Validate channel if provided
-        const validChannels = ['silkpay', 'f2pay', 'gtpay'];
+        const validChannels = ['silkpay', 'f2pay', 'gtpay', 'hdpay'];
         const userChannel = channel && validChannels.includes(channel) ? channel : undefined;
 
         if (userChannel) {
