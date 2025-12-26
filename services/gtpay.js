@@ -122,7 +122,17 @@ async function createPayin(data) {
     const jsonStr = JSON.stringify(paramMap);
     const key = process.env.GTPAY_PAYIN_KEY;
 
+    // Validate key exists
+    if (!key) {
+        logError('createPayin', { error: 'GTPAY_PAYIN_KEY environment variable is not set' }, data);
+        return { success: false, error: 'GTPAY configuration missing: GTPAY_PAYIN_KEY not set' };
+    }
+
     const parameter = encryptAes(jsonStr, key);
+    if (!parameter) {
+        logError('createPayin', { error: 'Encryption failed' }, data);
+        return { success: false, error: 'GTPAY encryption failed' };
+    }
     const sign = md5(jsonStr); // Sign the JSON string directly? Doc: "对生成的json字符串md5加密"
 
     const formData = new FormData();
@@ -242,7 +252,17 @@ async function createPayout(data) {
     const jsonStr = JSON.stringify(paramMap);
     const key = process.env.GTPAY_PAYOUT_KEY;
 
+    // Validate key exists
+    if (!key) {
+        logError('createPayout', { error: 'GTPAY_PAYOUT_KEY environment variable is not set' }, data);
+        return { code: 0, error: 'GTPAY configuration missing: GTPAY_PAYOUT_KEY not set' };
+    }
+
     const parameter = encryptAes(jsonStr, key);
+    if (!parameter) {
+        logError('createPayout', { error: 'Encryption failed' }, data);
+        return { code: 0, error: 'GTPAY encryption failed' };
+    }
     const sign = md5(jsonStr);
 
     const fd = new URLSearchParams();
