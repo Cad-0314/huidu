@@ -364,19 +364,7 @@
                 Secured by UPI
             </div>
 
-            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px dashed #e2e8f0;">
-                <div class="section-title" style="margin-bottom: 12px;">Already paid? Submit UTR</div>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="utrInput" placeholder="Enter 12-digit UTR/Ref No."
-                        style="flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; outline: none; transition: all 0.2s;"
-                        onfocus="this.style.borderColor='#4299e1'" onblur="this.style.borderColor='#e2e8f0'">
-                    <button id="submitUtrBtn"
-                        style="padding: 12px 16px; background: #2d3748; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px; white-space: nowrap;">
-                        Submit
-                    </button>
-                </div>
-                <div id="utrMessage" style="font-size: 12px; margin-top: 8px; font-weight: 500; display: none;"></div>
-            </div>
+
         </div>
     </div>
 
@@ -475,56 +463,7 @@
                 let checkCount = 0;
                 let currentInterval = 1500; // Start fast (1.5s)
 
-                // UTR Submission Handling
-                const submitUtrBtn = document.getElementById('submitUtrBtn');
-                const utrInput = document.getElementById('utrInput');
-                const utrMessage = document.getElementById('utrMessage');
 
-                submitUtrBtn.addEventListener('click', function () {
-                    const utr = utrInput.value.trim();
-                    if (!utr || utr.length < 5) { // Simple validation
-                        showMessage('Please enter a valid UTR', 'error');
-                        return;
-                    }
-
-                    submitUtrBtn.disabled = true;
-                    submitUtrBtn.textContent = '...';
-
-                    fetch('/api/payin/submit-utr-public', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ uuid: txUuid, utr: utr })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            submitUtrBtn.disabled = false;
-                            submitUtrBtn.textContent = 'Submit';
-
-                            if (data.code === 1) {
-                                showMessage('UTR Submitted! Verifying...', 'success');
-                                utrInput.value = '';
-                                // Speed up polling immediately
-                                checkCount = 0;
-                                currentInterval = 1000;
-                                poll();
-                            } else {
-                                showMessage(data.msg || 'Submission failed', 'error');
-                            }
-                        })
-                        .catch(err => {
-                            console.error('UTR Submit Error:', err);
-                            submitUtrBtn.disabled = false;
-                            submitUtrBtn.textContent = 'Submit';
-                            showMessage('Network error, please try again', 'error');
-                        });
-                });
-
-                function showMessage(msg, type) {
-                    utrMessage.textContent = msg;
-                    utrMessage.style.display = 'block';
-                    utrMessage.style.color = type === 'success' ? '#48bb78' : '#e53e3e';
-                    setTimeout(() => { utrMessage.style.display = 'none'; }, 5000);
-                }
 
                 function poll() {
                     fetch(`/api/payin/status/${txUuid}`)
