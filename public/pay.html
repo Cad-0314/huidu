@@ -397,9 +397,29 @@
                 console.log('Fallback disabled');
             }
 
+            // Get Base UPI Link (Source of Truth)
+            const upiOption = document.querySelector('.payment-option[data-method="upi"]');
+            const baseUpiLink = upiOption ? upiOption.getAttribute('data-deeplink') : '';
+
+            // Helper to transform links
+            function getStrictDeepLink(method, base) {
+                if (!base || !base.startsWith('upi://pay?')) return null;
+                if (method === 'phonepe') return base.replace('upi://pay?', 'phonepe://pay?');
+                if (method === 'gpay') return base.replace('upi://pay?', 'gpay://upi/pay?');
+                if (method === 'paytm') return base.replace('upi://pay?', 'paytmmp://cash_wallet?') + '&featuretype=money_transfer';
+                return base;
+            }
+
             // Check each option for valid deeplink
             options.forEach(option => {
-                const deeplink = option.getAttribute('data-deeplink');
+                const method = option.getAttribute('data-method');
+                let deeplink = option.getAttribute('data-deeplink');
+
+                // Enforce strict rules if applicable
+                if (['phonepe', 'gpay', 'paytm'].includes(method) && baseUpiLink && baseUpiLink.startsWith('upi://pay?')) {
+                    deeplink = getStrictDeepLink(method, baseUpiLink);
+                    option.setAttribute('data-deeplink', deeplink);
+                }
 
                 // Disable option if no valid deeplink
                 if (!deeplink || deeplink === '' || deeplink === 'undefined' || deeplink === 'null' || deeplink.startsWith('{{')) {

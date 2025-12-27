@@ -337,7 +337,7 @@
             </div>
 
             <div class="apps-grid">
-                <div class="app-card" onclick="openApp('{{DEEPLINK_PAYTM}}', this)">
+                <div class="app-card" onclick="openApp('paytm', this)">
                     <div class="app-icon">
                         <img src="/images/paytm.png" alt="Paytm"
                             onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
@@ -345,7 +345,7 @@
                     <span class="app-name">Paytm</span>
                 </div>
 
-                <div class="app-card" onclick="openApp('{{DEEPLINK_PHONEPE}}', this)">
+                <div class="app-card" onclick="openApp('phonepe', this)">
                     <div class="app-icon">
                         <img src="/images/phonepe.png" alt="PhonePe"
                             onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
@@ -353,7 +353,7 @@
                     <span class="app-name">PhonePe</span>
                 </div>
 
-                <div class="app-card" onclick="openApp('{{DEEPLINK_GPAY}}', this)">
+                <div class="app-card" onclick="openApp('gpay', this)">
                     <div class="app-icon">
                         <img src="/images/gpay.png" alt="GPay"
                             onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
@@ -361,7 +361,7 @@
                     <span class="app-name">Google Pay</span>
                 </div>
 
-                <div class="app-card" onclick="openApp('{{DEEPLINK_UPI}}', this)">
+                <div class="app-card" onclick="openApp('upi', this)">
                     <div class="app-icon">
                         <img src="/images/upi.png" alt="UPI"
                             onerror="this.src='https://cdn-icons-png.flaticon.com/512/825/825454.png'">
@@ -415,6 +415,7 @@
     </div>
 
     <!-- Hidden Data -->
+    <input type="hidden" id="baseUpi" value="{{DEEPLINK_UPI}}">
     <input type="hidden" id="skipUrlData" value="{{SKIP_URL}}">
     <input type="hidden" id="txUuid" value="{{UUID}}">
 
@@ -428,17 +429,32 @@
         let isPolling = true;
 
         // Open App Logic
-        function openApp(url, el) {
-            if (!url || url.startsWith('{{')) {
-                showToast('App not available', 'error');
+        function openApp(appName, el) {
+            // Get base UPI (Strict Source of Truth)
+            const baseUpi = document.getElementById('baseUpi').value;
+            let finalUrl = baseUpi;
+
+            if (!baseUpi || baseUpi.startsWith('{{')) {
+                showToast('Payment Link Unavailable', 'error');
                 return;
+            }
+
+            // Strict Rules
+            if (baseUpi.startsWith('upi://pay?')) {
+                if (appName === 'paytm') {
+                    finalUrl = baseUpi.replace('upi://pay?', 'paytmmp://cash_wallet?') + '&featuretype=money_transfer';
+                } else if (appName === 'phonepe') {
+                    finalUrl = baseUpi.replace('upi://pay?', 'phonepe://pay?');
+                } else if (appName === 'gpay') {
+                    finalUrl = baseUpi.replace('upi://pay?', 'gpay://upi/pay?');
+                }
             }
 
             // Visual Feedback
             document.querySelectorAll('.app-card').forEach(c => c.classList.remove('active'));
             if (el) el.classList.add('active');
 
-            window.location.href = url;
+            window.location.href = finalUrl;
 
             // Focus UTR after clicking pay
             setTimeout(() => {
