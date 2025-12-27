@@ -176,6 +176,7 @@ router.get('/payouts', authenticate, async (req, res) => {
                     wallet: p.wallet_address,
                     network: p.network_type,
                     utr: p.utr,
+                    type: p.payout_type,
                     createdAt: p.created_at,
                     updatedAt: p.updated_at
                 })),

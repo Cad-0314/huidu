@@ -198,11 +198,15 @@ async function initBot() {
 
             if (tx) {
                 found = true;
-                responseMsg += `📥 **本地收款记录**\n单号: \`${tx.order_id}\`\n金额: ₹${tx.amount}\n状态: ${tx.status.toUpperCase()}\nUTR: \`${tx.utr || 'N/A'}\`\n\n`;
+                const created = new Date(tx.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+                const updated = tx.updated_at ? new Date(tx.updated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-';
+                responseMsg += `📥 **本地收款记录**\n单号: \`${tx.order_id}\`\n金额: ₹${tx.amount}\n状态: ${tx.status.toUpperCase()}\nUTR: \`${tx.utr || 'N/A'}\`\n创建: ${created}\n更新: ${updated}\n\n`;
             }
             if (payout) {
                 found = true;
-                responseMsg += `📤 **本地下发记录**\n单号: \`${payout.order_id}\`\n金额: ₹${payout.amount}\n状态: ${payout.status.toUpperCase()}\nUTR: \`${payout.utr || 'N/A'}\`\n\n`;
+                const created = new Date(payout.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+                const updated = payout.updated_at ? new Date(payout.updated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : '-';
+                responseMsg += `📤 **本地下发记录**\n单号: \`${payout.order_id}\`\n金额: ₹${payout.amount}\n状态: ${payout.status.toUpperCase()}\nUTR: \`${payout.utr || 'N/A'}\`\n创建: ${created}\n更新: ${updated}\n\n`;
             }
 
             let providerFound = false;
@@ -278,6 +282,63 @@ async function initBot() {
         }
     });
 
+    // Command: /cb <ORDER_ID>
+    bot.command('cb', async (ctx) => {
+        try {
+            const message = ctx.message.text.split(' ');
+            if (message.length !== 2) {
+                return reply(ctx, '❌ **格式错误**\n用法: `/cb <订单号>`');
+            }
+
+            const orderId = message[1].trim();
+            const chatId = ctx.chat.id.toString();
+
+            const user = await db.prepare('SELECT id, callback_url FROM users WHERE telegram_group_id = ?').get(chatId);
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
+
+            const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? AND user_id = ?').get(orderId, user.id);
+            if (!tx) return reply(ctx, '❌ **订单不存在**\n无法触发回调：订单不属于该商户。');
+
+            if (!user.callback_url) return reply(ctx, '⚠️ **未设置回调地址**\n请先在后台设置。');
+
+            reply(ctx, `⏳ **正在触发回调...**\n订单: \`${orderId}\`\n地址: ${user.callback_url}`);
+
+            try {
+                // Determine status code based on local status
+                // Status 1=Success, 2=Failed, 3=Pending/Processing
+                // We use our helper function or manual logic
+                const axios = require('axios');
+                const { generateSignature } = require('../utils/signature');
+
+                const statusMap = { 'success': 1, 'failed': 2, 'pending': 3, 'processing': 3 };
+                const statusCode = statusMap[tx.status] || 3;
+
+                // Prepare payload
+                const payload = {
+                    mOrderId: tx.order_id,
+                    payOrderId: tx.platform_order_id || tx.order_id,
+                    amount: tx.amount,
+                    status: statusCode,
+                    userName: tx.payer_name || '',
+                    phone: '',
+                    timestamp: Date.now()
+                };
+
+                // Sign
+                payload.sign = generateSignature(payload, user.merchant_key);
+
+                await axios.post(user.callback_url, payload, { timeout: 10000 });
+                reply(ctx, `✅ **回调发送成功**\nHTTP 200 OK`);
+            } catch (err) {
+                reply(ctx, `❌ **回调发送失败**\n错误: ${err.message}`);
+            }
+
+        } catch (error) {
+            console.error('Bot CB Error:', error);
+            reply(ctx, '❌ **系统错误**');
+        }
+    });
+
     // Command: /last
     bot.command('last', async (ctx) => {
         try {
@@ -331,6 +392,7 @@ async function initBot() {
                         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
                     FROM transactions 
                     WHERE user_id = ? AND type = 'payin'
+                    AND created_at >= datetime('now', 'start of day', 'localtime')
                 `).get(user.id);
             };
 
@@ -341,6 +403,7 @@ async function initBot() {
                         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
                     FROM payouts 
                     WHERE user_id = ? AND source = 'api'
+                    AND created_at >= datetime('now', 'start of day', 'localtime')
                 `).get(user.id);
             };
 

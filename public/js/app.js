@@ -2151,12 +2151,14 @@ async function loadAllTransactionsData(page = 1) {
         const endDate = document.getElementById('atEndDate')?.value || '';
         const status = document.getElementById('atStatus')?.value || '';
         const type = document.getElementById('atType')?.value || '';
+        const merchant = document.getElementById('atMerchant')?.value || '';
 
         let url = `/admin/transactions?page=${page}&limit=20&search=${encodeURIComponent(search)}`;
         if (startDate) url += `&startDate=${startDate}`;
         if (endDate) url += `&endDate=${endDate}`;
         if (status) url += `&status=${status}`;
         if (type) url += `&type=${type}`;
+        if (merchant) url += `&merchant=${encodeURIComponent(merchant)}`;
 
         console.log('[GlobalTx] Fetching:', url);
         const data = await API.get(url);
@@ -2191,6 +2193,16 @@ async function loadAllTransactionsData(page = 1) {
         container.innerHTML = `<tr><td colspan="8" class="text-danger" style="text-align:center;">Error: ${error.message}</td></tr>`;
         showToast(t('error_load_tx'), 'error');
     }
+}
+
+function resetAllTransactionsFilters() {
+    if (document.getElementById('atStartDate')) document.getElementById('atStartDate').value = '';
+    if (document.getElementById('atEndDate')) document.getElementById('atEndDate').value = '';
+    if (document.getElementById('atStatus')) document.getElementById('atStatus').value = '';
+    if (document.getElementById('atType')) document.getElementById('atType').value = '';
+    if (document.getElementById('atSearch')) document.getElementById('atSearch').value = '';
+    if (document.getElementById('atMerchant')) document.getElementById('atMerchant').value = '';
+    loadAllTransactionsData(1);
 }
 
 // ========================================

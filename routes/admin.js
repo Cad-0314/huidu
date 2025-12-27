@@ -431,6 +431,11 @@ router.get('/transactions', authenticate, requireAdmin, async (req, res) => {
             params.push(term, term, term);
         }
 
+        if (req.query.merchant) {
+            query += ' AND u.username LIKE ?';
+            params.push(`%${req.query.merchant}%`);
+        }
+
         query += ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), offset);
 
