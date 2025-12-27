@@ -14,7 +14,16 @@ async function initBot() {
         return;
     }
 
-    bot = new Telegraf(token);
+    const https = require('https');
+
+    const agent = new https.Agent({
+        keepAlive: true,
+        family: 4
+    });
+
+    bot = new Telegraf(token, {
+        telegram: { agent }
+    });
     const db = getDb();
 
     // Generic reply helper to quote message

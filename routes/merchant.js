@@ -452,19 +452,40 @@ router.get('/stats/chart', authenticate, async (req, res) => {
         const userId = req.user.id;
         console.log(`[CHART] Fetching chart for user ${userId}, days=${days}`);
 
-        // 1. Generate date labels
+        // Helper for IST Date String YYYY-MM-DD
+        const getISTDate = (d) => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+        // 1. Generate date labels and Date Map
         const labels = [];
         const dateMap = {}; // 'YYYY-MM-DD': { payin: 0, payout: 0 }
+        const now = new Date();
 
+        // Loop backwards from days-1 to 0
         for (let i = days - 1; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-            labels.push(dateStr);
-            dateMap[dateStr] = { payin: 0, payout: 0 };
+            // Subtract i days safely using timestamps (approx 24h chunks)
+            // Note: This matches "N days ago" logic. 
+            // Better to align with midnight boundaries if needed, but for "last 7 days" 24h chunks usually suffice 
+            // if we just want the calendar date of that moment.
+            const d = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+            const dateStr = getISTDate(d);
+
+            // Avoid duplicates if DST/time shifts cause same day (unlikely in pure IST but good safety)
+            if (!dateMap[dateStr]) {
+                labels.push(dateStr);
+                dateMap[dateStr] = { payin: 0, payout: 0 };
+            }
         }
 
-        // 2. Fetch Aggregated Data
+        // Make sure we have exactly 'days' labels? 
+        // Logic above might produce fewer if multiple 'd' fall on same day, or more if valid.
+        // Actually, simple loop is:
+        // for (let i = 0; i < days; i++) ...
+        // Let's stick to the generated labels for the query range.
+
+        const startDate = labels[0]; // Oldest date
+        const endDate = labels[labels.length - 1]; // Newest date (Today)
+
+        // 2. Fetch Aggregated Data using explicit Date Strings
         const stats = await db.prepare(`
             SELECT 
                 date(created_at, '+05:30') as date, 
@@ -473,9 +494,9 @@ router.get('/stats/chart', authenticate, async (req, res) => {
             FROM transactions 
             WHERE user_id = ? 
             AND status = 'success' 
-            AND date(created_at, '+05:30') >= date('now', '+05:30', '-' || ? || ' days')
+            AND date(created_at, '+05:30') >= ?
             GROUP BY date, type
-        `).all(userId, days);
+        `).all(userId, startDate);
 
         stats.forEach(row => {
             if (dateMap[row.date]) {
@@ -485,14 +506,13 @@ router.get('/stats/chart', authenticate, async (req, res) => {
         });
 
         // 3. Prepare Arrays
+        // Ensure we map based on the 'labels' array order
         const payinData = labels.map(d => dateMap[d].payin);
         const payoutData = labels.map(d => dateMap[d].payout);
 
         // 4. Calculate Top Stats
-        // Balance
         const user = await db.prepare('SELECT balance FROM users WHERE id = ?').get(userId);
 
-        // Total Payin/Payout (All time)
         const totals = await db.prepare(`
             SELECT 
                 SUM(CASE WHEN type = 'payin' AND status = 'success' THEN amount ELSE 0 END) as totalPayin,
@@ -501,10 +521,8 @@ router.get('/stats/chart', authenticate, async (req, res) => {
             WHERE user_id = ?
         `).get(userId);
 
-        // Pending Payouts
         const pending = await db.prepare("SELECT COUNT(*) as count FROM payouts WHERE user_id = ? AND status IN ('pending', 'processing')").get(userId);
 
-        // Success Rate
         const rates = await db.prepare(`
             SELECT 
                 COUNT(*) as total,
@@ -515,14 +533,17 @@ router.get('/stats/chart', authenticate, async (req, res) => {
 
         const successRate = rates.total > 0 ? ((rates.success / rates.total) * 100).toFixed(1) : 0;
 
-        // Volume Today/Yesterday
+        // Volume Today/Yesterday using explicit JS dates
+        const todayStr = getISTDate(new Date());
+        const yesterdayStr = getISTDate(new Date(Date.now() - 86400000));
+
         const volume = await db.prepare(`
             SELECT 
-                SUM(CASE WHEN date(created_at, '+05:30') = date('now', '+05:30') THEN amount ELSE 0 END) as today,
-                SUM(CASE WHEN date(created_at, '+05:30') = date('now', '+05:30', '-1 day') THEN amount ELSE 0 END) as yesterday
+                SUM(CASE WHEN date(created_at, '+05:30') = ? THEN amount ELSE 0 END) as today,
+                SUM(CASE WHEN date(created_at, '+05:30') = ? THEN amount ELSE 0 END) as yesterday
             FROM transactions 
             WHERE user_id = ? AND type = 'payin' AND status = 'success'
-        `).get(userId);
+        `).get(todayStr, yesterdayStr, userId);
 
         res.json({
             code: 1,
@@ -536,7 +557,7 @@ router.get('/stats/chart', authenticate, async (req, res) => {
                     totalPayout: totals.totalPayout || 0,
                     pendingPayouts: pending.count,
                     successRate: successRate,
-                    conversionRate: successRate, // Placeholder
+                    conversionRate: successRate,
                     todayVolume: volume.today || 0,
                     yesterdayVolume: volume.yesterday || 0
                 }

@@ -374,7 +374,15 @@ window.translations = {
         sig_step_3: "3. <strong>Join</strong> with <code>&</code> in <code>key=value</code> format.",
         sig_step_4: "4. <strong>Append</strong> <code>&secret=YOUR_MERCHANT_SECRET_KEY</code>.",
         sig_step_5: "5. <strong>Hash</strong> using MD5 and convert to uppercase.",
-        php_ex: "PHP Example"
+        php_ex: "PHP Example",
+
+        // API Docs - New Keys
+        error_codes: "Error Codes",
+        error_codes_desc: "Standard response codes returned by the API.",
+        payin_callback: "Pay-In Callback",
+        payin_callback_desc: "Webhook notification when a pay-in order status changes.",
+        payout_callback: "Payout Callback",
+        payout_callback_desc: "Webhook notification when a payout order status changes."
     },
     zh: {
         // App Shell
@@ -719,7 +727,15 @@ window.translations = {
         sig_step_3: "3. 将筛选后的参数用 <code>&</code> 拼接成 <code>key=value</code> 格式。",
         sig_step_4: "4. 在拼接后的字符串末尾加上 <code>&secret=YOUR_MERCHANT_SECRET_KEY</code>。",
         sig_step_5: "5. 进行 <strong>MD5</strong> 计算并转为大写。",
-        php_ex: "PHP 示例代码"
+        php_ex: "PHP 示例代码",
+
+        // API Docs - New Keys - Chinese
+        error_codes: "错误码列表",
+        error_codes_desc: "API 返回的标准响应码。",
+        payin_callback: "充值回调",
+        payin_callback_desc: "充值订单状态变更时的异步回调通知。",
+        payout_callback: "代付回调",
+        payout_callback_desc: "代付订单状态变更时的异步回调通知。"
     }
 };
 
