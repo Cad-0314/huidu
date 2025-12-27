@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
+const https = require('https');
+
 // Configuration from environment
 const BASE_URL = process.env.F2PAY_BASE_URL || 'https://api.f2pay.com';
 const MERCHANT_ID = process.env.F2PAY_MERCHANT_ID;
@@ -39,7 +41,8 @@ const api = axios.create({
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json'
-    }
+    },
+    httpsAgent: new https.Agent({ family: 4 }) // Force IPv4
 });
 
 /**
