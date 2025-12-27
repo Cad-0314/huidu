@@ -2207,7 +2207,14 @@ function getStatusClass(status) {
 }
 
 function formatDate(dateStr) {
-    const date = new Date(dateStr);
+    if (!dateStr) return '-';
+    // SQLite stores as UTC "YYYY-MM-DD HH:MM:SS" but JS parses this as Local.
+    // Append 'Z' to force UTC interpretation so toLocaleString works correctly.
+    let cleanDateStr = dateStr;
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateStr)) {
+        cleanDateStr += 'Z';
+    }
+    const date = new Date(cleanDateStr);
     return date.toLocaleString('en-IN', {
         timeZone: 'Asia/Kolkata',
         day: '2-digit',

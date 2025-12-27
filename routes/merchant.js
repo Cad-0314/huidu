@@ -228,7 +228,8 @@ router.get('/payouts/export', authenticate, async (req, res) => {
             else if (p.status === 'processing') statusCn = '处理中';
 
             const account = p.payout_type === 'usdt' ? p.wallet_address : p.account_number;
-            const date = new Date(p.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            // Append 'Z' to force UTC interpretation for correct IST conversion
+            const date = new Date(p.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
 
             csv += `${p.order_id},${p.amount},${p.fee},${account || ''},${statusCn},${p.utr || ''},${date}\n`;
         });
@@ -276,7 +277,8 @@ router.get('/transactions/export', authenticate, async (req, res) => {
         transactions.forEach(t => {
             const typeCn = t.type === 'payin' ? '代收' : '代付';
             const statusCn = t.status === 'success' ? '成功' : (t.status === 'pending' ? '等待' : '失败');
-            const date = new Date(t.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' }); // Approx
+            // Append 'Z' to force UTC interpretation for correct IST conversion
+            const date = new Date(t.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' }); // Approx
 
             csv += `${t.order_id},${t.platform_order_id || ''},${typeCn},${t.amount},${t.fee},${t.net_amount},${statusCn},${t.utr || ''},${date}\n`;
         });
@@ -427,7 +429,8 @@ router.get('/all-transactions/export', authenticate, async (req, res) => {
             else if (r.type === 'usdt') typeCn = 'USDT代付';
 
             let statusCn = r.status === 'success' ? '成功' : (r.status === 'pending' || r.status === 'processing' ? '处理中' : '失败');
-            const date = new Date(r.created_at).toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            // Append 'Z' to force UTC interpretation for correct IST conversion
+            const date = new Date(r.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
 
             csv += `${r.order_id},${typeCn},${r.amount},${r.fee},${r.net_amount},${statusCn},${r.utr || ''},${date}\n`;
         });
