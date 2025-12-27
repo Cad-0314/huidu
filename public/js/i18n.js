@@ -65,6 +65,8 @@ window.translations = {
         "2fa_status": "2FA",
         rates: "Rates",
         created: "Created",
+        time_initiated: "Initiated Time",
+        time_updated: "Updated Time",
         email: "Email",
 
         // Status & Types
@@ -450,6 +452,8 @@ window.translations = {
         "2fa_status": "2FA 状态",
         rates: "费率",
         created: "创建时间",
+        time_initiated: "创建时间",
+        time_updated: "更新时间",
         email: "邮箱",
 
         // Status & Types

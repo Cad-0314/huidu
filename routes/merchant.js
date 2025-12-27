@@ -95,7 +95,8 @@ router.get('/transactions', authenticate, async (req, res) => {
                     netAmount: t.net_amount,
                     status: t.status,
                     utr: t.utr,
-                    createdAt: t.created_at
+                    createdAt: t.created_at,
+                    updatedAt: t.updated_at
                 })),
                 total,
                 page: parseInt(page),
@@ -175,7 +176,8 @@ router.get('/payouts', authenticate, async (req, res) => {
                     wallet: p.wallet_address,
                     network: p.network_type,
                     utr: p.utr,
-                    createdAt: p.created_at
+                    createdAt: p.created_at,
+                    updatedAt: p.updated_at
                 })),
                 total,
                 page: parseInt(page),
@@ -219,7 +221,7 @@ router.get('/payouts/export', authenticate, async (req, res) => {
         const payouts = await db.prepare(query).all(...params);
 
         // CSV Header (Chinese)
-        let csv = '订单号 (Order ID),金额 (Amount),手续费 (Fee),账户 (Account),状态 (Status),UTR,时间 (Time)\n';
+        let csv = '订单号 (Order ID),金额 (Amount),手续费 (Fee),账户 (Account),状态 (Status),UTR,创建时间 (Created Time),更新时间 (Updated Time)\n';
 
         payouts.forEach(p => {
             let statusCn = '等待';
@@ -229,9 +231,10 @@ router.get('/payouts/export', authenticate, async (req, res) => {
 
             const account = p.payout_type === 'usdt' ? p.wallet_address : p.account_number;
             // Append 'Z' to force UTC interpretation for correct IST conversion
-            const date = new Date(p.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            const createdDate = new Date(p.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            const updatedDate = p.updated_at ? new Date(p.updated_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' }) : '-';
 
-            csv += `${p.order_id},${p.amount},${p.fee},${account || ''},${statusCn},${p.utr || ''},${date}\n`;
+            csv += `${p.order_id},${p.amount},${p.fee},${account || ''},${statusCn},${p.utr || ''},${createdDate},${updatedDate}\n`;
         });
 
         res.header('Content-Type', 'text/csv');
@@ -272,15 +275,16 @@ router.get('/transactions/export', authenticate, async (req, res) => {
         const transactions = await db.prepare(query).all(...params);
 
         // CSV Header (Chinese)
-        let csv = '订单号 (Order ID),平台订单号 (Platform ID),类型 (Type),金额 (Amount),手续费 (Fee),到账金额 (Net),状态 (Status),UTR,时间 (Time)\n';
+        let csv = '订单号 (Order ID),平台订单号 (Platform ID),类型 (Type),金额 (Amount),手续费 (Fee),到账金额 (Net),状态 (Status),UTR,创建时间 (Created Time),更新时间 (Updated Time)\n';
 
         transactions.forEach(t => {
             const typeCn = t.type === 'payin' ? '代收' : '代付';
             const statusCn = t.status === 'success' ? '成功' : (t.status === 'pending' ? '等待' : '失败');
             // Append 'Z' to force UTC interpretation for correct IST conversion
-            const date = new Date(t.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' }); // Approx
+            const createdDate = new Date(t.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            const updatedDate = t.updated_at ? new Date(t.updated_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' }) : '-';
 
-            csv += `${t.order_id},${t.platform_order_id || ''},${typeCn},${t.amount},${t.fee},${t.net_amount},${statusCn},${t.utr || ''},${date}\n`;
+            csv += `${t.order_id},${t.platform_order_id || ''},${typeCn},${t.amount},${t.fee},${t.net_amount},${statusCn},${t.utr || ''},${createdDate},${updatedDate}\n`;
         });
 
         res.header('Content-Type', 'text/csv');
@@ -305,8 +309,8 @@ router.get('/all-transactions', authenticate, async (req, res) => {
         const userId = req.user.id;
 
         // Base subqueries
-        let txQuery = `SELECT uuid as id, order_id, type, amount, fee, net_amount, status, utr, created_at FROM transactions WHERE user_id = ?`;
-        let poQuery = `SELECT uuid as id, order_id, payout_type as type, amount, fee, net_amount, status, utr, created_at FROM payouts WHERE user_id = ?`;
+        let txQuery = `SELECT uuid as id, order_id, type, amount, fee, net_amount, status, utr, created_at, updated_at FROM transactions WHERE user_id = ?`;
+        let poQuery = `SELECT uuid as id, order_id, payout_type as type, amount, fee, net_amount, status, utr, created_at, updated_at FROM payouts WHERE user_id = ?`;
 
         const params = [userId, userId];
 
@@ -386,8 +390,8 @@ router.get('/all-transactions/export', authenticate, async (req, res) => {
         const db = getDb();
         const userId = req.user.id;
 
-        let txQuery = `SELECT order_id, type, amount, fee, net_amount, status, utr, created_at FROM transactions WHERE user_id = ?`;
-        let poQuery = `SELECT order_id, payout_type as type, amount, fee, net_amount, status, utr, created_at FROM payouts WHERE user_id = ?`;
+        let txQuery = `SELECT order_id, type, amount, fee, net_amount, status, utr, created_at, updated_at FROM transactions WHERE user_id = ?`;
+        let poQuery = `SELECT order_id, payout_type as type, amount, fee, net_amount, status, utr, created_at, updated_at FROM payouts WHERE user_id = ?`;
 
         const params = [userId, userId];
 
@@ -420,7 +424,7 @@ router.get('/all-transactions/export', authenticate, async (req, res) => {
 
         const results = await db.prepare(combinedQuery + " ORDER BY created_at DESC").all(...queryParams);
 
-        let csv = '订单号 (Order ID),类型 (Type),金额 (Amount),手续费 (Fee),到账 (Net),状态 (Status),UTR,时间 (Time)\n';
+        let csv = '订单号 (Order ID),类型 (Type),金额 (Amount),手续费 (Fee),到账 (Net),状态 (Status),UTR,创建时间 (Created Time),更新时间 (Updated Time)\n';
 
         results.forEach(r => {
             let typeCn = r.type;
@@ -430,9 +434,10 @@ router.get('/all-transactions/export', authenticate, async (req, res) => {
 
             let statusCn = r.status === 'success' ? '成功' : (r.status === 'pending' || r.status === 'processing' ? '处理中' : '失败');
             // Append 'Z' to force UTC interpretation for correct IST conversion
-            const date = new Date(r.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            const createdDate = new Date(r.created_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' });
+            const updatedDate = r.updated_at ? new Date(r.updated_at + 'Z').toLocaleString('zh-CN', { timeZone: 'Asia/Kolkata' }) : '-';
 
-            csv += `${r.order_id},${typeCn},${r.amount},${r.fee},${r.net_amount},${statusCn},${r.utr || ''},${date}\n`;
+            csv += `${r.order_id},${typeCn},${r.amount},${r.fee},${r.net_amount},${statusCn},${r.utr || ''},${createdDate},${updatedDate}\n`;
         });
 
         res.header('Content-Type', 'text/csv');

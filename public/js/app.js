@@ -399,6 +399,7 @@ async function loadMerchantAllTransactions(page = 1) {
                     <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${tx.utr || '-'}</td>
                     <td>${formatDate(tx.created_at)}</td>
+                    <td>${formatDate(tx.updated_at)}</td>
                 </tr>
             `}).join('');
             renderPagination(data.data, 'matPagination', loadMerchantAllTransactions);
@@ -759,6 +760,7 @@ async function loadTransactionsData(page = 1) {
                     <td><span class="badge badge-${getStatusClass(tx.status)}">${t('status_' + tx.status)}</span></td>
                     <td>${tx.utr || '-'}</td>
                     <td>${formatDate(tx.createdAt)}</td>
+                    <td>${formatDate(tx.updatedAt)}</td>
                 </tr>
             `).join('');
                 updatePaginationControls('txPagination', { page, pages, total }, 'loadTransactionsData');
@@ -815,6 +817,7 @@ async function loadPayoutsData(page = 1) {
                     <td><span class="badge badge-${getStatusClass(p.status)}">${t('status_' + p.status)}</span></td>
                     <td>${p.utr || '-'}</td>
                     <td>${formatDate(p.createdAt)}</td>
+                    <td>${formatDate(p.updatedAt)}</td>
                 </tr>
             `).join('');
                 updatePaginationControls('payoutsPagination', { page, pages, total }, 'loadPayoutsData');
@@ -2562,6 +2565,7 @@ async function loadSettlementHistory(page = 1) {
                     </td>
                     <td><span class="badge badge-${getStatusClass(p.status)}">${t('status_' + p.status)}</span></td>
                     <td>${formatDate(p.createdAt)}</td>
+                    <td>${formatDate(p.updatedAt)}</td>
                 </tr>
             `).join('');
                 updatePaginationControls('stPagination', { page, pages, total }, 'loadSettlementHistory');
