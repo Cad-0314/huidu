@@ -171,7 +171,9 @@ app.get('/pay/:orderId', async (req, res) => {
         }
 
         // All channels (Silkpay, F2PAY, HDPay) use the same pay.html with deeplinks
-        const templateFile = 'pay.html';
+        // Toggle between versions based on config
+        const uiVersion = process.env.PAYMENT_UI_VERSION || 'v1';
+        const templateFile = uiVersion === 'v2' ? 'pay2.html' : 'pay.html';
 
         let html = fs.readFileSync(path.join(__dirname, 'public', templateFile), 'utf8');
 
