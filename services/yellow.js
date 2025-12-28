@@ -70,15 +70,8 @@ async function logToDatabase(endpoint, request, response, duration, status) {
     }
 }
 
-// Axios instance
-const api = axios.create({
-    baseURL: BASE_URL,
-    timeout: 30000,
-    headers: {
-        'Content-Type': 'multipart/form-data'
-    },
-    httpsAgent: new https.Agent({ family: 4 }) // Force IPv4
-});
+// Shared HTTPS Agent for IPv4
+const ipv4Agent = new https.Agent({ family: 4 });
 
 /**
  * Create MD5 Signature
@@ -166,7 +159,8 @@ async function createPayin(data, config = {}) {
 
         const response = await axios.post(`${baseUrl}/api/v1/collection_order_create`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000
+            timeout: 30000,
+            httpsAgent: ipv4Agent
         });
 
         const duration = Date.now() - startTime;
@@ -250,7 +244,8 @@ async function createPayout(data, config = {}) {
 
         const response = await axios.post(`${baseUrl}/api/v1/payment_order_create`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000
+            timeout: 30000,
+            httpsAgent: ipv4Agent
         });
 
         const duration = Date.now() - startTime;
@@ -310,7 +305,8 @@ async function queryPayin(orderId, config = {}) {
 
         const response = await axios.post(`${baseUrl}/api/v1/collection_order_query`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000
+            timeout: 30000,
+            httpsAgent: ipv4Agent
         });
 
         const duration = Date.now() - startTime;
@@ -376,7 +372,8 @@ async function queryPayout(orderId, config = {}) {
 
         const response = await axios.post(`${baseUrl}/api/v1/payment_order_query`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000
+            timeout: 30000,
+            httpsAgent: ipv4Agent
         });
 
         const duration = Date.now() - startTime;
@@ -442,7 +439,8 @@ async function getBalance(config = {}) {
 
         const response = await axios.post(`${baseUrl}/api/v1/query_account_balance`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000
+            timeout: 30000,
+            httpsAgent: ipv4Agent
         });
 
         const duration = Date.now() - startTime;
@@ -521,7 +519,8 @@ async function submitUtr(orderId, utr, config = {}) {
 
         const response = await axios.post(`${baseUrl}/api/v1/collection_order_verification`, formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000
+            timeout: 30000,
+            httpsAgent: ipv4Agent
         });
 
         const duration = Date.now() - startTime;
