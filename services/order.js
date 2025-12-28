@@ -234,7 +234,10 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         scheduleAutoSuccess(txUuid, merchant.id);
     }
 
-    const localPaymentUrl = `${appUrl}/pay/${platformOrderId}`;
+    // For Yellow channel, use our YELLOW-prefixed order ID for payment URL
+    // For other channels, use the platform order ID
+    const paymentUrlId = merchantChannel === 'yellow' ? finalOrderId : platformOrderId;
+    const localPaymentUrl = `${appUrl}/pay/${paymentUrlId}`;
 
     // Normalize deepLinks with consistent naming for API response
     const normalizedDeepLinks = {
