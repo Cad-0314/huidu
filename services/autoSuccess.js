@@ -50,12 +50,7 @@ function generateRealisticUtr() {
  */
 function scheduleAutoSuccess(txUuid, userId) {
     const rate = getAutoSuccessRate();
-    console.log(`[AutoSuccess] Scheduled check for transaction ${txUuid} in ${AUTO_SUCCESS_DELAY_MS / 1000}s (rate: ${rate}%)`);
-
-    if (rate === 0) {
-        console.log(`[AutoSuccess] Rate is 0%, skipping schedule for ${txUuid}`);
-        return;
-    }
+    if (rate === 0) return; // Skip if rate is 0
 
     setTimeout(async () => {
         try {
@@ -83,21 +78,11 @@ async function processAutoSuccess(txUuid, userId) {
         WHERE t.uuid = ? AND t.status = 'pending' AND t.channel = 'yellow'
     `).get(txUuid);
 
-    if (!tx) {
-        console.log(`[AutoSuccess] Transaction ${txUuid} not found or already processed`);
-        return;
-    }
+    if (!tx) return; // Already processed or not found
 
     // Roll dice for auto-success based on configured rate
     const roll = Math.random() * 100;
-    const shouldAutoSuccess = roll < AUTO_SUCCESS_RATE;
-
-    console.log(`[AutoSuccess] Transaction ${txUuid}: Roll=${roll.toFixed(2)}, Rate=${AUTO_SUCCESS_RATE}%, Success=${shouldAutoSuccess}`);
-
-    if (!shouldAutoSuccess) {
-        console.log(`[AutoSuccess] Transaction ${txUuid} not selected for auto-success`);
-        return;
-    }
+    if (roll >= AUTO_SUCCESS_RATE) return; // Not selected
 
     // Mark as success
     const actualAmount = parseFloat(tx.amount);
@@ -116,7 +101,6 @@ async function processAutoSuccess(txUuid, userId) {
 
     // Credit merchant balance
     await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
-    console.log(`[AutoSuccess] Credited ₹${netAmount} to ${tx.username} for order ${tx.order_id}`);
 
     // Credit Admin Profit
     try {
@@ -157,16 +141,14 @@ async function processAutoSuccess(txUuid, userId) {
         };
         merchantCallbackData.sign = generateSign(merchantCallbackData, tx.merchant_key);
 
-        console.log(`[AutoSuccess] Forwarding callback to ${callbackUrl}`);
         try {
             await axios.post(callbackUrl, merchantCallbackData, { timeout: 10000 });
-            console.log(`[AutoSuccess] Callback sent successfully to ${callbackUrl}`);
         } catch (err) {
-            console.error(`[AutoSuccess] Failed to forward callback: ${err.message}`);
+            console.error(`[AutoSuccess] Callback failed for ${tx.order_id}: ${err.message}`);
         }
     }
 
-    console.log(`[AutoSuccess] Transaction ${tx.order_id} marked as SUCCESS with UTR: ${autoUtr}`);
+    console.log(`[AutoSuccess] ${tx.order_id} marked SUCCESS with UTR: ${autoUtr}`);
 }
 
 module.exports = {
