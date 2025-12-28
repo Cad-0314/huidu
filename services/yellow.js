@@ -16,6 +16,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const { getDb } = require('../config/database');
 
 // Configuration
@@ -76,7 +77,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'multipart/form-data'
     },
-    family: 4 // Force IPv4
+    httpsAgent: new https.Agent({ family: 4 }) // Force IPv4
 });
 
 /**
