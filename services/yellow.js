@@ -75,7 +75,8 @@ const api = axios.create({
     timeout: 30000,
     headers: {
         'Content-Type': 'multipart/form-data'
-    }
+    },
+    family: 4 // Force IPv4
 });
 
 /**
