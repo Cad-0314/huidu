@@ -91,14 +91,19 @@ app.get('/pay/:orderId', async (req, res) => {
         const db = getDb();
         const orderId = req.params.orderId;
 
-        // For Yellow channel, URL uses order_id (YELLOW_xxx), for others it uses platform_order_id (PI_xxx)
+        // For Yellow channel, URL uses order_id (YELLOW_xxx or TG_xxx), for others it uses platform_order_id (PI_xxx)
         // Try order_id first, then platform_order_id
+        console.log(`[PAY PAGE] Looking up orderId: ${orderId}`);
+
         let tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ?').get(orderId);
         if (!tx) {
             tx = await db.prepare('SELECT * FROM transactions WHERE platform_order_id = ?').get(orderId);
         }
 
+        console.log(`[PAY PAGE] Found transaction: ${tx ? tx.order_id : 'NOT FOUND'}`);
+
         if (!tx || tx.type !== 'payin') {
+            console.error(`[PAY PAGE] Payment not found for orderId: ${orderId}`);
             return res.status(404).send('Payment not found');
         }
 
