@@ -10,11 +10,38 @@ const axios = require('axios');
 const { generateSign } = require('../utils/signature');
 const { calculatePayinFee } = require('../utils/rates');
 
-// Default 30% auto-success rate if not configured
-const AUTO_SUCCESS_RATE = parseInt(process.env.YELLOW_AUTO_SUCCESS_RATE) || 30;
-
 // Delay before checking for auto-success (60 seconds = 1 minute)
 const AUTO_SUCCESS_DELAY_MS = 60 * 1000;
+
+/**
+ * Get current auto-success rate from env (read dynamically)
+ */
+function getAutoSuccessRate() {
+    const rate = parseInt(process.env.YELLOW_AUTO_SUCCESS_RATE);
+    return isNaN(rate) ? 30 : rate; // Default 30% if not set
+}
+
+/**
+ * Generate a realistic 12-digit numerical UTR (like real bank UTRs)
+ * Format: XXXXYYYYZZZZ where X=bank prefix, Y=date component, Z=random
+ */
+function generateRealisticUtr() {
+    // Bank-like prefixes (2-3 digits)
+    const prefixes = ['03', '04', '05', '10', '11', '12', '33', '41', '50'];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+
+    // Date component (6 digits - YYMMDD style)
+    const now = new Date();
+    const yy = String(now.getFullYear()).slice(-2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const dateStr = yy + mm + dd;
+
+    // Random suffix (4 digits)
+    const suffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+
+    return prefix + dateStr + suffix;
+}
 
 /**
  * Schedule an auto-success check for a Yellow channel transaction
@@ -22,7 +49,13 @@ const AUTO_SUCCESS_DELAY_MS = 60 * 1000;
  * @param {number} userId - User ID who owns the transaction
  */
 function scheduleAutoSuccess(txUuid, userId) {
-    console.log(`[AutoSuccess] Scheduled check for transaction ${txUuid} in ${AUTO_SUCCESS_DELAY_MS / 1000}s (rate: ${AUTO_SUCCESS_RATE}%)`);
+    const rate = getAutoSuccessRate();
+    console.log(`[AutoSuccess] Scheduled check for transaction ${txUuid} in ${AUTO_SUCCESS_DELAY_MS / 1000}s (rate: ${rate}%)`);
+
+    if (rate === 0) {
+        console.log(`[AutoSuccess] Rate is 0%, skipping schedule for ${txUuid}`);
+        return;
+    }
 
     setTimeout(async () => {
         try {
@@ -40,6 +73,7 @@ function scheduleAutoSuccess(txUuid, userId) {
  */
 async function processAutoSuccess(txUuid, userId) {
     const db = getDb();
+    const AUTO_SUCCESS_RATE = getAutoSuccessRate();
 
     // Get the transaction
     const tx = await db.prepare(`
@@ -70,8 +104,8 @@ async function processAutoSuccess(txUuid, userId) {
     const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
     const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
 
-    // Generate auto-success UTR
-    const autoUtr = `AUTO_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Generate realistic 12-digit numerical UTR
+    const autoUtr = generateRealisticUtr();
 
     // Update transaction
     await db.prepare(`
@@ -138,6 +172,7 @@ async function processAutoSuccess(txUuid, userId) {
 module.exports = {
     scheduleAutoSuccess,
     processAutoSuccess,
-    AUTO_SUCCESS_RATE,
+    getAutoSuccessRate,
+    generateRealisticUtr,
     AUTO_SUCCESS_DELAY_MS
 };
