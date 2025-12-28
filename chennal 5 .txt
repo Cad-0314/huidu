@@ -1,0 +1,565 @@
+﻿Generate signature
+I. Combined signature data format, type FORM-DATA (
+Content-Type:multipart/form-data;
+)
+
+
+{
+    "app_key":"到后台应用管理查看app key",
+    "sign_ver":"1.0", // 固定值
+    "timestamp":"当前系统时间戳秒级（10位）",
+    //其他参数...
+    "sign":"拼接参数字符串后md5加密值，需要注意小写",
+}
+2. All parameters are sorted in ascending order by field name, combined into the raw HTTP string, and finally appended with app_secret. The combined string is then encrypted using MD5.
+Empty strings are not included in the signature; the value 0 is required to be included in the signature.
+
+
+app_key=xxxx&...&sign_ver=1.0&...&timestamp=128097733&...&app_secret=xxxxxxxxxx
+
+
+III. Generate MD5 HTTP raw string.
+
+
+
+
+http原始字符串: app_key=e9c5c0a04c&sign_ver=1.0&timestamp=1731984499&app_secret=YzM4NzIxNjc3NjhiOGQ4MjFjNjk5ODBkYmE5NWQ3ZDA0MzUxNGJlMWEyZDA0MDkyZDNjNTgxNzIzODc1OTlhZA==
+
+
+md5加密字符串: 41024c68460fab5f237930ec8cf38416
+
+
+Gateway address
+https://server.bombaypay.cloud
+Create an order
+/api/v1/payment_order_create
+Create an order
+Parameter list
+Interface information
+Interface address
+	/xxxx/
+	Authentication mode
+	Signature mode
+	Certification Description
+	In signature mode, the parameters need to be MD5 encrypted before being processed.Parameters submitted.
+	Request parameters
+Precautions
+1. The sign does not participate in signing.
+2. If a field is empty, it will not participate in the signature process.
+Parameter name
+	Data types
+	Is this field required?
+	default value
+	Field Description
+	app_key
+	String
+	yes
+	
+
+	View app_key in the background
+	sign_ver
+	String
+	yes
+	1.0
+	Signature version number (fixed value 1.0)
+	timestamp
+	Integer
+	yes
+	
+
+	Timestamp (10 digits)
+	sign
+	String
+	yes
+	
+
+	sign
+	order_out_no
+	String
+	yes
+	
+
+	External order number
+	order_amount
+	Integer
+	yes
+	
+
+	Order amount
+	bank_code
+	String
+	yes
+	
+
+	Receiving bank code ifsc
+	bank_account
+	String
+	yes
+	
+
+	Receiving bank account
+	bank_user_name
+	String
+	yes
+	
+
+	Receiving bank customer name
+	callback_url
+	String
+	yes
+	
+
+	Callback address
+	* * Response parameters
+Parameter name
+	Data types
+	Field Description
+	requestId
+	String
+	Request ID
+	path
+	String
+	Request URI
+	success
+	Boolean
+	Response status
+	message
+	String
+	Response Information
+	code
+	Integer
+	Response code (200 indicates success; for other error codes, please refer to the code explanation).
+	data
+	Array
+	Response data
+	* Response Example
+{
+    "requestId": "ae99f331-b773-43cf-abf9-2e525d1fde71",
+    "path": "\/api\/v1\/payment_order_create",
+    "success": true,
+    message: "Request successful",
+    "code": 200,
+    "data": {
+        "order_no": "20241213032931861572",
+        "order_no_token": "48461410f83b94716c5bd035bda6e9b2",
+        "order_out_no": "dsdfdfd",
+        "order_amount": "100",
+        "order_pay_amount": "100.00",
+        "order_status": 1,
+        "callback_url": "http:\/\/qq.com"
+    }
+}
+Order Inquiry
+/api/v1/payment_order_query
+POST
+
+
+
+
+Parameter list
+Interface information
+Interface address
+	/xxxx/
+	Authentication mode
+	Public Mode
+	Certification Description
+	In public mode, access is possible without any authentication.
+	Request parameters
+Precautions
+1. The sign does not participate in signing.
+2. If a field is empty, it will not participate in the signature process.
+Parameter name
+	Data types
+	Is this field required?
+	default value
+	Field Description
+	app_key
+	String
+	yes
+	
+
+	External order number
+	* Response parameters
+Parameter name
+	Data types
+	Field Description
+	requestId
+	String
+	Request ID
+	path
+	String
+	Request URI
+	success
+	Boolean
+	Response status
+	message
+	String
+	Response Information
+	code
+	Integer
+	Response code (200 indicates success; for other error codes, please refer to the code explanation).
+	data
+	Array
+	Response data
+	* Response Example
+{
+        "requestId": "1aceec47-75ff-4bc4-b8d2-d58480830040",
+        "path": "/api/v1/payment_order_query",
+        "success": true,
+        message: "Request successful",
+        "code": 200,
+        "data": {
+                "order_out_no": "dsdfdfd",
+                "order_status": 20,
+                "fail_msg": "",
+                "order_amount": "3600.00",
+    "utr": "479201045562",
+                "created_by_name": "zhangsan
+        }
+}
+Create a payment order
+/api/v1/collection_order_create
+POST
+arameter list
+Interface information
+Interface address
+	/xxxx/
+	Authentication mode
+	Signature mode
+	Certification Description
+	In signature mode, the parameters need to be MD5 encrypted before being processed.Parameters submitted.
+	Request parameters
+Precautions
+1. The sign does not participate in signing.
+2. If a field is empty, it will not participate in the signature process.
+Parameter name
+	Data types
+	Is this field required?
+	default value
+	Field Description
+	app_key
+	String
+	yes
+	
+
+	View app_key in the background
+	sign_ver
+	String
+	yes
+	1.0
+	Signature version number (fixed value 1.0)
+	timestamp
+	Integer
+	yes
+	
+
+	Timestamp (10 digits)
+	sign
+	String
+	yes
+	
+
+	sign
+	order_out_no
+	String
+	yes
+	
+
+	External order number
+	order_amount
+	Integer
+	yes
+	
+
+	Order amount
+	callback_url
+	String
+	yes
+	
+
+	Callback API address after successful order payment
+	* Response parameters
+Parameter name
+	Data types
+	Field Description
+	requestId
+	String
+	Request ID
+	path
+	String
+	Request URI
+	success
+	Boolean
+	Response status
+	message
+	String
+	Response Information
+	code
+	Integer
+	Response code (200 indicates success; for other error codes, please refer to the code explanation).
+	data
+	Array
+	Response data
+	* Response Example
+{
+
+
+    "requestId": "a3a3e587-2299-453a-8697-19b8426065ad",
+
+
+    "path": "\/client\/transaction\/collectionOrder\/manualSave",
+
+
+    "success": true,
+
+
+    message: "Request successful",
+
+
+    "code": 200,
+
+
+    "data": {
+
+
+        "pay_url": "http:\/\/localhost:2889\/login?order_no=9595082d939ef157197cfe513b5a97ef",
+
+
+        "paytm": "paytmmp:\/\/cash_wallet?pa=skynetcafe@iob&pn=skynetcafe&tr=e983c451274eb993ea4870142b0c9bde&tn=lk8g&am=100.15}&cu=INR&mc=5641&url=&mode=02&purpose= 00&orgid=159002&sign=MEYCIQCHBg\/RU0nnqGczGT+3qmufIH0d4syWKuN\/93J8Of+pVwIhAJRHuz0ouV+LC1+MLU9is5mIfphzIYAnLb9yRKM7lXA+&featuretype=money_transfer",
+
+
+        "upi": "upi:\/\/pay?pa=skynetcafe@iob&pn=Payment To skynetcafe&am=100.15&tn=lk8g&cu=INR&tr=e983c451274eb993ea4870142b0c9bde",
+
+
+        "gpay": "gpay:\/\/pay?pa=skynetcafe@iob&pn=skynetcafe&tr=e983c451274eb993ea4870142b0c9bde&am=100.15&tn=lk8g&cu=INR&mc=5641",
+
+
+        "phonepe": "phonepe:\/\/pay?pa=skynetcafe@iob&pn=skynetcafe&tr=e983c451274eb993ea4870142b0c9bde&tn=lk8g&am=100.15&cu=INR&mc=5641&url=&mode=0 2&purpose=00&orgid=159002&sign=MEYCIQCHBg\/RU0nnqGczGT+3qmufIH0d4syWKuN\/93J8Of+pVwIhAJRHuz0ouV+LC1+MLU9is5mIfphzIYAnLb9yRKM7lXA+"
+
+
+    }
+
+
+}
+Order Inquiry
+/api/v1/collection_order_query
+POST
+Parameter list
+Interface information
+Interface address
+	/xxxx/
+	Authentication mode
+	Public Mode
+	Certification Description
+	In public mode, access is possible without any authentication.
+	Request parameters
+Precautions
+1. The sign does not participate in signing.
+2. If a field is empty, it will not participate in the signature process.
+Parameter name
+	Data types
+	Is this field required?
+	default value
+	Field Description
+	app_key
+	String
+	yes
+	
+
+	External order number
+	* Response parameters
+Parameter name
+	Data types
+	Field Description
+	requestId
+	String
+	Request ID
+	path
+	String
+	Request URI
+	success
+	Boolean
+	Response status
+	message
+	String
+	Response Information
+	code
+	Integer
+	Response code (200 indicates success; for other error codes, please refer to the code explanation).
+	data
+	Array
+	Response data
+	* Response Example
+{
+        "requestId": "e3c4102b-389d-4ffd-8d5d-90e7e27929a2",
+        "path": "/api/v1/collection_order_query",
+        "success": true,
+        "message": "successful",
+        "code": 200,
+        "data": {
+                "order_out_no": "DS58040303221411422782036",
+                "order_status": 10,
+                "order_amount": "2000",
+    "order_pay_amount": "pay00001111",
+                "created_by_name": ""
+        }
+}
+Parameter list
+Order Verification UTR
+/api/v1/collection_order_verification
+POST
+
+Interface information
+Interface address
+	/xxxx/
+	Authentication mode
+	Public Mode
+	Certification Description
+	In public mode, access is possible without any authentication.
+	Request parameters
+Precautions
+1. The sign does not participate in signing.
+2. If a field is empty, it will not participate in the signature process.
+Parameter name
+	Data types
+	Is this field required?
+	default value
+	Field Description
+	app_key
+	String
+	yes
+	
+
+	External order number
+	utr
+	String
+	yes
+	
+
+	utr
+	* Response parameters
+Parameter name
+	Data types
+	Field Description
+	requestId
+	String
+	Request ID
+	path
+	String
+	Request URI
+	success
+	Boolean
+	Response status
+	message
+	String
+	Response Information
+	code
+	Integer
+	Response code (200 indicates success; for other error codes, please refer to the code explanation).
+	data
+	Array
+	Response data
+	* Response Example
+{
+  code: 200,
+  success: true,
+  message: 'Request successful'
+  data: []
+}
+Account Interface
+Balance Inquiry
+/api/v1/query_account_balance
+POST
+Parameter list
+Interface information
+Interface address
+	/xxxx/
+	Authentication mode
+	Signature mode
+	Certification Description
+	In signature mode, the parameters need to be MD5 encrypted before being processed.Parameters submitted.
+	Request parameters
+Precautions
+1. The sign does not participate in signing.
+2. If a field is empty, it will not participate in the signature process.
+Parameter name
+	Data types
+	Is this field required?
+	default value
+	Field Description
+	app_key
+	String
+	yes
+	
+
+	View app_key in the background
+	utr
+	String
+	yes
+	1.0
+	Signature version number (fixed value 1.0)
+	timestamp
+	Integer
+	yes
+	
+
+	Timestamp (10 digits)
+	sign
+	String
+	yes
+	
+
+	sign
+	* Response parameters
+Parameter name
+	Data types
+	Field Description
+	requestId
+	String
+	Request ID
+	path
+	String
+	Request URI
+	success
+	Boolean
+	Response status
+	message
+	String
+	Response Information
+	code
+	Integer
+	Response code (200 indicates success; for other error codes, please refer to the code explanation).
+	data
+	Array
+	Response data
+	* Response Example
+{
+    "requestId": "984829fc-8fb5-4be6-a177-c85ee889ff67",
+    "path": "\/api\/v1\/query_account_balance",
+    "success": true,
+    "message": "successful",
+    "code": 200,
+    "data": {
+        "income_balance": "764301.00",
+        "pay_balance": "826201.64",
+        "frozen_balance": "996601.00",
+        "status": 1,
+        "income_type": [
+            "10",
+            "1"
+        ],
+        "income_rate": 5,
+        "income_fixed": 25,
+        "pay_type": [
+            "1",
+            "10"
+        ],
+        "pay_rate": 6.3,
+        "pay_fixed": 20,
+        "amount_type": [
+            "10",
+            "1"
+        ],
+        "updated_at": "2024-10-11 02:52:12"
+    }
+}

@@ -7,7 +7,7 @@ const silkpayService = require('../services/silkpay');
 const f2payService = require('../services/f2pay');
 const gtpayService = require('../services/gtpay');
 const hdpayService = require('../services/hdpay');
-const yellowService = require('../services/yellow');
+// Yellow channel uses F2PAY service - no separate yellowService needed
 const { calculatePayinFee, calculatePayoutFee } = require('../utils/rates');
 const { generateSign } = require('../utils/signature');
 
@@ -901,44 +901,62 @@ router.post('/hdpay/payout', async (req, res) => {
 
 /**
  * POST /api/callback/yellow/payin
- * Handles callbacks from Yellow (BombayPay) for Payin Orders
+ * Handles callbacks from Yellow channel (uses F2PAY API)
+ * Also handles auto-success callbacks internally
  */
 router.post('/yellow/payin', async (req, res) => {
     try {
         console.log('Yellow Payin Callback received:', req.body);
         const db = getDb();
 
-        // Expected callback fields based on API doc patterns
-        const { order_out_no, order_status, order_amount, utr, sign } = req.body;
+        // Yellow uses F2PAY API, so expect F2PAY callback format
+        const { code, bizContent: bizContentRaw, sign } = req.body;
+
+        let bizContent = bizContentRaw;
+        let mchOrderNo = '';
+        try {
+            if (typeof bizContentRaw === 'string') {
+                bizContent = JSON.parse(bizContentRaw);
+            }
+            mchOrderNo = bizContent?.mchOrderNo || '';
+        } catch (e) {
+            console.error('[Yellow Payin] Failed to parse bizContent:', e);
+        }
 
         // 1. Log Raw Callback
         await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('yellow_payin', ?, ?, ?, datetime('now'))`)
-            .run(order_out_no, JSON.stringify(req.body), order_status);
+            .run(mchOrderNo || bizContent?.platNo, JSON.stringify(req.body), bizContent?.state || 'unknown');
 
         // 2. Find Transaction
         let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
-            .get(order_out_no);
+            .get(mchOrderNo);
 
-        if (!tx) {
-            console.warn(`[Yellow Payin] Transaction not found for order_out_no: ${order_out_no}`);
-            return res.json({ code: 200, success: true, message: 'OK' });
+        if (!tx && bizContent?.platNo) {
+            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
+                .get(bizContent.platNo);
         }
 
-        // 3. Verify Signature (optional - log warning if fails)
-        if (!yellowService.verifyPayinCallback(req.body)) {
+        if (!tx) {
+            console.warn(`[Yellow Payin] Transaction not found for mchOrderNo: ${mchOrderNo}`);
+            return res.send('success');
+        }
+
+        // 3. Verify Signature using F2PAY service
+        if (!f2payService.verifyPayinCallback(req.body)) {
             console.error('[Yellow Payin SECURITY] Signature verification failed!');
         }
 
-        // 4. Determine Status
-        // Status: 10=pending, 20=success, others=failed (based on API doc)
+        // 4. Determine Status (F2PAY format: Paid, UnequalPaid = success)
+        const state = bizContent?.state;
         let newStatus = 'pending';
-        if (order_status === 20 || order_status === '20') {
+        if (state === 'Paid' || state === 'UnequalPaid') {
             newStatus = 'success';
-        } else if (order_status > 20) {
+        } else if (state === 'Expired' || state === 'Failed') {
             newStatus = 'failed';
         }
 
-        const actualAmount = parseFloat(order_amount);
+        const actualAmount = parseFloat(bizContent?.actualAmount || bizContent?.amount || tx.amount);
+        const utr = bizContent?.trxId || '';
 
         if (tx.status === 'success' && newStatus === 'success') {
             console.log(`[Yellow Payin] Order ${tx.order_id} already success. Ignoring duplicate.`);
@@ -966,8 +984,8 @@ router.post('/yellow/payin', async (req, res) => {
             }
         }
 
-        // 5. Response to Yellow
-        res.json({ code: 200, success: true, message: 'OK' });
+        // 5. Response to F2PAY (Yellow uses F2PAY API)
+        res.send('success');
 
         // 6. Forward Callback to Merchant
         let callbackUrl = tx.callback_url;
@@ -1009,47 +1027,68 @@ router.post('/yellow/payin', async (req, res) => {
 
 /**
  * POST /api/callback/yellow/payout
- * Handles callbacks from Yellow (BombayPay) for Payout Orders
+ * Handles callbacks from Yellow channel (uses F2PAY API)
  */
 router.post('/yellow/payout', async (req, res) => {
     try {
         console.log('Yellow Payout Callback received:', req.body);
         const db = getDb();
 
-        const { order_out_no, order_status, order_amount, utr, fail_msg, sign } = req.body;
+        // Yellow uses F2PAY API format
+        const { code, bizContent: bizContentRaw, sign } = req.body;
+
+        let bizContent = bizContentRaw;
+        let mchOrderNo = '';
+        try {
+            if (typeof bizContentRaw === 'string') {
+                bizContent = JSON.parse(bizContentRaw);
+            }
+            mchOrderNo = bizContent?.mchOrderNo || '';
+        } catch (e) {
+            console.error('[Yellow Payout] Failed to parse bizContent:', e);
+        }
 
         // 1. Log Raw Callback
         await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('yellow_payout', ?, ?, ?, datetime('now'))`)
-            .run(order_out_no, JSON.stringify(req.body), order_status);
+            .run(mchOrderNo || bizContent?.platNo, JSON.stringify(req.body), bizContent?.state || 'unknown');
 
         // 2. Find Payout
         let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
-            .get(order_out_no);
+            .get(mchOrderNo);
 
-        if (!payout) {
-            console.warn(`[Yellow Payout] Payout not found for order_out_no: ${order_out_no}`);
-            return res.json({ code: 200, success: true, message: 'OK' });
+        if (!payout && bizContent?.platNo) {
+            payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
+                .get(bizContent.platNo);
         }
 
-        // 3. Verify Signature
-        if (!yellowService.verifyPayoutCallback(req.body)) {
+        if (!payout) {
+            console.warn(`[Yellow Payout] Payout not found for mchOrderNo: ${mchOrderNo}`);
+            return res.send('success');
+        }
+
+        // 3. Verify Signature using F2PAY service
+        if (!f2payService.verifyPayinCallback(req.body)) {
             console.error('[Yellow Payout SECURITY] Signature verification failed!');
         }
 
-        // 4. Update Status
-        // Status: 20=success, others=failed
+        // 4. Update Status (F2PAY format)
+        const state = bizContent?.state;
         let newStatus = 'processing';
-        if (order_status === 20 || order_status === '20') {
+        let message = '';
+        const utr = bizContent?.trxId || '';
+
+        if (state === 'Paid' || state === 'Success' || state === 'SUCCESS') {
             newStatus = 'success';
-        } else if (order_status > 20) {
+        } else if (state === 'Failed' || state === 'Expired' || state === 'FAIL') {
             newStatus = 'failed';
+            message = 'Payout Failed';
         }
 
         if (payout.status === 'success' && newStatus === 'success') {
             console.log(`[Yellow Payout] Order ${payout.order_id} already success.`);
         } else {
             await db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
-                .run(newStatus, utr || null, fail_msg || null, JSON.stringify(req.body), payout.id);
+                .run(newStatus, utr || null, message || null, JSON.stringify(req.body), payout.id);
 
             if (newStatus === 'failed' && payout.status !== 'failed') {
                 const refundAmount = payout.amount + payout.fee;
@@ -1064,8 +1103,8 @@ router.post('/yellow/payout', async (req, res) => {
             }
         }
 
-        // 5. Response to Yellow
-        res.json({ code: 200, success: true, message: 'OK' });
+        // 5. Response to F2PAY (Yellow uses F2PAY API)
+        res.send('success');
 
         // 6. Forward Callback
         const callbackUrl = payout.payout_callback_url || payout.user_callback_url;
@@ -1075,7 +1114,7 @@ router.post('/yellow/payout', async (req, res) => {
                 status: newStatus === 'success' ? 1 : 2,
                 amount: payout.amount,
                 commission: payout.fee,
-                message: fail_msg || (newStatus === 'success' ? 'success' : 'failed'),
+                message: message || (newStatus === 'success' ? 'success' : 'failed'),
                 orderId: payout.order_id,
                 id: payout.uuid,
                 utr: utr || '',
@@ -1091,7 +1130,7 @@ router.post('/yellow/payout', async (req, res) => {
 
     } catch (error) {
         console.error('Yellow Payout Callback Error:', error);
-        if (!res.headersSent) res.json({ code: 200, success: true, message: 'OK' });
+        if (!res.headersSent) res.send('success');
     }
 });
 

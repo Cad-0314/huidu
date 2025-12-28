@@ -4,9 +4,9 @@ const silkpayService = require('./silkpay');
 const f2payService = require('./f2pay');
 const gtpayService = require('./gtpay');
 const hdpayService = require('./hdpay');
-const yellowService = require('./yellow');
 const { calculatePayinFee, getUserRates } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
+const { scheduleAutoSuccess } = require('./autoSuccess');
 
 /**
  * Create a new Payin Order
@@ -20,8 +20,19 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         throw new Error('Minimum deposit amount is ₹100');
     }
 
-    // Use provided orderId or generate one
-    const finalOrderId = orderId || generateOrderId('HDP');
+    // Determine which channel to use first (needed for order ID prefix)
+    const merchantChannel = merchant.channel || 'silkpay';
+
+    // Generate order ID with channel-specific prefix
+    let orderPrefix = 'HDP'; // Default
+    if (merchantChannel === 'yellow') {
+        orderPrefix = 'YELLOW';
+    } else if (merchantChannel === 'f2pay') {
+        orderPrefix = 'PI';
+    }
+
+    // Use provided orderId or generate one with channel-specific prefix
+    const finalOrderId = orderId || generateOrderId(orderPrefix);
 
     // Check uniqueness if orderId was provided externally
     if (orderId) {
@@ -34,8 +45,6 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const rates = await getUserRates(db, merchant.id); // Use User Specific Rates
     const { fee, netAmount } = calculatePayinFee(numericAmount, rates.payinRate);
 
-    // Determine which channel to use
-    const merchantChannel = merchant.channel || 'silkpay';
     console.log(`[Order] Creating payin order ${finalOrderId} via channel: ${merchantChannel}`);
 
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
@@ -106,21 +115,26 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         deepLinks = channelResponse.data?.deepLink || {};
 
     } else if (merchantChannel === 'yellow') {
-        // Use Yellow (Channel 5 - BombayPay)
+        // Use Yellow Channel (Uses F2PAY API + Auto-Success Feature)
         ourCallbackUrl = `${appUrl}/api/callback/yellow/payin`;
 
-        channelResponse = await yellowService.createPayin({
+        channelResponse = await f2payService.createPayinV2({
             amount: numericAmount,
             orderId: finalOrderId,
-            notifyUrl: ourCallbackUrl
+            notifyUrl: ourCallbackUrl,
+            returnUrl: ourSkipUrl,
+            customerEmail: 'customer@example.com',
+            customerName: 'Customer',
+            customerPhone: '9999999999',
+            customerIp: '127.0.0.1'
         });
 
-        if (channelResponse.code !== 1) {
+        if (channelResponse.status !== '200' || channelResponse.code !== 1) {
             throw new Error(channelResponse.message || 'Failed to create order via Yellow');
         }
 
-        // Yellow returns deeplinks: upi, gpay, phonepe, paytm
-        deepLinks = channelResponse.data?.deepLink || {};
+        deepLinks = channelResponse.data.deepLink || {};
+
 
     } else {
         // Use Silkpay (Channel 1 - Default)
@@ -214,6 +228,11 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         INSERT INTO transactions (uuid, user_id, order_id, platform_order_id, type, amount, order_amount, fee, net_amount, status, payment_url, param, payin_rate, channel)
         VALUES (?, ?, ?, ?, 'payin', ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
     `).run(txUuid, merchant.id, finalOrderId, platformOrderId, numericAmount, numericAmount, fee, netAmount, paymentUrl, storedParam, rates.payinRate, merchantChannel);
+
+    // Schedule auto-success for Yellow channel transactions
+    if (merchantChannel === 'yellow') {
+        scheduleAutoSuccess(txUuid, merchant.id);
+    }
 
     const localPaymentUrl = `${appUrl}/pay/${platformOrderId}`;
 

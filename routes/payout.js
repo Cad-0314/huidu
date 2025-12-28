@@ -200,11 +200,12 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 platformOrderId = apiResponse.payOrderId || orderId;
 
             } else if (channel === 'yellow') {
-                const yellowService = require('../services/yellow');
-                console.log(`[PAYOUT] Using Yellow for merchant ${merchant.username} (Channel: ${channel})`);
+                // Yellow channel uses F2PAY API for payouts
+                const f2payService = require('../services/f2pay');
+                console.log(`[PAYOUT] Using Yellow (F2PAY) for merchant ${merchant.username} (Channel: ${channel})`);
                 const yellowCallbackUrl = `${appUrl}/api/callback/yellow/payout`;
 
-                apiResponse = await yellowService.createPayout({
+                apiResponse = await f2payService.createPayout({
                     orderId: orderId,
                     amount: amount,
                     name: personName,
@@ -214,10 +215,10 @@ router.post('/bank', unifiedAuth, async (req, res) => {
                 });
 
                 if (apiResponse.code !== 1) {
-                    throw new Error(apiResponse.message || 'Yellow API error');
+                    throw new Error(apiResponse.message || 'Yellow/F2PAY API error');
                 }
 
-                platformOrderId = apiResponse.payOrderId || orderId;
+                platformOrderId = apiResponse.data?.payOrderId || orderId;
 
             } else {
                 // Default: Silkpay
