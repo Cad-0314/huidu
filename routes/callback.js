@@ -7,6 +7,7 @@ const silkpayService = require('../services/silkpay');
 const f2payService = require('../services/f2pay');
 const gtpayService = require('../services/gtpay');
 const hdpayService = require('../services/hdpay');
+const yellowService = require('../services/yellow');
 const { calculatePayinFee, calculatePayoutFee } = require('../utils/rates');
 const { generateSign } = require('../utils/signature');
 
@@ -895,6 +896,202 @@ router.post('/hdpay/payout', async (req, res) => {
     } catch (error) {
         console.error('HDPay Payout Callback Error:', error);
         if (!res.headersSent) res.send('success');
+    }
+});
+
+/**
+ * POST /api/callback/yellow/payin
+ * Handles callbacks from Yellow (BombayPay) for Payin Orders
+ */
+router.post('/yellow/payin', async (req, res) => {
+    try {
+        console.log('Yellow Payin Callback received:', req.body);
+        const db = getDb();
+
+        // Expected callback fields based on API doc patterns
+        const { order_out_no, order_status, order_amount, utr, sign } = req.body;
+
+        // 1. Log Raw Callback
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('yellow_payin', ?, ?, ?, datetime('now'))`)
+            .run(order_out_no, JSON.stringify(req.body), order_status);
+
+        // 2. Find Transaction
+        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
+            .get(order_out_no);
+
+        if (!tx) {
+            console.warn(`[Yellow Payin] Transaction not found for order_out_no: ${order_out_no}`);
+            return res.json({ code: 200, success: true, message: 'OK' });
+        }
+
+        // 3. Verify Signature (optional - log warning if fails)
+        if (!yellowService.verifyPayinCallback(req.body)) {
+            console.error('[Yellow Payin SECURITY] Signature verification failed!');
+        }
+
+        // 4. Determine Status
+        // Status: 10=pending, 20=success, others=failed (based on API doc)
+        let newStatus = 'pending';
+        if (order_status === 20 || order_status === '20') {
+            newStatus = 'success';
+        } else if (order_status > 20) {
+            newStatus = 'failed';
+        }
+
+        const actualAmount = parseFloat(order_amount);
+
+        if (tx.status === 'success' && newStatus === 'success') {
+            console.log(`[Yellow Payin] Order ${tx.order_id} already success. Ignoring duplicate.`);
+        } else {
+            const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
+            const { fee, netAmount } = calculatePayinFee(actualAmount, merchantRate);
+
+            await db.prepare(`
+                UPDATE transactions 
+                SET status = ?, amount = ?, fee = ?, net_amount = ?, utr = ?, callback_data = ?, updated_at = datetime('now') 
+                WHERE id = ?
+            `).run(newStatus, actualAmount, fee, netAmount, utr || null, JSON.stringify(req.body), tx.id);
+
+            if (newStatus === 'success') {
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(netAmount, tx.user_id);
+                console.log(`[Yellow Payin] Credited ₹${netAmount} to ${tx.username}`);
+
+                // Credit Admin Profit
+                try {
+                    const settings = await db.prepare('SELECT value FROM settings WHERE key = ?').get('admin_payin_cost');
+                    const adminCostRate = settings ? parseFloat(settings.value) : 0.05;
+                    const profit = fee - (actualAmount * adminCostRate);
+                    if (profit !== 0) await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(profit);
+                } catch (e) { }
+            }
+        }
+
+        // 5. Response to Yellow
+        res.json({ code: 200, success: true, message: 'OK' });
+
+        // 6. Forward Callback to Merchant
+        let callbackUrl = tx.callback_url;
+        let originalParam = '';
+        try {
+            if (tx.param) {
+                const parsed = JSON.parse(tx.param);
+                if (parsed.c) callbackUrl = parsed.c;
+                originalParam = parsed.p || '';
+            }
+        } catch (e) { }
+
+        if (callbackUrl) {
+            const merchantRate = tx.payin_rate !== undefined ? tx.payin_rate : 0.05;
+            const { netAmount } = calculatePayinFee(actualAmount, merchantRate);
+
+            const data = {
+                status: newStatus === 'success' ? 1 : 0,
+                amount: netAmount,
+                orderAmount: actualAmount,
+                orderId: tx.order_id,
+                id: tx.uuid,
+                utr: utr || '',
+                param: originalParam
+            };
+            data.sign = generateSign(data, tx.merchant_key);
+            try {
+                await axios.post(callbackUrl, data, { timeout: 10000 });
+            } catch (e) {
+                console.error('[Yellow Payin] Forward failed:', e.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('Yellow Payin Callback Error:', error);
+        if (!res.headersSent) res.json({ code: 200, success: true, message: 'OK' });
+    }
+});
+
+/**
+ * POST /api/callback/yellow/payout
+ * Handles callbacks from Yellow (BombayPay) for Payout Orders
+ */
+router.post('/yellow/payout', async (req, res) => {
+    try {
+        console.log('Yellow Payout Callback received:', req.body);
+        const db = getDb();
+
+        const { order_out_no, order_status, order_amount, utr, fail_msg, sign } = req.body;
+
+        // 1. Log Raw Callback
+        await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('yellow_payout', ?, ?, ?, datetime('now'))`)
+            .run(order_out_no, JSON.stringify(req.body), order_status);
+
+        // 2. Find Payout
+        let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
+            .get(order_out_no);
+
+        if (!payout) {
+            console.warn(`[Yellow Payout] Payout not found for order_out_no: ${order_out_no}`);
+            return res.json({ code: 200, success: true, message: 'OK' });
+        }
+
+        // 3. Verify Signature
+        if (!yellowService.verifyPayoutCallback(req.body)) {
+            console.error('[Yellow Payout SECURITY] Signature verification failed!');
+        }
+
+        // 4. Update Status
+        // Status: 20=success, others=failed
+        let newStatus = 'processing';
+        if (order_status === 20 || order_status === '20') {
+            newStatus = 'success';
+        } else if (order_status > 20) {
+            newStatus = 'failed';
+        }
+
+        if (payout.status === 'success' && newStatus === 'success') {
+            console.log(`[Yellow Payout] Order ${payout.order_id} already success.`);
+        } else {
+            await db.prepare(`UPDATE payouts SET status = ?, utr = ?, message = ?, callback_data = ?, updated_at = datetime('now') WHERE id = ?`)
+                .run(newStatus, utr || null, fail_msg || null, JSON.stringify(req.body), payout.id);
+
+            if (newStatus === 'failed' && payout.status !== 'failed') {
+                const refundAmount = payout.amount + payout.fee;
+                console.log(`[Yellow Payout] Failed. Refunding ${refundAmount} to ${payout.username}`);
+                await db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(refundAmount, payout.user_id);
+            }
+
+            if (newStatus === 'success' && payout.status !== 'success') {
+                if (payout.fee > 0) {
+                    await db.prepare("UPDATE users SET balance = balance + ? WHERE role = 'admin'").run(payout.fee);
+                }
+            }
+        }
+
+        // 5. Response to Yellow
+        res.json({ code: 200, success: true, message: 'OK' });
+
+        // 6. Forward Callback
+        const callbackUrl = payout.payout_callback_url || payout.user_callback_url;
+
+        if (callbackUrl) {
+            const cbData = {
+                status: newStatus === 'success' ? 1 : 2,
+                amount: payout.amount,
+                commission: payout.fee,
+                message: fail_msg || (newStatus === 'success' ? 'success' : 'failed'),
+                orderId: payout.order_id,
+                id: payout.uuid,
+                utr: utr || '',
+                param: payout.param || ''
+            };
+            cbData.sign = generateSign(cbData, payout.merchant_key);
+            try {
+                await axios.post(callbackUrl, cbData, { timeout: 10000 });
+            } catch (e) {
+                console.error('[Yellow Payout] Forward failed:', e.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('Yellow Payout Callback Error:', error);
+        if (!res.headersSent) res.json({ code: 200, success: true, message: 'OK' });
     }
 });
 

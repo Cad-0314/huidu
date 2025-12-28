@@ -4,6 +4,7 @@ const silkpayService = require('./silkpay');
 const f2payService = require('./f2pay');
 const gtpayService = require('./gtpay');
 const hdpayService = require('./hdpay');
+const yellowService = require('./yellow');
 const { calculatePayinFee, getUserRates } = require('../utils/rates');
 const { generateOrderId } = require('../utils/signature');
 
@@ -102,6 +103,23 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
         }
 
         // HDPay returns deeplink in data.deepLink.upi_scan
+        deepLinks = channelResponse.data?.deepLink || {};
+
+    } else if (merchantChannel === 'yellow') {
+        // Use Yellow (Channel 5 - BombayPay)
+        ourCallbackUrl = `${appUrl}/api/callback/yellow/payin`;
+
+        channelResponse = await yellowService.createPayin({
+            amount: numericAmount,
+            orderId: finalOrderId,
+            notifyUrl: ourCallbackUrl
+        });
+
+        if (channelResponse.code !== 1) {
+            throw new Error(channelResponse.message || 'Failed to create order via Yellow');
+        }
+
+        // Yellow returns deeplinks: upi, gpay, phonepe, paytm
         deepLinks = channelResponse.data?.deepLink || {};
 
     } else {

@@ -199,6 +199,26 @@ router.post('/bank', unifiedAuth, async (req, res) => {
 
                 platformOrderId = apiResponse.payOrderId || orderId;
 
+            } else if (channel === 'yellow') {
+                const yellowService = require('../services/yellow');
+                console.log(`[PAYOUT] Using Yellow for merchant ${merchant.username} (Channel: ${channel})`);
+                const yellowCallbackUrl = `${appUrl}/api/callback/yellow/payout`;
+
+                apiResponse = await yellowService.createPayout({
+                    orderId: orderId,
+                    amount: amount,
+                    name: personName,
+                    bankNo: account,
+                    ifsc: ifsc,
+                    notifyUrl: yellowCallbackUrl
+                });
+
+                if (apiResponse.code !== 1) {
+                    throw new Error(apiResponse.message || 'Yellow API error');
+                }
+
+                platformOrderId = apiResponse.payOrderId || orderId;
+
             } else {
                 // Default: Silkpay
                 console.log(`[PAYOUT] Using Silkpay for merchant ${merchant.username} (Channel: ${channel})`);
