@@ -1265,8 +1265,8 @@ async function loadUsersData(page = 1) {
                         </span>
                     </td>
                     <td>
-                        <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : (u.channel === 'gtpay' ? 'info' : (u.channel === 'hdpay' ? 'warning' : 'success'))}">
-                            ${u.channel === 'f2pay' ? 'X2 Channel' : (u.channel === 'gtpay' ? 'GTPAY' : (u.channel === 'hdpay' ? 'HDPay' : 'Payable'))}
+                        <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : (u.channel === 'gtpay' ? 'info' : (u.channel === 'hdpay' ? 'warning' : (u.channel === 'yellow' ? 'warning' : 'success')))}" style="${u.channel === 'yellow' ? 'background:#fcd34d;color:#000;' : ''}">
+                            ${u.channel === 'f2pay' ? 'X2 Channel' : (u.channel === 'gtpay' ? 'GTPAY' : (u.channel === 'hdpay' ? 'HDPay' : (u.channel === 'yellow' ? 'Yellow' : 'Payable')))}
                         </span>
                     </td>
                     <td>
@@ -1534,6 +1534,7 @@ function showCreateUserModal() {
                     <option value="f2pay">X2 Channel (5.0% / 3.0% + 6 INR)</option>
                     <option value="gtpay">GTPAY (Channel 3)</option>
                     <option value="hdpay">HDPay (Channel 4)</option>
+                    <option value="yellow">Yellow (5.0% / 3.0% + 6 INR)</option>
                 </select>
                 <small class="text-muted">Select the payment channel for this merchant.</small>
             </div>
@@ -1607,7 +1608,7 @@ async function createUser() {
 }
 
 function updateRatesByChannel(channel) {
-    if (channel === 'silkpay' || channel === 'f2pay' || channel === 'gtpay' || channel === 'hdpay') {
+    if (channel === 'silkpay' || channel === 'f2pay' || channel === 'gtpay' || channel === 'hdpay' || channel === 'yellow') {
         document.getElementById('newUserPayinRate').value = 5.0;
         document.getElementById('newUserPayoutRate').value = 3.0;
         document.getElementById('newUserUsdtRate').value = 100.0;
@@ -1615,7 +1616,7 @@ function updateRatesByChannel(channel) {
 }
 
 function updateDetailRatesByChannel(channel) {
-    if (channel === 'silkpay' || channel === 'f2pay' || channel === 'gtpay' || channel === 'hdpay') {
+    if (channel === 'silkpay' || channel === 'f2pay' || channel === 'gtpay' || channel === 'hdpay' || channel === 'yellow') {
         if (document.getElementById('detailPayinRate')) document.getElementById('detailPayinRate').value = 5.0;
         if (document.getElementById('detailPayoutRate')) document.getElementById('detailPayoutRate').value = 3.0;
         if (document.getElementById('detailUsdtRate')) document.getElementById('detailUsdtRate').value = 100.0;
@@ -1668,6 +1669,7 @@ async function showEditUserModal(userId) {
                     <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>X2 Channel</option>
                     <option value="gtpay" ${user.channel === 'gtpay' ? 'selected' : ''}>GTPAY</option>
                     <option value="hdpay" ${user.channel === 'hdpay' ? 'selected' : ''}>HDPay</option>
+                    <option value="yellow" ${user.channel === 'yellow' ? 'selected' : ''}>Yellow</option>
                 </select>
             </div>
 
