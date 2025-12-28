@@ -58,11 +58,12 @@ function generateMerchantKey() {
 
 /**
  * Generate a unique order ID
+ * Note: Using dash (-) instead of underscore (_) to avoid Telegram Markdown stripping
  */
 function generateOrderId(prefix = 'HD') {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `${prefix}_${timestamp}_${random}`;
+    return `${prefix}-${timestamp}-${random}`;
 }
 
 module.exports = {
