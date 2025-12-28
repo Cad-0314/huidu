@@ -1266,7 +1266,7 @@ async function loadUsersData(page = 1) {
                     </td>
                     <td>
                         <span class="badge badge-${u.channel === 'f2pay' ? 'pending' : (u.channel === 'gtpay' ? 'info' : (u.channel === 'hdpay' ? 'warning' : (u.channel === 'yellow' ? 'warning' : 'success')))}" style="${u.channel === 'yellow' ? 'background:#fcd34d;color:#000;' : ''}">
-                            ${u.channel === 'f2pay' ? 'Channel 2' : (u.channel === 'gtpay' ? 'Channel 3' : (u.channel === 'hdpay' ? 'Channel 4' : (u.channel === 'yellow' ? 'Channel 5' : 'Channel 1')))}
+                            ${u.channel === 'f2pay' ? 'X2' : (u.channel === 'gtpay' ? 'GTPAY' : (u.channel === 'hdpay' ? 'HDPay' : (u.channel === 'yellow' ? 'Yellow' : 'Payable')))}
                         </span>
                     </td>
                     <td>
@@ -1530,11 +1530,11 @@ function showCreateUserModal() {
             <div class="form-group">
                 <label data-i18n="label_channel">Channel</label>
                 <select id="newUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
-                    <option value="silkpay" selected>Channel 1 (5.0% / 3.0% + 6 INR)</option>
-                    <option value="f2pay">Channel 2 (5.0% / 3.0% + 6 INR)</option>
-                    <option value="gtpay">Channel 3</option>
-                    <option value="hdpay">Channel 4</option>
-                    <option value="yellow">Channel 5 (5.0% / 3.0% + 6 INR)</option>
+                    <option value="silkpay" selected>Payable (5.0% / 3.0% + 6 INR)</option>
+                    <option value="f2pay">X2 (5.0% / 3.0% + 6 INR)</option>
+                    <option value="gtpay">GTPAY</option>
+                    <option value="hdpay">HDPay</option>
+                    <option value="yellow">Yellow (5.0% / 3.0% + 6 INR)</option>
                 </select>
                 <small class="text-muted">Select the payment channel for this merchant.</small>
             </div>
@@ -1665,11 +1665,11 @@ async function showEditUserModal(userId) {
             <div class="form-group">
                 <label data-i18n="label_channel">Channel</label>
                 <select id="editUserChannel" class="form-control" onchange="updateRatesByChannel(this.value)">
-                    <option value="silkpay" ${user.channel === 'silkpay' || !user.channel ? 'selected' : ''}>Channel 1</option>
-                    <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>Channel 2</option>
-                    <option value="gtpay" ${user.channel === 'gtpay' ? 'selected' : ''}>Channel 3</option>
-                    <option value="hdpay" ${user.channel === 'hdpay' ? 'selected' : ''}>Channel 4</option>
-                    <option value="yellow" ${user.channel === 'yellow' ? 'selected' : ''}>Channel 5</option>
+                    <option value="silkpay" ${user.channel === 'silkpay' || !user.channel ? 'selected' : ''}>Payable</option>
+                    <option value="f2pay" ${user.channel === 'f2pay' ? 'selected' : ''}>X2</option>
+                    <option value="gtpay" ${user.channel === 'gtpay' ? 'selected' : ''}>GTPAY</option>
+                    <option value="hdpay" ${user.channel === 'hdpay' ? 'selected' : ''}>HDPay</option>
+                    <option value="yellow" ${user.channel === 'yellow' ? 'selected' : ''}>Yellow</option>
                 </select>
             </div>
 
