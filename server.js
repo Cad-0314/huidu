@@ -174,10 +174,16 @@ app.get('/pay/:orderId', async (req, res) => {
             return res.redirect(tx.payment_url);
         }
 
-        // All channels (Silkpay, F2PAY, HDPay) use the same pay.html with deeplinks
-        // Toggle between versions based on config
-        const uiVersion = process.env.PAYMENT_UI_VERSION || 'v1';
-        const templateFile = uiVersion === 'v2' ? 'pay2.html' : 'pay.html';
+        // Select template based on channel
+        // F2Pay uses pay-x2.html (Paytm/PhonePe + QR only, no Google Pay)
+        // Other channels use pay.html with all payment options
+        let templateFile;
+        if (tx.channel === 'f2pay') {
+            templateFile = 'pay-x2.html';
+        } else {
+            const uiVersion = process.env.PAYMENT_UI_VERSION || 'v1';
+            templateFile = uiVersion === 'v2' ? 'pay2.html' : 'pay.html';
+        }
 
         let html = fs.readFileSync(path.join(__dirname, 'public', templateFile), 'utf8');
 

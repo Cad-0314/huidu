@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment | VSPAY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .payment-container {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 400px;
+            overflow: hidden;
+        }
+
+        .payment-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .amount-display {
+            font-size: 36px;
+            font-weight: 700;
+            color: #4299e1;
+        }
+
+        .timer {
+            font-size: 14px;
+            color: #f56565;
+            font-weight: 500;
+        }
+
+        .section-title {
+            font-size: 14px;
+            color: #f97316;
+            font-weight: 600;
+            padding: 16px 20px 8px;
+        }
+
+        .method-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: #f8fafc;
+            cursor: pointer;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .method-header span {
+            font-size: 14px;
+            color: #1a202c;
+            font-weight: 500;
+        }
+
+        .method-toggle {
+            font-size: 18px;
+            color: #718096;
+        }
+
+        .payment-options {
+            padding: 12px 20px;
+        }
+
+        .payment-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+
+        .payment-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .payment-option:hover {
+            border-color: #4299e1;
+            background: #f0f9ff;
+        }
+
+        .option-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .option-icon {
+            width: 48px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-icon img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .option-text {
+            font-size: 15px;
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        .pay-btn {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pay-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        /* QR Section */
+        .qr-section {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .qr-warning {
+            color: #f56565;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .qr-container {
+            display: inline-block;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
+
+        #qrcode {
+            width: 180px;
+            height: 180px;
+        }
+
+        #qrcode img,
+        #qrcode canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .qr-label {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        /* Divider */
+        .dashed-divider {
+            border-top: 2px dashed #cbd5e0;
+            margin: 0 20px;
+        }
+
+        /* Order Info */
+        .order-info {
+            padding: 16px 20px;
+            background: #f8fafc;
+        }
+
+        .order-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .order-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .order-value {
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .secure-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px;
+            color: #718096;
+            font-size: 12px;
+            background: #f8fafc;
+        }
+
+        .lock-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Paytm Logo */
+        .paytm-logo {
+            background: linear-gradient(135deg, #00baf2 0%, #0070ba 100%);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .paytm-logo img {
+            height: 20px;
+        }
+
+        /* PhonePe Logo */
+        .phonepe-logo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .phonepe-logo img {
+            height: 28px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="payment-container">
+        <div class="payment-header">
+            <div class="amount-display">₹{{AMOUNT}}</div>
+            <div class="timer" id="timer">00:20:00</div>
+        </div>
+
+        <div class="section-title">Step1 Transfer</div>
+
+        <div class="method-header">
+            <span>Method 1: Use PAYTM / PhonePe</span>
+            <span class="method-toggle">−</span>
+        </div>
+
+        <div class="payment-options">
+            <div class="payment-option" data-method="paytm" data-deeplink="{{DEEPLINK_PAYTM}}"
+                onclick="handlePay(this)">
+                <div class="option-left">
+                    <div class="option-icon">
+                        <img src="/images/paytm.png" alt="Paytm"
+                            onerror="this.parentElement.innerHTML='<div style=&quot;background:#00baf2;padding:4px 8px;border-radius:4px;color:#fff;font-weight:bold;font-size:12px&quot;>paytm</div>'">
+                    </div>
+                </div>
+                <button class="pay-btn">Click To Pay</button>
+            </div>
+
+            <div class="payment-option" data-method="phonepe" data-deeplink="{{DEEPLINK_PHONEPE}}"
+                onclick="handlePay(this)">
+                <div class="option-left">
+                    <div class="option-icon phonepe-logo">
+                        <img src="/images/phonepe.png" alt="PhonePe"
+                            onerror="this.parentElement.innerHTML='<svg viewBox=&quot;0 0 24 24&quot; width=&quot;28&quot; height=&quot;28&quot;><circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;12&quot; fill=&quot;#5f259f&quot;/><text x=&quot;12&quot; y=&quot;16&quot; text-anchor=&quot;middle&quot; fill=&quot;white&quot; font-size=&quot;10&quot; font-weight=&quot;bold&quot;>P</text></svg>'">
+                        <span class="option-text">PhonePe</span>
+                    </div>
+                </div>
+                <button class="pay-btn">Click To Pay</button>
+            </div>
+        </div>
+
+        <div class="method-header">
+            <span>Method 2: Scan QR Code</span>
+            <span class="method-toggle">−</span>
+        </div>
+
+        <div class="qr-section">
+            <div class="qr-warning">Don't use same QR code to pay multiple times</div>
+            <div class="qr-container">
+                <div id="qrcode"></div>
+            </div>
+            <div class="qr-label">Scan QR Code</div>
+        </div>
+
+        <div class="dashed-divider"></div>
+
+        <div class="order-info">
+            <div class="order-row">
+                <span>Order ID</span>
+                <span class="order-value">{{ORDER_ID}}</span>
+            </div>
+            <div class="order-row">
+                <span>Date</span>
+                <span class="order-value">{{DATE}}</span>
+            </div>
+        </div>
+
+        <div class="secure-badge">
+            <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                    clip-rule="evenodd" />
+            </svg>
+            Secured by UPI
+        </div>
+    </div>
+
+    <!-- Hidden Data -->
+    <input type="hidden" id="upiScanLink" value="{{DEEPLINK_UPI}}">
+    <input type="hidden" id="skipUrlData" value="{{SKIP_URL}}">
+    <input type="hidden" id="txUuid" value="{{UUID}}">
+    <input type="hidden" id="paymentUrl" value="{{PAYMENT_URL}}">
+
+    <script>
+        // Handle payment button click
+        function handlePay(element) {
+            const deeplink = element.getAttribute('data-deeplink');
+            if (deeplink && deeplink !== '' && !deeplink.startsWith('{{')) {
+                window.location.href = deeplink;
+            } else {
+                alert('Payment method not available');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Generate QR Code
+            const upiLink = document.getElementById('upiScanLink').value;
+            if (upiLink && upiLink !== '' && !upiLink.startsWith('{{')) {
+                QRCode.toCanvas(document.createElement('canvas'), upiLink, {
+                    width: 180,
+                    margin: 1,
+                    color: { dark: '#000000', light: '#ffffff' }
+                }, function (error, canvas) {
+                    if (!error) {
+                        document.getElementById('qrcode').appendChild(canvas);
+                    } else {
+                        console.error('QR generation error:', error);
+                        document.getElementById('qrcode').innerHTML = '<div style="color:#f56565;padding:20px">QR generation failed</div>';
+                    }
+                });
+            } else {
+                document.getElementById('qrcode').innerHTML = '<div style="color:#718096;padding:20px">QR not available</div>';
+            }
+
+            // Timer countdown (20 minutes)
+            let timeLeft = 20 * 60;
+            const timerEl = document.getElementById('timer');
+
+            function updateTimer() {
+                const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const secs = (timeLeft % 60).toString().padStart(2, '0');
+                timerEl.textContent = `00:${mins}:${secs}`;
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    setTimeout(updateTimer, 1000);
+                } else {
+                    timerEl.textContent = 'EXPIRED';
+                    timerEl.style.color = '#e53e3e';
+                }
+            }
+            updateTimer();
+
+            // Disable unavailable payment options
+            document.querySelectorAll('.payment-option').forEach(option => {
+                const deeplink = option.getAttribute('data-deeplink');
+                if (!deeplink || deeplink === '' || deeplink === 'undefined' || deeplink === 'null' || deeplink.startsWith('{{')) {
+                    option.style.opacity = '0.5';
+                    option.style.pointerEvents = 'none';
+                }
+            });
+
+            // Auto-polling for payment status
+            const txUuid = document.getElementById('txUuid').value;
+            const skipUrlData = document.getElementById('skipUrlData').value;
+
+            if (txUuid) {
+                let checkCount = 0;
+                let currentInterval = 1500;
+
+                function poll() {
+                    fetch(`/api/payin/status/${txUuid}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.code === 1 && (data.data.status === 'success' || data.data.status === 1)) {
+                                handlePaymentSuccess();
+                            } else {
+                                checkCount++;
+                                if (checkCount > 10) currentInterval = 3000;
+                                setTimeout(poll, currentInterval);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Polling error:', err);
+                            setTimeout(poll, 3000);
+                        });
+                }
+
+                function handlePaymentSuccess() {
+                    const container = document.querySelector('.payment-container');
+                    if (container) {
+                        container.innerHTML = `
+                            <div style="padding: 40px 24px; text-align: center; animation: fadeIn 0.5s ease;">
+                                <div style="display: inline-flex; justify-content: center; align-items: center; width: 80px; height: 80px; background: #def7ec; border-radius: 50%; margin-bottom: 24px;">
+                                    <svg style="width: 40px; height: 40px; color: #48bb78;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                                <h2 style="color: #1a365d; margin-bottom: 12px; font-size: 24px; font-weight: 700;">Payment Successful!</h2>
+                                <p style="color: #718096; margin-bottom: 24px; line-height: 1.5;">Your transaction has been verified securely.</p>
+                                ${skipUrlData ? '<div style="font-size: 13px; color: #a0aec0; display: flex; align-items: center; justify-content: center; gap: 8px;"><div style="width: 14px; height: 14px; border: 2px solid #cbd5e0; border-top-color: #4299e1; border-radius: 50%; animation: spin 1s linear infinite;"></div> Redirecting you back...</div>' : '<button onclick="window.close()" style="background: #4299e1; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer;">Close Window</button>'}
+                            </div>
+                            <style>
+                                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                                @keyframes spin { to { transform: rotate(360deg); } }
+                            </style>
+                        `;
+                    }
+
+                    if (skipUrlData && skipUrlData !== '') {
+                        setTimeout(() => { window.location.href = skipUrlData; }, 2000);
+                    }
+                }
+
+                setTimeout(poll, 1000);
+            }
+        });
+    </script>
+</body>
+
+</html>
