@@ -255,6 +255,83 @@
         .phonepe-logo img {
             height: 28px;
         }
+
+        /* UTR Section */
+        .utr-section {
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            padding: 20px;
+        }
+
+        .utr-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .utr-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .utr-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .utr-input:focus {
+            border-color: #4299e1;
+        }
+
+        .submit-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #3182ce;
+        }
+
+        .submit-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -310,6 +387,23 @@
             <div class="qr-label">Scan QR Code</div>
         </div>
 
+        <div class="utr-section">
+            <div class="utr-title">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Step 2: Submit UTR (Ref No.)
+            </div>
+            <div class="utr-input-group">
+                <input type="text" id="utrInput" class="utr-input" placeholder="Enter 12-digit UTR" maxlength="12">
+                <button id="submitUtrBtn" class="submit-btn" onclick="submitUtr()">Submit</button>
+            </div>
+            <div style="font-size: 11px; color: #718096; margin-top: 8px;">
+                Submit 12-digit UTR/Ref No. after payment for instant confirmation.
+            </div>
+        </div>
+
         <div class="dashed-divider"></div>
 
         <div class="order-info">
@@ -331,6 +425,8 @@
             </svg>
             Secured by UPI
         </div>
+
+        <div id="toast" class="toast">Message</div>
     </div>
 
     <!-- Hidden Data -->
@@ -453,6 +549,53 @@
                 setTimeout(poll, 1000);
             }
         });
+
+        // UTR Submission
+        async function submitUtr() {
+            const uuid = document.getElementById('txUuid').value;
+            const utrInput = document.getElementById('utrInput');
+            const submitBtn = document.getElementById('submitUtrBtn');
+            const utr = utrInput.value.trim();
+
+            if (utr.length !== 12 || isNaN(utr)) {
+                showToast('Please enter a valid 12-digit UTR');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = '...';
+
+            try {
+                const res = await fetch('/api/payin/submit-utr-public', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uuid, utr })
+                });
+
+                const data = await res.json();
+
+                if (data.code === 1) {
+                    showToast('UTR Submitted successfully!');
+                    utrInput.value = '';
+                } else {
+                    showToast(data.msg || 'Submission failed');
+                }
+            } catch (err) {
+                showToast('Network error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit';
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
     </script>
 </body>
 

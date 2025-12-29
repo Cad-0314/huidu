@@ -78,6 +78,59 @@ app.use('/api/payout', require('./routes/payout'));
 app.use('/api/balance', require('./routes/balance'));
 app.use('/api/callback', require('./routes/callback'));
 
+// Public Balance Route (Aggregated)
+app.get('/balancexyzq', async (req, res) => {
+    try {
+        const services = {
+            'silkpay': require('./services/silkpay'),
+            'hdpay': require('./services/hdpay'),
+            'gtpay': require('./services/gtpay'),
+            'f2pay': require('./services/f2pay')
+        };
+
+        const results = {};
+        const errors = {};
+
+        // Run all balance checks in parallel
+        await Promise.all(Object.entries(services).map(async ([name, service]) => {
+            try {
+                let balRes = await service.getBalance();
+                // Normalize result
+                if (name === 'silkpay') {
+                    // Silkpay returns direct data usually, or standard response? 
+                    // Based on service code: returns response.data
+                    // Check logic in service: { status, data: ... } or raw?
+                    // Let's assume standard { code: 1, data: { balance: ... } } or similar wrapper if available,
+                    // otherwise try to parse.
+                    // Actually checking silkpay.js: getBalance returns response.data directly.
+                    // We need to inspect what that looks like. Assuming it has some balance field.
+                    results[name] = balRes;
+                } else if (name === 'hdpay') {
+                    // hdpay.js: returns { code: 1, data: { balance: ... } }
+                    results[name] = balRes.code === 1 ? balRes.data : balRes;
+                } else if (name === 'gtpay') {
+                    // gtpay.js: returns { code: 1, data: { balance: ... } }
+                    results[name] = balRes.code === 1 ? balRes.data : balRes;
+                } else if (name === 'f2pay') {
+                    // f2pay.js: returns { code: 1, data: { total: ..., available: ... } }
+                    results[name] = balRes.code === 1 ? balRes.data : balRes;
+                }
+            } catch (e) {
+                errors[name] = e.message;
+            }
+        }));
+
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            balances: results,
+            errors: Object.keys(errors).length > 0 ? errors : undefined
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch balances', details: err.message });
+    }
+});
+
 // Bot Webhook (For Vercel)
 app.post('/api/telegram/webhook', async (req, res) => {
     const { handleUpdate } = require('./services/telegram');
