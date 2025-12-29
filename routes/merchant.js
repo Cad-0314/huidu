@@ -519,6 +519,28 @@ router.get('/stats/chart', authenticate, async (req, res) => {
         const payinData = labels.map(d => dateMap[d].payin);
         const payoutData = labels.map(d => dateMap[d].payout);
 
+        // --- NEW: Daily Success Rate Stats ---
+        const dailyRates = await db.prepare(`
+            SELECT 
+                date(created_at, '+05:30') as date, 
+                COUNT(*) as total_count,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count
+            FROM transactions 
+            WHERE user_id = ? 
+            AND type = 'payin'
+            AND date(created_at, '+05:30') >= ?
+            GROUP BY date
+        `).all(userId, startDate);
+
+        const rateMap = {};
+        dailyRates.forEach(r => {
+            const rate = r.total_count > 0 ? ((r.success_count / r.total_count) * 100).toFixed(1) : 0;
+            rateMap[r.date] = rate;
+        });
+
+        const successRateData = labels.map(d => rateMap[d] || 0);
+        // -------------------------------------
+
         // 4. Calculate Top Stats
         const user = await db.prepare('SELECT balance FROM users WHERE id = ?').get(userId);
 
@@ -560,6 +582,7 @@ router.get('/stats/chart', authenticate, async (req, res) => {
                 labels,
                 payinData,
                 payoutData,
+                successRateData,
                 stats: {
                     balance: user.balance,
                     totalPayin: totals.totalPayin || 0,

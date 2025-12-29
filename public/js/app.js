@@ -634,7 +634,7 @@ async function updateDashboardChart() {
         const res = await API.get(`/merchant/stats/chart?days=${period}`);
         if (res.code !== 1) return;
 
-        const { labels, payinData, payoutData, stats } = res.data;
+        const { labels, payinData, payoutData, successRateData, stats } = res.data;
 
         // Update Top Stats
         if (stats) {
@@ -659,6 +659,11 @@ async function updateDashboardChart() {
 
         // Render Chart
         renderDashboardChart(labels, payinData, payoutData);
+
+        // Render Success Rate Chart (New)
+        if (successRateData) {
+            renderSuccessRateChart(labels, successRateData);
+        }
 
     } catch (e) {
         console.error('Chart load error:', e);
@@ -706,6 +711,69 @@ function renderDashboardChart(labels, payinData, payoutData) {
             scales: {
                 x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
                 y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+}
+
+let successRateChartInstance = null;
+function renderSuccessRateChart(labels, data) {
+    const ctx = document.getElementById('successRateChart');
+    if (!ctx) return;
+
+    if (successRateChartInstance) {
+        successRateChartInstance.destroy();
+    }
+
+    successRateChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Success Rate (%)',
+                data: data,
+                borderColor: '#10b981', // Success Green
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function (context) {
+                            return `Success Rate: ${context.parsed.y}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: false, // Hide X axis labels for cleaner look in small chart
+                    grid: { display: false }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#9ca3af',
+                        stepSize: 20
+                    }
+                }
             },
             interaction: {
                 mode: 'nearest',
