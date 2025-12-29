@@ -239,9 +239,13 @@ async function initializeSchema() {
         'CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)',
         'CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status)',
         'CREATE INDEX IF NOT EXISTS idx_transactions_order_id ON transactions(order_id)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_platform_order_id ON transactions(platform_order_id)',
         'CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_transactions_uuid ON transactions(uuid)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_user_id ON payouts(user_id)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status)',
+        'CREATE INDEX IF NOT EXISTS idx_payouts_order_id ON payouts(order_id)',
+        'CREATE INDEX IF NOT EXISTS idx_payouts_platform_order_id ON payouts(platform_order_id)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_created_at ON payouts(created_at)',
         'CREATE INDEX IF NOT EXISTS idx_upi_records_upi_id ON upi_records(upi_id)'
     ];

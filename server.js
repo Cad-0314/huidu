@@ -144,11 +144,8 @@ app.get('/pay/:orderId', async (req, res) => {
         const db = getDb();
         const orderId = req.params.orderId;
 
-        // Try order_id first, then platform_order_id
-        let tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ?').get(orderId);
-        if (!tx) {
-            tx = await db.prepare('SELECT * FROM transactions WHERE platform_order_id = ?').get(orderId);
-        }
+        // Optimized: Single query with OR (both columns are now indexed)
+        const tx = await db.prepare('SELECT * FROM transactions WHERE order_id = ? OR platform_order_id = ?').get(orderId, orderId);
 
         if (!tx || tx.type !== 'payin') {
             return res.status(404).send('Payment not found');
