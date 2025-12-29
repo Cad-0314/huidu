@@ -25,15 +25,9 @@ router.post('/silkpay/payin', async (req, res) => {
         await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('payin', ?, ?, ?, datetime('now'))`)
             .run(mOrderId || payOrderId, JSON.stringify(req.body), status);
 
-        // 2. Find Transaction
-        // Try platform_order_id (payOrderId) first, then order_id (mOrderId)
-        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
-            .get(payOrderId);
-
-        if (!tx) {
-            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
-                .get(mOrderId);
-        }
+        // 2. Find Transaction (Optimized: single query with OR)
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ? OR t.order_id = ?')
+            .get(payOrderId, mOrderId);
 
         if (!tx) {
             console.warn(`[Silkpay Payin] Transaction not found for payOrderId: ${payOrderId}, mOrderId: ${mOrderId}`);
@@ -159,14 +153,9 @@ router.post('/silkpay/payout', async (req, res) => {
         await db.prepare(`INSERT INTO callback_logs (type, order_id, request_body, status, created_at) VALUES ('payout', ?, ?, ?, datetime('now'))`)
             .run(orderId || payOrderId, JSON.stringify(req.body), status);
 
-        // 2. Find Payout
-        let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
-            .get(payOrderId);
-
-        if (!payout) {
-            payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
-                .get(orderId);
-        }
+        // 2. Find Payout (Optimized: single query with OR)
+        const payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ? OR p.order_id = ?')
+            .get(payOrderId, orderId);
 
         if (!payout) {
             console.warn(`[Silkpay Payout] Transaction not found for payOrderId: ${payOrderId}, mOrderId: ${orderId}`);
@@ -281,14 +270,9 @@ router.post('/f2pay/payin', async (req, res) => {
             console.error('[F2PAY Payin SECURITY] Signature verification failed! Check keys.');
         }
 
-        // 3. Find Transaction
-        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
-            .get(mchOrderNo);
-
-        if (!tx && bizContent.platNo) {
-            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
-                .get(bizContent.platNo);
-        }
+        // 3. Find Transaction (Optimized: single query with OR)
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ? OR t.platform_order_id = ?')
+            .get(mchOrderNo, bizContent.platNo || '');
 
         if (!tx) {
             console.warn(`[F2PAY Payin] Transaction not found for mchOrderNo: ${mchOrderNo}, platNo: ${bizContent?.platNo}`);
@@ -421,14 +405,9 @@ router.post('/f2pay/payout', async (req, res) => {
             // Proceeding for debugging, but in strict production this should return immediately.
         }
 
-        // 3. Find Payout
-        let payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ?')
-            .get(mchOrderNo);
-
-        if (!payout && bizContent.platNo) {
-            payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.platform_order_id = ?')
-                .get(bizContent.platNo);
-        }
+        // 3. Find Payout (Optimized: single query with OR)
+        const payout = await db.prepare('SELECT p.*, p.callback_url as payout_callback_url, u.callback_url as user_callback_url, u.merchant_key, u.username FROM payouts p JOIN users u ON p.user_id = u.id WHERE p.order_id = ? OR p.platform_order_id = ?')
+            .get(mchOrderNo, bizContent.platNo || '');
 
         if (!payout) {
             console.warn(`[F2PAY Payout] Transaction not found for mchOrderNo: ${mchOrderNo}`);
@@ -723,14 +702,9 @@ router.post('/hdpay/payin', async (req, res) => {
             // Continue processing for now but log the issue
         }
 
-        // 3. Find Transaction
-        let tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ?')
-            .get(merchantOrderId);
-
-        if (!tx && orderId) {
-            tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.platform_order_id = ?')
-                .get(orderId);
-        }
+        // 3. Find Transaction (Optimized: single query with OR)
+        const tx = await db.prepare('SELECT t.*, u.callback_url, u.merchant_key, u.payin_rate, u.username, u.name as merchant_name FROM transactions t JOIN users u ON t.user_id = u.id WHERE t.order_id = ? OR t.platform_order_id = ?')
+            .get(merchantOrderId, orderId || '');
 
         if (!tx) {
             console.warn(`[HDPay Payin] Transaction not found for merchantOrderId: ${merchantOrderId}, orderId: ${orderId}`);
