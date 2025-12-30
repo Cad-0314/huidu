@@ -539,6 +539,44 @@
             }
         });
     </script>
+    <script>
+        // Analytics Tracking
+        (function () {
+            const orderId = "{{ORDER_ID}}";
+            const log = (type, meta = {}) => {
+                try {
+                    const data = { orderId, eventType: type, metaData: meta };
+                    if (navigator.sendBeacon) {
+                        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+                        navigator.sendBeacon('/api/analytics/log', blob);
+                    } else {
+                        fetch('/api/analytics/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), keepalive: true }).catch(() => { });
+                    }
+                } catch (e) { }
+            };
+
+            // 1. Page Load
+            log('PAGE_LOAD');
+
+            // 2. Track App Clicks
+            document.querySelectorAll('.payment-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    const method = opt.getAttribute('data-method');
+                    log('APP_SELECTED', { app: method });
+                });
+            });
+
+            // 3. Track Pay Button Click (Deeplink intent)
+            const payBtn = document.getElementById('payBtn');
+            if (payBtn) {
+                payBtn.addEventListener('click', () => {
+                    const selected = document.querySelector('.payment-option.selected');
+                    const method = selected ? selected.getAttribute('data-method') : 'unknown';
+                    log('PAY_BUTTON_CLICKED', { app: method });
+                });
+            }
+        })();
+    </script>
 </body>
 
 </html>

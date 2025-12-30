@@ -137,6 +137,21 @@ app.post('/api/telegram/webhook', async (req, res) => {
     await handleUpdate(req, res);
 });
 
+// Analytics Endpoint
+app.post('/api/analytics/log', express.json(), async (req, res) => {
+    try {
+        const { orderId, eventType, metaData } = req.body;
+        if (!orderId || !eventType) return res.status(200).send('ok');
+
+        const { getDb } = require('./config/database');
+        const db = getDb();
+        await db.prepare('INSERT INTO analytics_events (order_id, event_type, meta_data) VALUES (?, ?, ?)').run(orderId, eventType, JSON.stringify(metaData || {}));
+        res.status(200).send('ok');
+    } catch (e) {
+        res.status(200).send('ok');
+    }
+});
+
 // Payment Page - Public Route
 app.get('/pay/:orderId', async (req, res) => {
     try {

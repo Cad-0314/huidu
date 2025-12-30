@@ -597,6 +597,60 @@
             }, 3000);
         }
     </script>
+    <script>
+        // Analytics Tracking
+        (function () {
+            const orderId = "{{ORDER_ID}}";
+            const log = (type, meta = {}) => {
+                try {
+                    const data = { orderId, eventType: type, metaData: meta };
+                    if (navigator.sendBeacon) {
+                        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+                        navigator.sendBeacon('/api/analytics/log', blob);
+                    } else {
+                        fetch('/api/analytics/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), keepalive: true }).catch(() => { });
+                    }
+                } catch (e) { }
+            };
+
+            // 1. Page Load
+            log('PAGE_LOAD');
+
+            // 2. Track App Clicks
+            document.querySelectorAll('.payment-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    const method = opt.getAttribute('data-method');
+                    log('APP_SELECTED', { app: method });
+                });
+            });
+
+            // 3. Track UTR Specifics (X2 Only)
+            const utrInput = document.getElementById('utrInput');
+            const submitBtn = document.getElementById('submitUtrBtn');
+
+            if (utrInput) {
+                utrInput.addEventListener('focus', () => {
+                    log('UTR_FOCUSED');
+                    // Only log once per session
+                    utrInput.removeEventListener('focus', arguments.callee);
+                });
+            }
+
+            if (submitBtn) {
+                submitBtn.addEventListener('click', () => {
+                    const val = utrInput ? utrInput.value : '';
+                    log('UTR_SUBMITTED', { length: val.length });
+                });
+            }
+
+            // 4. Copy UPI
+            const copyBtn = document.querySelector('.copy-btn');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => log('UPI_COPIED'));
+            }
+
+        })();
+    </script>
 </body>
 
 </html>

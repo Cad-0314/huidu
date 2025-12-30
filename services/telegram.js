@@ -609,7 +609,98 @@ async function initBot() {
         }
     });
 
-    // Help / Start Command
+    // Command: /know <ORDER_ID> or /know (Today Stats)
+    bot.command('know', async (ctx) => {
+        try {
+            const message = ctx.message.text.split(' ');
+            const arg = message[1] ? message[1].trim() : null;
+            const chatId = ctx.chat.id.toString();
+
+            const user = await db.prepare('SELECT id, name FROM users WHERE telegram_group_id = ?').get(chatId);
+            if (!user) return reply(ctx, '⚠️ **未绑定商户**');
+
+            if (arg) {
+                // Scenario 1: Specific Order Timeline
+                const orderId = arg;
+                const events = await db.prepare('SELECT event_type, meta_data, created_at FROM analytics_events WHERE order_id = ? ORDER BY created_at ASC').all(orderId);
+
+                if (!events || events.length === 0) {
+                    return reply(ctx, `❌ **无数据**\n未找到订单 \`${orderId}\` 的追踪日志。`);
+                }
+
+                let timeline = `🕵️ **用户行为追踪: ${orderId}**\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n`;
+
+                events.forEach(e => {
+                    const time = new Date(e.created_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+                    let icon = '🔹';
+                    let desc = e.event_type;
+                    let meta = '';
+
+                    try {
+                        const m = JSON.parse(e.meta_data);
+                        if (m && Object.keys(m).length > 0) meta = ` (${JSON.stringify(m)})`;
+                    } catch (err) { }
+
+                    if (e.event_type === 'PAGE_LOAD') { icon = '👁️'; desc = 'Page Loaded'; }
+                    else if (e.event_type === 'APP_SELECTED') { icon = '👇'; desc = 'Selected App'; }
+                    else if (e.event_type === 'UTR_FOCUSED') { icon = '⌨️'; desc = 'Typing UTR'; }
+                    else if (e.event_type === 'UTR_SUBMITTED') { icon = '📝'; desc = 'Submitted UTR'; }
+                    else if (e.event_type === 'UPI_COPIED') { icon = '📋'; desc = 'Copied UPI'; }
+                    else if (e.event_type === 'PAY_BUTTON_CLICKED') { icon = '🚀'; desc = 'Clicked Pay'; }
+
+                    timeline += `\`${time}\` ${icon} ${desc}${meta}\n`;
+                });
+
+                reply(ctx, timeline);
+            } else {
+                // Scenario 2: Today's Funnel Stats
+                // Get all events for this user's orders today
+                // We need to join with transactions to filter by user_id
+                const stats = await db.prepare(`
+                    SELECT 
+                        SUM(CASE WHEN e.event_type = 'PAGE_LOAD' THEN 1 ELSE 0 END) as views,
+                        SUM(CASE WHEN e.event_type = 'APP_SELECTED' THEN 1 ELSE 0 END) as clicks,
+                        SUM(CASE WHEN e.event_type = 'UTR_SUBMITTED' THEN 1 ELSE 0 END) as utrs,
+                        SUM(CASE WHEN e.event_type = 'PAY_BUTTON_CLICKED' THEN 1 ELSE 0 END) as pay_clicks
+                    FROM analytics_events e
+                    JOIN transactions t ON e.order_id = t.order_id
+                    WHERE t.user_id = ? 
+                    AND e.created_at >= datetime('now', 'start of day', 'localtime')
+                `).get(user.id);
+
+                // Get real successes from transactions table
+                const txStats = await db.prepare(`
+                    SELECT COUNT(*) as success_count 
+                    FROM transactions 
+                    WHERE user_id = ? 
+                    AND status = 'success'
+                    AND created_at >= datetime('now', 'start of day', 'localtime')
+                `).get(user.id);
+
+                const views = stats.views || 0;
+                const clicks = stats.clicks || 0;
+                const utrs = stats.utrs || 0; // For X2
+                const payClicks = stats.pay_clicks || 0; // For V1
+                const success = txStats.success_count || 0;
+
+                // Calculate simple conversion
+                const conv = views > 0 ? ((success / views) * 100).toFixed(1) : 0;
+
+                let msg = `📊 **今日流量漏斗** (Today's Funnel)\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n` +
+                    `👁️ **访问 (Views)**: \`${views}\`\n` +
+                    `👇 **点击支付 (Clicks)**: \`${clicks + payClicks}\`\n` +
+                    `📝 **提交 UTR**: \`${utrs}\`\n` +
+                    `✅ **成功 (Success)**: \`${success}\`\n\n` +
+                    `📉 **转化率**: **${conv}%**`;
+
+                reply(ctx, msg);
+            }
+
+        } catch (error) {
+            console.error('Bot Know Command Error:', error);
+            reply(ctx, '❌ **查询失败**');
+        }
+    });
     bot.start((ctx) => {
         const msg = `🤖 **收银助手机器人已就绪**\n` +
             `您可以发送以下命令进行操作:\n\n` +

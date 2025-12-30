@@ -227,6 +227,15 @@ async function initializeSchema() {
         )`
     ];
 
+    // Add Analytics Table
+    tableQueries.push(`CREATE TABLE IF NOT EXISTS analytics_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            meta_data TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        )`);
+
     for (const sql of tableQueries) {
         await db.exec(sql);
     }
@@ -247,7 +256,10 @@ async function initializeSchema() {
         'CREATE INDEX IF NOT EXISTS idx_payouts_order_id ON payouts(order_id)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_platform_order_id ON payouts(platform_order_id)',
         'CREATE INDEX IF NOT EXISTS idx_payouts_created_at ON payouts(created_at)',
-        'CREATE INDEX IF NOT EXISTS idx_upi_records_upi_id ON upi_records(upi_id)'
+        'CREATE INDEX IF NOT EXISTS idx_payouts_created_at ON payouts(created_at)',
+        'CREATE INDEX IF NOT EXISTS idx_upi_records_upi_id ON upi_records(upi_id)',
+        'CREATE INDEX IF NOT EXISTS idx_analytics_order_id ON analytics_events(order_id)',
+        'CREATE INDEX IF NOT EXISTS idx_analytics_created_at ON analytics_events(created_at)'
     ];
 
     for (const sql of indexQueries) {
