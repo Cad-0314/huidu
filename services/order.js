@@ -21,7 +21,7 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
 
     // Validation: Minimum Amount
     let minAmount = 100;
-    if (merchantChannel === 'f2pay' || merchantChannel === 'yellow') {
+    if (merchantChannel === 'f2pay' || merchantChannel === 'yellow' || merchantChannel === 'payable') {
         minAmount = 200;
     }
 
