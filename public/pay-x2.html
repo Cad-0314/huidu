@@ -387,22 +387,7 @@
             <div class="qr-label">Scan QR Code</div>
         </div>
 
-        <div class="utr-section">
-            <div class="utr-title">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Step 2: Submit UTR (Ref No.)
-            </div>
-            <div class="utr-input-group">
-                <input type="text" id="utrInput" class="utr-input" placeholder="Enter 12-digit UTR" maxlength="12">
-                <button id="submitUtrBtn" class="submit-btn" onclick="submitUtr()">Submit</button>
-            </div>
-            <div style="font-size: 11px; color: #718096; margin-top: 8px;">
-                Submit 12-digit UTR/Ref No. after payment for instant confirmation.
-            </div>
-        </div>
+        <!-- UTR Section Removed -->
 
         <div class="dashed-divider"></div>
 
@@ -550,43 +535,7 @@
             }
         });
 
-        // UTR Submission
-        async function submitUtr() {
-            const uuid = document.getElementById('txUuid').value;
-            const utrInput = document.getElementById('utrInput');
-            const submitBtn = document.getElementById('submitUtrBtn');
-            const utr = utrInput.value.trim();
-
-            if (utr.length !== 12 || isNaN(utr)) {
-                showToast('Please enter a valid 12-digit UTR');
-                return;
-            }
-
-            submitBtn.disabled = true;
-            submitBtn.innerText = '...';
-
-            try {
-                const res = await fetch('/api/payin/submit-utr-public', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ uuid, utr })
-                });
-
-                const data = await res.json();
-
-                if (data.code === 1) {
-                    showToast('UTR Submitted successfully!');
-                    utrInput.value = '';
-                } else {
-                    showToast(data.msg || 'Submission failed');
-                }
-            } catch (err) {
-                showToast('Network error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = 'Submit';
-            }
-        }
+        // UTR Submission Removed
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -624,7 +573,8 @@
                 });
             });
 
-            // 3. Track UTR Specifics (X2 Only)
+            // 3. Track UTR Specifics (X2 Only) - Removed
+            /*
             const utrInput = document.getElementById('utrInput');
             const submitBtn = document.getElementById('submitUtrBtn');
 
@@ -642,6 +592,7 @@
                     log('UTR_SUBMITTED', { length: val.length });
                 });
             }
+            */
 
             // 4. Copy UPI
             const copyBtn = document.querySelector('.copy-btn');
