@@ -529,6 +529,7 @@ router.get('/stats/chart', authenticate, async (req, res) => {
             WHERE user_id = ? 
             AND type = 'payin'
             AND date(created_at, '+05:30') >= ?
+            AND payment_url IS NOT NULL AND payment_url != ''
             GROUP BY date
         `).all(userId, startDate);
 
@@ -560,6 +561,7 @@ router.get('/stats/chart', authenticate, async (req, res) => {
                 SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
             FROM transactions
             WHERE user_id = ? AND type = 'payin'
+            AND payment_url IS NOT NULL AND payment_url != ''
         `).get(userId);
 
         const successRate = rates.total > 0 ? ((rates.success / rates.total) * 100).toFixed(1) : 0;
