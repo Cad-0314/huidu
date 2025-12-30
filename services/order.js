@@ -16,12 +16,18 @@ async function createPayinOrder({ amount, orderId, merchant, callbackUrl, skipUr
     const db = getDb();
     const numericAmount = parseFloat(amount);
 
-    if (numericAmount < 100) {
-        throw new Error('Minimum deposit amount is ₹100');
+    // Determine which channel to use first
+    const merchantChannel = merchant.channel || 'silkpay';
+
+    // Validation: Minimum Amount
+    let minAmount = 100;
+    if (merchantChannel === 'f2pay' || merchantChannel === 'yellow') {
+        minAmount = 200;
     }
 
-    // Determine which channel to use first (needed for order ID prefix)
-    const merchantChannel = merchant.channel || 'silkpay';
+    if (numericAmount < minAmount) {
+        throw new Error(`Minimum deposit amount is ₹${minAmount} for this channel`);
+    }
 
     // Generate order ID with channel-specific prefix
     let orderPrefix = 'HDP'; // Default
