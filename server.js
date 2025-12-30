@@ -229,7 +229,8 @@ app.get('/pay/:orderId', async (req, res) => {
         // Other channels use pay.html with all payment options
         let templateFile;
         if (tx.channel === 'f2pay') {
-            templateFile = 'pay-x2.html';
+            const f2payVersion = process.env.PAYMENT_UI_VERSION || 'payable';
+            templateFile = (f2payVersion === 'v1') ? 'pay-x2-v1.html' : 'pay-x2.html';
         } else {
             const uiVersion = process.env.PAYMENT_UI_VERSION || 'v1';
             templateFile = uiVersion === 'v2' ? 'pay2.html' : 'pay.html';
